@@ -22,26 +22,26 @@ command.
 This module initializes the application via ``websetup`` (`paster
 setup-app`) and provides the base testing objects.
 """
-import StringIO
+from io import StringIO
 import gzip
 import os
-import simplejson as json
+import json
 from time import sleep
 import webtest
 from paste.deploy import appconfig
 from unittest import TestCase
-from paste.script.appinstall import SetupCommand
-from pylons import url
-from routes.util import URLGenerator
-import pylons.test
-import onlinelinguisticdatabase.lib.helpers as h
-from paste.deploy.converters import asbool
-from onlinelinguisticdatabase.model.meta import Session
+#from paste.script.appinstall import SetupCommand
+#from pylons import url
+#from routes.util import URLGenerator
+#import pylons.test
+import old.lib.helpers as h
+#from paste.deploy.converters import asbool
+#from onlinelinguisticdatabase.model.meta import Session
 
-__all__ = ['environ', 'url', 'TestController']
+#__all__ = ['environ', 'url', 'TestController']
 
 # Invoke websetup with the current config file
-SetupCommand('setup-app').run([pylons.test.pylonsapp.config['__file__']])
+#SetupCommand('setup-app').run([pylons.test.pylonsapp.config['__file__']])
 
 environ = {}
 
