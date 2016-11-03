@@ -54,11 +54,15 @@ def add_resource(config, member_name):
             path = '{}/{{id}}'.format(path)
         request_method = {'create': 'POST', 'delete': 'DELETE',
                           'update': 'PUT'}.get(action, 'GET')
+        request_param = 'id'
+        if action in ('create', 'index', 'new'):
+            request_param = None
         config.add_route(route_name, path, request_method=request_method)
         config.add_view(view_callable,
                         attr=action,
                         route_name=route_name,
                         request_method=request_method,
+                        request_param=request_param,
                         renderer='json',
                         decorator=requires_auth)
 

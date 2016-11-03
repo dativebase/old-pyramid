@@ -1,4 +1,5 @@
 import inflect
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 from pyramid.response import Response
 from pyramid.view import view_config
 from sqlalchemy.exc import DBAPIError
@@ -8,8 +9,6 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
 )
 
-p = inflect.engine()
-p.classical()
 
 
 def authenticate(target):
@@ -29,15 +28,25 @@ def authenticate(target):
     return decorator(wrapper)(target)
 
 
-
-
 class Resources:
+
+    p = inflect.engine()
+    p.classical()
 
     def __init__(self, request):
         self.request = request
-        self.p = p
         self.collection_name = self.__class__.__name__.lower()
         self.member_name = self.p.singular_noun(self.collection_name)
+        self._query_builder = None
+
+    @property
+    def query_builder(self):
+        if self._query_builder:
+            return self._query_builder
+        model_name = self.p.singular_noun(self.__class__.__name__)
+        self._query_builder = SQLAQueryBuilder(
+            model_name, config=request.registry.settings)
+        return self._query_builder
 
     def index(self):
         user = self.request.user
@@ -48,7 +57,8 @@ class Resources:
         return Response('Create a new {}'.format(self.member_name))
 
     def new(self):
-        return Response('Get info to create a new {}'.format(self.member_name))
+        # return Response('Get info to create a new {}'.format(self.member_name))
+        return {}
 
     def update(self):
         # expect ``id`` in PUT params
