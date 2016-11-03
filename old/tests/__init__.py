@@ -1,3 +1,9 @@
+# TODO: Read:
+# - https://github.com/inklesspen/worstkittenwar-test_demo
+# - http://doc.pytest.org/en/latest/fixture.html
+# - https://metaclassical.com/testing-pyramid-apps-without-a-scoped-session/
+# - http://docs.pylonsproject.org/en/latest/community/testing.html
+
 import pytest
 import transaction
 import random
