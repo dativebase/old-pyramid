@@ -1,0 +1,151 @@
+################################################################################
+# onlinelinguisticdatabase - Pylons configuration
+#
+# TODO: this is from the Pylons version of the OLD. Incorporate into Pyramid
+# version.
+#
+# The %(here)s variable will be replaced with the parent directory of this file
+################################################################################
+[DEFAULT]
+debug = true
+email_to = you@yourdomain.com
+smtp_server = localhost
+error_email_from = paste@localhost
+
+[server:main]
+use = egg:Paste#http
+host = 127.0.0.1
+port = 5000
+
+[app:main]
+use = egg:onlinelinguisticdatabase
+full_stack = true
+static_files = true
+
+cache_dir = %(here)s/data
+beaker.session.key = onlinelinguisticdatabase
+beaker.session.secret = ${app_instance_secret}
+app_instance_uuid = ${app_instance_uuid}
+
+# If you'd like to fine-tune the individual locations of the cache data dirs
+# for the Cache data, or the Session saves, un-comment the desired settings
+# here:
+#beaker.cache.data_dir = %(here)s/data/cache
+#beaker.session.data_dir = %(here)s/data/sessions
+
+# WARNING: *THE LINE BELOW MUST BE UNCOMMENTED ON A PRODUCTION ENVIRONMENT*
+# Debug mode will enable the interactive debugging tool, allowing ANYONE to
+# execute malicious code after an exception is raised.
+set debug = false
+
+
+################################################################################
+# Database configuration
+################################################################################
+
+# SQLAlchemy database URL
+sqlalchemy.url = sqlite:///production.db
+
+# MySQL OPTION
+# The old_test database must exist: mysql> create database old_test default character set utf8
+# Existing production databases using Latin-1 will need to be changed to UTF-8:
+# mysql> alter table form convert to character set utf8 collate utf8_general_ci;
+# See http://dev.mysql.com/doc/refman/5.0/en/alter-table.html
+# To avoid MySQL automatically changing column types, use MODIFY to convert columns individually:
+# mysql> alter table form modify comments text character set utf8;
+# By convention, old databases are named "xyzold" where xyz is the 3-character
+# ISO 639-3 id for the language under study.
+#sqlalchemy.url = mysql://username:password@localhost:3306/dbname
+#sqlalchemy.pool_recycle = 3600
+# See model/model.py for toggling the MySQL engine between MyISAM and InnoDB
+
+
+################################################################################
+# OLD-specific configuration
+################################################################################
+
+# Empty Database.  If value is 1, no database defaults will be inserted.  0 is
+# the default value.  You'll probably want to keep the default.  It adds three 
+# users (admin, contributor and viewer) as well as the "restricted" and "foreign
+# word" tags, a home page template, etc.  The admin's username is "admin" and
+# her password is "adminA_1".
+empty_database = 0
+
+# Add Language Data.  If value is 1, ISO 639-3 language data will be entered.
+# When value is 1, make sure language table of db is empty or errors will arise.
+# If value is 0, ISO 639-3 language data will not be entered.  Default is 1.
+add_language_data = 1
+
+# Permanent Store: for storing binary files for corpora, files, users,
+# phonologies, ...
+permanent_store = %(here)s/store
+
+# When sending "password reset" emails, the system will, by default, use localhost
+# to attempt to send the email.  If password_reset_smtp_server is smtp.gmail.com,
+# then Gmail will be used to send the email.  In this case, the system expects a
+# gmail.ini config file in the root directory with a [DEFAULT] section and variables
+# defined for gmail_from_address and gmail_from_password.  Use the gmail.ini
+# template at the bottom of this config file to construct the gmail.ini config file.  
+# password_reset_smtp_server = smtp.gmail.com
+
+# Set create_reduced_size_file_copies to 0 if you do not want the system to
+# create copies of images and .wav files with reduced sizes.  Default is 1 (i.e,
+# true).  Note: if PIL is not installed, the system will be unable to create
+# reduced-size images.  Similarly, if the command-line program ffmpeg is not
+# installed, the OLD will be unable to create .ogg/.mp3 copies of .wav files.
+create_reduced_size_file_copies = 1
+
+# For preferred_lossy_audio_format choose one of 'ogg' (Ogg Vorbis) or 'mp3'.
+# Default is 'ogg'.  If mp3 is chosen and ffmpeg cannot encode mp3, ogg will be
+# used instead.
+preferred_lossy_audio_format = ogg
+
+
+################################################################################
+# Logging configuration
+################################################################################
+
+# Logging configuration
+[loggers]
+keys = root
+
+[handlers]
+keys = console, file
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = INFO
+# Logs are appended to application.log
+handlers = file
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(asctime)s %(levelname)-5.5s [%(name)s] [%(threadName)s] %(message)s
+
+[handler_file]
+class = FileHandler
+args = ('application.log', 'a')
+level = INFO
+formatter = generic
+
+
+################################################################################
+# Template for a gmail.ini config file
+################################################################################
+#
+# [DEFAULT]
+#
+# When testing the reset-password-via-email functionality, this GMail email
+# address will be used so that one can verify that an email was actually sent.
+# gmail_from_address = a_valid_gmail_address@gmail.com
+#
+# gmail_from_password must be the valid password for the above GMail account.
+# gmail_from_password = password_for_the_above_email_account
+
