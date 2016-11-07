@@ -1,107 +1,477 @@
-# TODO: Read:
-# - https://github.com/inklesspen/worstkittenwar-test_demo
-# - http://doc.pytest.org/en/latest/fixture.html
-# - https://metaclassical.com/testing-pyramid-apps-without-a-scoped-session/
-# - http://docs.pylonsproject.org/en/latest/community/testing.html
+# Copyright 2016 Joel Dunham
 
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+"""Machinery for functional tests for the OLD Pyramid app."""
+
+from io import StringIO
+import json
+import gzip
+import os
+import random
+from time import sleep
+from unittest import TestCase
+
+import inflect
+from paste.deploy.converters import asbool
+from paste.deploy import appconfig
+from pyramid import testing
+from pyramid.threadlocal import get_current_request
 import pytest
 import transaction
-import random
+import webtest
 
-from pyramid import testing
-from old.models import Tag
-import old.views.tags
+from old import main
+import old.lib.helpers as h
+from old.models.meta import Base
+from old.views.tags import Tags
 
-
-@pytest.fixture
-def app_config():
-    settings = {'sqlalchemy.url': 'sqlite:///:memory:'}
-    config = testing.setUp(settings=settings)
-    config.include('.models')
-    yield config
-    testing.tearDown()
+__all__ = ['TestView', 'url', 'add_SEARCH_to_web_test_valid_methods', 'poll']
 
 
-@pytest.fixture
-def db_session(app_config):
-    session = app_config.registry['db_sessionmaker']()
-    engine = session.bind
-    Base.metadata.create_all(engine)
-    return session
+# TODO: how to initialize the test database?
+# In Pylons, we did:
+# SetupCommand('setup-app').run([pylons.test.pylonsapp.config['__file__']])
 
 
-@pytest.fixture
-def dummy_request(db_session):
-    # Because we're using DummyRequest here, we need to manually add the
-    # db_session to the request. config.add_request_method doesn't work
-    # on dummy requests. No hardship though!
-    return testing.DummyRequest(db_session=db_session)
+def url(route_name, **kwargs):
+    return testing.DummyRequest().route_url(route_name, **kwargs)
 
 
-@pytest.fixture
-def basic_models(db_session):
-    with transaction.manager:
-        for i in range(10):
-            kitten = Kitten(
-                file_extension='.jpeg', file_data='DEADBEEF{0}'.format(i),
-                source_url='http://example.com/{0}'.format(i),
-                credit='Kitten {0}'.format(i))
-            db_session.add(kitten)
-    return [k.id for k in db_session.query(Kitten.id).order_by(Kitten.id.asc())]
+def add_SEARCH_to_web_test_valid_methods():
+    """Hack to prevent webtest from printing warnings when SEARCH method is
+    used.
+    """
+    new_valid_methods = list(webtest.lint.valid_methods)
+    new_valid_methods.append('SEARCH')
+    webtest.lint.valid_methods = tuple(new_valid_methods)
 
 
-@pytest.fixture
-def models_with_votes(basic_models, db_session):
-    for n in range(50):
-        kitten_ids = random.sample(basic_models, 2)
-        with transaction.manager:
-            kittens = db_session.query(Kitten).filter(Kitten.id.in_(kitten_ids)).all()
-            kittens[0].views += 1
-            kittens[1].views += 1
-            kittens[0].votes += 1
-    # since we don't explicitly return anything, the fixture value is None
-    # but we can still require it for its side effects
-    # since the default fixture scope is 'function', it will be executed
-    # every time it is required
-
-
-def test_worst_view(dummy_request, db_session, models_with_votes):
-    actual = views.worst(dummy_request)['kittens']
-    # This is not the best example of a test, actually; the view under test
-    # is so simple that the only way to test it is just to reiterate the query here.
-    # but it does demonstrate the use of the database fixtures
-    expected = db_session.query(Kitten).order_by(Kitten.votes.desc()).all()
-    assert actual == expected
-    last = actual[0]
-    for current in actual[1:]:
-        assert last.votes >= current.votes
-        last = current
-
-
-def test_see_choices(dummy_request, db_session, basic_models):
-    for kitten in db_session.query(Kitten):
-        assert kitten.views == 0
-    actual = views.see_choices(dummy_request)['kittens']
-    actual_ids = [k.id for k in actual]
-    for kitten in db_session.query(Kitten):
-        if kitten.id in actual_ids:
-            assert kitten.views == 1
+def poll(requester, changing_attr, changing_attr_originally,
+         log, wait=2, vocal=True, task_descr='task'):
+    """Poll a resource by calling ``requester`` until the value of
+    ``changing_attr`` no longer matches ``changing_attr_originally``.
+    """
+    seconds_elapsed = 0
+    while True:
+        response = requester()
+        resp = json.loads(response.body)
+        if changing_attr_originally != resp[changing_attr]:
+            if vocal:
+                log.debug('Task terminated')
+            break
         else:
-            assert kitten.views == 0
+            if vocal:
+                log.debug('Waiting for %s to terminate: %s', task_descr,
+                          h.human_readable_seconds(seconds_elapsed))
+        sleep(wait)
+        seconds_elapsed = seconds_elapsed + wait
+    return resp
 
 
-def test_vote(dummy_request, db_session, basic_models):
-    kitten_id = random.choice(basic_models)
-    assert db_session.query(Kitten).get(kitten_id).votes == 0
-    dummy_request.POST['kitten'] = kitten_id
-    views.vote(dummy_request)
-    assert db_session.query(Kitten).get(kitten_id).votes == 1
+class TestView(TestCase):
+    """Base test view for testing OLD Pyramid views.
+
+    Example usage within a method::
+
+        res = self.app.get(
+            '/forms', status=200,
+            extra_environ={'test.authentication.role': 'viewer'})
+    """
+
+    inflect_p = inflect.engine()
+    inflect_p.classical()
+
+    @property
+    def dbsession(self):
+        if not self._dbsession:
+            self._dbsession = get_current_request().dbsession
+        return self._dbsession
+
+    def __init__(self, *args, **kwargs):
+        config_file = 'test.ini'
+        self.settings = appconfig('config:{}'.format(config_file),
+                                  relative_to='.')
+        self.config = {'__file__': self.settings['__file__'],
+                       'here': self.settings['here']}
+        self.app = webtest.TestApp(main(self.config, **self.settings))
+        self._setattrs()
+        self._setcreateparams()
+        self._dbsession = None
+        testing.setUp()
+        super().__init__(*args, **kwargs)
+
+    def _setattrs(self):
+        """Set a whole bunch of instance attributes that are useful in tests."""
+        self.extra_environ_view = {'test.authentication.role': 'viewer'}
+        self.extra_environ_contrib = {'test.authentication.role':
+                                      'contributor'}
+        self.extra_environ_admin = {'test.authentication.role':
+                                    'administrator'}
+        self.extra_environ_view_appset = {'test.authentication.role': 'viewer',
+                                          'test.application_settings': True}
+        self.extra_environ_contrib_appset = {
+            'test.authentication.role': 'contributor',
+            'test.application_settings': True}
+        self.extra_environ_admin_appset = {
+            'test.authentication.role': 'administrator',
+            'test.application_settings': True}
+        self.json_headers = {'Content-Type': 'application/json'}
+
+        self.here = self.settings['here']
+        self.files_path = h.get_OLD_directory_path(
+            'files', config=self.settings)
+        self.reduced_files_path = h.get_OLD_directory_path(
+            'reduced_files', config=self.settings)
+        self.test_files_path = os.path.join(
+            self.here, 'old', 'tests', 'data', 'files')
+        self.create_reduced_size_file_copies = asbool(self.settings.get(
+            'create_reduced_size_file_copies', False))
+        self.preferred_lossy_audio_format = self.settings.get(
+            'preferred_lossy_audio_format', 'ogg')
+        self.corpora_path = h.get_OLD_directory_path(
+            'corpora', config=self.settings)
+        self.test_datasets_path = os.path.join(
+            self.here, 'old', 'tests', 'data', 'datasets')
+        self.test_scripts_path = os.path.join(
+            self.here, 'old', 'tests', 'scripts')
+        self.loremipsum100_path = os.path.join(
+            self.test_datasets_path, 'loremipsum_100.txt')
+        self.loremipsum1000_path = os.path.join(
+            self.test_datasets_path, 'loremipsum_1000.txt')
+        self.loremipsum10000_path = os.path.join(
+            self.test_datasets_path, 'loremipsum_10000.txt')
+        self.users_path = h.get_OLD_directory_path(
+            'users', config=self.settings)
+        self.morphologies_path = h.get_OLD_directory_path(
+            'morphologies', config=self.settings)
+        self.morphological_parsers_path = h.get_OLD_directory_path(
+            'morphological_parsers', config=self.settings)
+        self.phonologies_path = h.get_OLD_directory_path(
+            'phonologies', config=self.settings)
+        self.morpheme_language_models_path = h.get_OLD_directory_path(
+            'morpheme_language_models', config=self.settings)
+        self.test_phonologies_path = os.path.join(
+            self.here, 'old', 'tests', 'data', 'phonologies')
+        self.test_phonology_script_path = os.path.join(
+            self.test_phonologies_path, 'test_phonology.script')
+        self.test_malformed_phonology_script_path = os.path.join(
+            self.test_phonologies_path, 'test_phonology_malformed.script')
+        self.test_phonology_no_phonology_script_path = os.path.join(
+            self.test_phonologies_path, 'test_phonology_malformed.script')
+        self.test_medium_phonology_script_path = os.path.join(
+            self.test_phonologies_path, 'test_phonology_medium.script')
+        self.test_large_phonology_script_path = os.path.join(
+            self.test_phonologies_path, 'test_phonology_large.script')
+        self.test_phonology_testless_script_path = os.path.join(
+            self.test_phonologies_path, 'test_phonology_no_tests.script')
+        self.test_morphologies_path = os.path.join(
+            self.here, 'old', 'tests', 'data', 'morphologies')
+        self.test_morphophonologies_path = os.path.join(
+            self.here, 'old', 'tests', 'data', 'morphophonologies')
+
+    def _setcreateparams(self):
+        """Set a whole bunch of ``_create_params``-suffixed instance attributes
+        that are useful for creating new resources within tests.
+        """
+        self.application_settings_create_params = {
+            'object_language_name': '',
+            'object_language_id': '',
+            'metalanguage_name': '',
+            'metalanguage_id': '',
+            'metalanguage_inventory': '',
+            'orthographic_validation': 'None', # Value should be one of ['None', 'Warning', 'Error']
+            'narrow_phonetic_inventory': '',
+            'narrow_phonetic_validation': 'None',
+            'broad_phonetic_inventory': '',
+            'broad_phonetic_validation': 'None',
+            'morpheme_break_is_orthographic': '',
+            'morpheme_break_validation': 'None',
+            'phonemic_inventory': '',
+            'morpheme_delimiters': '',
+            'punctuation': '',
+            'grammaticalities': '',
+            'unrestricted_users': [],        # A list of user ids
+            'storage_orthography': '',        # An orthography id
+            'input_orthography': '',          # An orthography id
+            'output_orthography': ''         # An orthography id
+        }
+        self.collection_create_params = {
+            'title': '',
+            'type': '',
+            'url': '',
+            'description': '',
+            'markup_language': '',
+            'contents': '',
+            'speaker': '',
+            'source': '',
+            'elicitor': '',
+            'enterer': '',
+            'date_elicited': '',
+            'tags': [],
+            'files': []
+        }
+        self.corpus_create_params = {
+            'name': '',
+            'description': '',
+            'content': '',
+            'form_search': '',
+            'tags': []
+        }
+        self.file_create_params = {
+            'name': '',
+            'description': '',
+            'date_elicited': '',    # mm/dd/yyyy
+            'elicitor': '',
+            'speaker': '',
+            'utterance_type': '',
+            'embedded_file_markup': '',
+            'embedded_file_password': '',
+            'tags': [],
+            'forms': [],
+            'file': ''      # file data Base64 encoded
+        }
+        self.file_create_params_base64 = {
+            'filename': '',        # Will be filtered out on update requests
+            'description': '',
+            'date_elicited': '',    # mm/dd/yyyy
+            'elicitor': '',
+            'speaker': '',
+            'utterance_type': '',
+            'tags': [],
+            'forms': [],
+            'base64_encoded_file': '' # file data Base64 encoded; will be
+                                      # filtered out on update requests
+        }
+        self.file_create_params_MPFD = {
+            'filename': '',        # Will be filtered out on update requests
+            'description': '',
+            'date_elicited': '',    # mm/dd/yyyy
+            'elicitor': '',
+            'speaker': '',
+            'utterance_type': '',
+            'tags-0': '',
+            'forms-0': ''
+        }
+        self.file_create_params_sub_ref = {
+            'parent_file': '',
+            'name': '',
+            'start': '',
+            'end': '',
+            'description': '',
+            'date_elicited': '',    # mm/dd/yyyy
+            'elicitor': '',
+            'speaker': '',
+            'utterance_type': '',
+            'tags': [],
+            'forms': []
+        }
+        self.file_create_params_ext_host = {
+            'url': '',
+            'name': '',
+            'password': '',
+            'MIME_type': '',
+            'description': '',
+            'date_elicited': '',    # mm/dd/yyyy
+            'elicitor': '',
+            'speaker': '',
+            'utterance_type': '',
+            'tags': [],
+            'forms': []
+        }
+        self.form_create_params = {
+            'transcription': '',
+            'phonetic_transcription': '',
+            'narrow_phonetic_transcription': '',
+            'morpheme_break': '',
+            'grammaticality': '',
+            'morpheme_gloss': '',
+            'translations': [],
+            'comments': '',
+            'speaker_comments': '',
+            'elicitation_method': '',
+            'tags': [],
+            'syntactic_category': '',
+            'speaker': '',
+            'elicitor': '',
+            'verifier': '',
+            'source': '',
+            'status': 'tested',
+            'date_elicited': '',     # mm/dd/yyyy
+            'syntax': '',
+            'semantics': ''
+        }
+        self.form_search_create_params = {
+            'name': '',
+            'search': '',
+            'description': '',
+            'searcher': ''
+        }
+        self.morpheme_language_model_create_params = {
+            'name': '',
+            'description': '',
+            'corpus': '',
+            'vocabulary_morphology': '',
+            'toolkit': '',
+            'order': '',
+            'smoothing': '',
+            'categorial': False
+        }
+        self.morphology_create_params = {
+            'name': '',
+            'description': '',
+            'lexicon_corpus': '',
+            'rules_corpus': '',
+            'script_type': 'lexc',
+            'extract_morphemes_from_rules_corpus': False,
+            'rules': '',
+            'rich_upper': True,
+            'rich_lower': False,
+            'include_unknowns': False
+        }
+        self.morphological_parser_create_params = {
+            'name': '',
+            'phonology': '',
+            'morphology': '',
+            'language_model': '',
+            'description': ''
+        }
+        self.orthography_create_params = {
+            'name': '',
+            'orthography': '',
+            'lowercase': False,
+            'initial_glottal_stops': True
+        }
+        self.page_create_params = {
+            'name': '',
+            'heading': '',
+            'markup_language': '',
+            'content': '',
+            'html': ''
+        }
+        self.phonology_create_params = {
+            'name': '',
+            'description': '',
+            'script': ''
+        }
+        self.source_create_params = {
+            'file': '',
+            'type': '',
+            'key': '',
+            'address': '',
+            'annote': '',
+            'author': '',
+            'booktitle': '',
+            'chapter': '',
+            'crossref': '',
+            'edition': '',
+            'editor': '',
+            'howpublished': '',
+            'institution': '',
+            'journal': '',
+            'key_field': '',
+            'month': '',
+            'note': '',
+            'number': '',
+            'organization': '',
+            'pages': '',
+            'publisher': '',
+            'school': '',
+            'series': '',
+            'title': '',
+            'type_field': '',
+            'url': '',
+            'volume': '',
+            'year': '',
+            'affiliation': '',
+            'abstract': '',
+            'contents': '',
+            'copyright': '',
+            'ISBN': '',
+            'ISSN': '',
+            'keywords': '',
+            'language': '',
+            'location': '',
+            'LCCN': '',
+            'mrnumber': '',
+            'price': '',
+            'size': '',
+        }
+        self.speaker_create_params = {
+            'first_name': '',
+            'last_name': '',
+            'page_content': '',
+            'dialect': 'dialect',
+            'markup_language': 'reStructuredText'
+        }
+        self.syntactic_category_create_params = {
+            'name': '',
+            'type': '',
+            'description': ''
+        }
+        self.user_create_params = {
+            'username': '',
+            'password': '',
+            'password_confirm': '',
+            'first_name': '',
+            'last_name': '',
+            'email': '',
+            'affiliation': '',
+            'role': '',
+            'markup_language': '',
+            'page_content': '',
+            'input_orthography': None,
+            'output_orthography': None
+        }
+
+    def tearDown(self, **kwargs):
+        """Clean up after a test."""
+        clear_all_tables = kwargs.get('clear_all_tables', False)
+        dirs_to_clear = kwargs.get('dirs_to_clear', [])
+        del_global_app_set = kwargs.get('del_global_app_set', False)
+        dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
+        if clear_all_tables:
+            h.clear_all_tables(['language'])
+        else:
+            h.clear_all_models()
+        administrator = h.generate_default_administrator()
+        contributor = h.generate_default_contributor()
+        viewer = h.generate_default_viewer()
+        self.dbsession.add_all([administrator, contributor, viewer])
+        self.dbsession.commit()
+        for dir_path in dirs_to_clear:
+            h.clear_directory_of_files(getattr(self, dir_path))
+        for dir_name in dirs_to_destroy:
+            h.destroy_all_directories(self.inflect_p.plural(dir_name),
+                                      'test.ini')
+        # TODO: necessary still?
+        if del_global_app_set:
+            # Perform a vacuous GET just to delete
+            # app_globals.application_settings to clean up for subsequent tests.
+            self.app.get(url('new_form'),
+                         extra_environ=self.extra_environ_admin_appset)
+        testing.tearDown()
 
 
-def test_kitten_photo(dummy_request, db_session, basic_models):
-    kitten_id = random.choice(basic_models)
-    kitten = db_session.query(Kitten).get(kitten_id)
-    dummy_request.matchdict['kitten'] = kitten_id
-    response = views.kitten_photo(dummy_request)
-    assert response.body == kitten.file_data
-    assert response.content_type == 'image/jpeg'
+def decompress_gzip_string(compressed_data):
+    compressed_stream = StringIO(compressed_data)
+    gzip_file = gzip.GzipFile(fileobj=compressed_stream, mode="rb")
+    return gzip_file.read()
+
+
+def get_file_size(file_path):
+    try:
+        return os.path.getsize(file_path)
+    except (OSError, TypeError):
+        return None

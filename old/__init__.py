@@ -1,7 +1,64 @@
 import datetime
 from old.models import Model
+from pyramid.authentication import (
+    AuthTktAuthenticationPolicy,
+    AuthTktCookieHelper,
+)
 from pyramid.config import Configurator
 from pyramid.renderers import JSON
+from pyramid.security import (
+    unauthenticated_userid,
+    Everyone,
+    Authenticated
+)
+from pyramid.settings import asbool
+
+
+def asint(setting):
+    """Convert variable to int, leave None unchanged"""
+    if setting is None:
+        return setting
+    else:
+        return int(setting)
+
+
+"""
+class MyAuthenticationPolicy(object):
+
+    def __init__(self, settings):
+        self.cookie = AuthTktCookieHelper(
+            settings.get('auth.secret'),
+            cookie_name=settings.get('auth.token') or 'auth_tkt',
+            secure=asbool(settings.get('auth.secure')),
+            timeout=asint(settings.get('auth.timeout')),
+            reissue_time=asint(settings.get('auth.reissue_time')),
+            max_age=asint(settings.get('auth.max_age')),
+    )
+
+def remember(self, request, principal, **kw):
+    return self.cookie.remember(request, principal, **kw)
+
+def forget(self, request):
+    return self.cookie.forget(request)
+
+def unauthenticated_userid(self, request):
+    result = self.cookie.identify(request)
+    if result:
+        return result['userid']
+
+def authenticated_userid(self, request):
+    if request.user:
+        return request.user.id
+
+def effective_principals(self, request):
+    principals = [Everyone]
+    user = request.user
+    if user:
+        principals += [Authenticated, 'u:%s' % user.id]
+        principals.extend(('g:%s' % g.name for g in user.groups))
+    return principals
+"""
+
 
 
 def old_model_adapter(obj, request):
@@ -108,11 +165,31 @@ class OLDHeadersMiddleware(object):
             new_headers['Access-Control-Expose-Headers'] = \
                 'Access-Control-Allow-Origin, Access-Control-Allow-Credentials'
 
-            headers = new_headers.items()
+            headers = list(new_headers.items())
 
             return start_response(status, headers, exc_info)
 
         return self.app(environ, custom_start_response)
+
+
+def authenticate(userid, request):
+    user = request.user
+    if user is not None:
+        return []
+    return None
+
+
+def get_user(request):
+    # the below line is just an example, use your own method of
+    # accessing a database connection here (this could even be another
+    # request property such as request.db, implemented using this same
+    # pattern).
+    print('in get_user')
+    print('request is...')
+    print(request)
+    userid = unauthenticated_userid(request)
+    if userid is not None:
+        return request.dbsession.query(User).get(userid)
 
 
 def main(global_config, **settings):
@@ -128,5 +205,6 @@ def main(global_config, **settings):
     config.include('.models')
     config.include('.routes')
     config.add_renderer('json', get_json_renderer())
+    config.add_request_method(get_user, 'user', reify=True)
     config.scan()
     return OLDHeadersMiddleware(config.make_wsgi_app())

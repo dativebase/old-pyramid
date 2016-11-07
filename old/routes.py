@@ -1,8 +1,10 @@
-from pyramid.response import Response
-import old.lib.pyramid_routehelper as pyrh
 import inflect
 p = inflect.engine()
 p.classical()
+
+from pyramid.response import Response
+import old.lib.pyramid_routehelper as pyrh
+from old.models import User
 
 
 def search_connect(config, name):
@@ -24,7 +26,48 @@ def search_connect(config, name):
     return config
 
 
+def test_fix_set_up(request):
+    if 'test.authentication.role' in request.environ:
+        role = request.environ['test.authentication.role']
+        user = request.dbsession.query(User).filter(User.role==role).first()
+        if user:
+            request.session['user'] = user.get_dict()
+    if 'test.authentication.id' in request.environ:
+        user = request.dbsession.query(User).get(
+            request.environ['test.authentication.id'])
+        if user:
+            request.session['user'] = user
+    # TODO: app_globals.application_settings ? ...
+    # if request.environ.get('test.application_settings'):
+    #     app_globals.application_settings = h.ApplicationSettings()
+    return request
+
+
+def test_fix_tear_down(request):
+    return request
+    # TODO:
+    # if request.environ.get('test.application_settings') and \
+    # not request.environ.get('test.retain_application_settings'):
+    #     del app_globals.application_settings
+
+
 def requires_auth(func):
+    def wrapper(context, request):
+        request = test_fix_set_up(request)
+        if request.session.get('user'):
+            resp = func(context, request)
+        else:
+            resp = Response(
+                json={'error': 'Authentication is required to access this'
+                               ' resource.'},
+                content_type='application/json',
+                status_code=401)
+        request = test_fix_tear_down(request)
+        return resp
+    return wrapper
+
+
+def requires_auth_try_1(func):
     def wrapper(context, request):
         if request.user is None:
             return Response(

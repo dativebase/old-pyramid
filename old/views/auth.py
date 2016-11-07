@@ -39,7 +39,9 @@ def login(request):
         .filter(User.password == password).first()
     if user is None:
         return not_authenticated(request)
-    request.response.headerlist.extend(remember(request, user.id))
+    # request.response.headerlist.extend(remember(request, user.id))
+    request.session['user'] = user.get_dict()
+    # request.session.save()
     home_page = request.dbsession.query(Page).filter(
         Page.name == u'home').first()
     return {
@@ -56,7 +58,8 @@ def not_authenticated(request):
 
 @view_config(route_name='logout', renderer='json')
 def logout(request):
-    request.response.headerlist.extend(forget(request))
+    # request.response.headerlist.extend(forget(request))
+    request.session.delete()
     return {'authenticated': False}
 
 

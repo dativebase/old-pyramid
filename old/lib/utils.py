@@ -340,7 +340,9 @@ def rename_user_directory(old_name, new_name, **kwargs):
         raise Exception('The config object was inadequate.')
 
 def destroy_all_directories(directory_name, config_filename='test.ini'):
-    """Remove all subdirectories from ``<permanent_store>/directory_name``, e.g., all in /store/corpora/."""
+    """Remove all subdirectories from ``<permanent_store>/directory_name``,
+    e.g., all in /store/corpora/.
+    """
     try:
         dir_path = get_OLD_directory_path(directory_name, config_filename=config_filename)
         for name in os.listdir(dir_path):

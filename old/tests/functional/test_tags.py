@@ -1,101 +1,404 @@
+# Copyright 2016 Joel Dunham
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+import json
+import logging
+from time import sleep
+
 import pytest
-import transaction
-import random
 
-from pyramid import testing
-from old.models import Tag
-import old.views.tags
+import old.lib.helpers as h
+from old.models import Form, Tag
+from old.tests import TestView, url
 
 
-@pytest.fixture
-def app_config():
-    settings = {'sqlalchemy.url': 'sqlite:///:memory:'}
-    config = testing.setUp(settings=settings)
-    config.include('.models')
-    yield config
-    testing.tearDown()
+LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture
-def db_session(app_config):
-    session = app_config.registry['db_sessionmaker']()
-    engine = session.bind
-    Base.metadata.create_all(engine)
-    return session
+###############################################################################
+# Functions for creating & retrieving test data
+###############################################################################
 
+class TestTagsView(TestView):
 
-@pytest.fixture
-def dummy_request(db_session):
-    # Because we're using DummyRequest here, we need to manually add the
-    # db_session to the request. config.add_request_method doesn't work
-    # on dummy requests. No hardship though!
-    return testing.DummyRequest(db_session=db_session)
+    # @pytest.mark.skip(reason='because')
+    def test_index(self):
+        """Tests that GET /tags returns an array of all tags and that order_by
+        and pagination parameters work correctly.
+        """
+        # Add 100 tags.
+        def create_tag_from_index(index):
+            tag = Tag()
+            tag.name = 'tag%d' % index
+            tag.description = 'description %d' % index
+            return tag
+        tags = [create_tag_from_index(i) for i in range(1, 101)]
+        self.dbsession.add_all(tags)
+        self.dbsession.commit()
+        tags = h.get_tags(True)
+        tags_count = len(tags)
 
+        # Test that GET /tags gives us all of the tags.
+        response = self.app.get(url('tags'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert len(resp) == tags_count
+        assert resp[0]['name'] == 'tag1'
+        assert resp[0]['id'] == tags[0].id
+        assert response.content_type == 'application/json'
 
-@pytest.fixture
-def basic_models(db_session):
-    with transaction.manager:
-        for i in range(10):
-            kitten = Kitten(
-                file_extension='.jpeg', file_data='DEADBEEF{0}'.format(i),
-                source_url='http://example.com/{0}'.format(i),
-                credit='Kitten {0}'.format(i))
-            db_session.add(kitten)
-    return [k.id for k in db_session.query(Kitten.id).order_by(Kitten.id.asc())]
+        return
 
+        # Test the paginator GET params.
+        paginator = {'items_per_page': 23, 'page': 3}
+        response = self.app.get(url('tags'), paginator,
+                                headers=self.json_headers,
+                                extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert len(resp['items']) == 23
+        assert resp['items'][0]['name'] == tags[46].name
+        assert response.content_type == 'application/json'
 
-@pytest.fixture
-def models_with_votes(basic_models, db_session):
-    for n in range(50):
-        kitten_ids = random.sample(basic_models, 2)
-        with transaction.manager:
-            kittens = db_session.query(Kitten).filter(Kitten.id.in_(kitten_ids)).all()
-            kittens[0].views += 1
-            kittens[1].views += 1
-            kittens[0].votes += 1
-    # since we don't explicitly return anything, the fixture value is None
-    # but we can still require it for its side effects
-    # since the default fixture scope is 'function', it will be executed
-    # every time it is required
+        # Test the order_by GET params.
+        order_by_params = {
+            'order_by_model': 'Tag',
+            'order_by_attribute': 'name',
+            'order_by_direction': 'desc'
+        }
+        response = self.app.get(
+            url('tags'), order_by_params, headers=self.json_headers,
+            extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        result_set = sorted([t.name for t in tags], reverse=True)
+        assert result_set == [t['name'] for t in resp]
 
+        # Test the order_by *with* paginator.
+        params = {
+            'order_by_model': 'Tag',
+            'order_by_attribute': 'name',
+            'order_by_direction': 'desc',
+            'items_per_page': 23, 'page': 3
+        }
+        response = self.app.get(
+            url('tags'), params, headers=self.json_headers,
+            extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert result_set[46] == resp['items'][0]['name']
+        assert response.content_type == 'application/json'
 
-def test_worst_view(dummy_request, db_session, models_with_votes):
-    actual = views.worst(dummy_request)['kittens']
-    # This is not the best example of a test, actually; the view under test
-    # is so simple that the only way to test it is just to reiterate the query here.
-    # but it does demonstrate the use of the database fixtures
-    expected = db_session.query(Kitten).order_by(Kitten.votes.desc()).all()
-    assert actual == expected
-    last = actual[0]
-    for current in actual[1:]:
-        assert last.votes >= current.votes
-        last = current
+        # Expect a 400 error when the order_by_direction param is invalid
+        order_by_params = {
+            'order_by_model': 'Tag',
+            'order_by_attribute': 'name',
+            'order_by_direction': 'descending'
+        }
+        response = self.app.get(
+            url('tags'), order_by_params, status=400,
+            headers=self.json_headers, extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp['errors']['order_by_direction'] == (
+            "Value must be one of: asc; desc (not 'descending')")
+        assert response.content_type == 'application/json'
 
+        # Expect the default BY id ASCENDING ordering when the
+        # order_by_model/Attribute param is invalid.
+        order_by_params = {
+            'order_by_model': 'Tagist',
+            'order_by_attribute': 'nominal',
+            'order_by_direction': 'desc'
+        }
+        response = self.app.get(
+            url('tags'), order_by_params, headers=self.json_headers,
+            extra_environ=self.extra_environ_view)
+        resp = json.loads(response.body)
+        assert resp[0]['id'] == tags[0].id
 
-def test_see_choices(dummy_request, db_session, basic_models):
-    for kitten in db_session.query(Kitten):
-        assert kitten.views == 0
-    actual = views.see_choices(dummy_request)['kittens']
-    actual_ids = [k.id for k in actual]
-    for kitten in db_session.query(Kitten):
-        if kitten.id in actual_ids:
-            assert kitten.views == 1
-        else:
-            assert kitten.views == 0
+        # Expect a 400 error when the paginator GET params are empty
+        # or are integers less than 1
+        paginator = {'items_per_page': 'a', 'page': ''}
+        response = self.app.get(
+            url('tags'), paginator, headers=self.json_headers,
+            extra_environ=self.extra_environ_view, status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['items_per_page'] == (
+            'Please enter an integer value')
+        assert resp['errors']['page'] == 'Please enter a value'
+        assert response.content_type == 'application/json'
 
+        paginator = {'items_per_page': 0, 'page': -1}
+        response = self.app.get(
+            url('tags'), paginator, headers=self.json_headers,
+            extra_environ=self.extra_environ_view, status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['items_per_page'] == (
+            'Please enter a number that is 1 or greater')
+        assert resp['errors']['page'] == (
+            'Please enter a number that is 1 or greater')
+        assert response.content_type == 'application/json'
 
-def test_vote(dummy_request, db_session, basic_models):
-    kitten_id = random.choice(basic_models)
-    assert db_session.query(Kitten).get(kitten_id).votes == 0
-    dummy_request.POST['kitten'] = kitten_id
-    views.vote(dummy_request)
-    assert db_session.query(Kitten).get(kitten_id).votes == 1
+    @pytest.mark.skip(reason='because')
+    def test_create(self):
+        """Tests that POST /tags creates a new tag
+        or returns an appropriate error if the input is invalid.
+        """
+        original_tag_count = self.dbsession.query(Tag).count()
 
+        # Create a valid one
+        params = json.dumps({'name': 'tag', 'description': 'Described.'})
+        response = self.app.post(
+            url('tags'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        new_tag_count = self.dbsession.query(Tag).count()
+        assert new_tag_count == original_tag_count + 1
+        assert resp['name'] == 'tag'
+        assert resp['description'] == 'Described.'
+        assert response.content_type == 'application/json'
 
-def test_kitten_photo(dummy_request, db_session, basic_models):
-    kitten_id = random.choice(basic_models)
-    kitten = db_session.query(Kitten).get(kitten_id)
-    dummy_request.matchdict['kitten'] = kitten_id
-    response = views.kitten_photo(dummy_request)
-    assert response.body == kitten.file_data
-    assert response.content_type == 'image/jpeg'
+        # Invalid because name is not unique
+        params = json.dumps({'name': 'tag', 'description': 'Described.'})
+        response = self.app.post(
+            url('tags'), params, self.json_headers, self.extra_environ_admin,
+            status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['name'] == (
+            'The submitted value for Tag.name is not unique.')
+
+        # Invalid because name is empty
+        params = json.dumps({'name': '', 'description': 'Described.'})
+        response = self.app.post(
+            url('tags'), params, self.json_headers, self.extra_environ_admin,
+            status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['name'] == 'Please enter a value'
+        assert response.content_type == 'application/json'
+
+        # Invalid because name is too long
+        params = json.dumps({
+            'name': 'name' * 400,
+            'description': 'Described.'
+        })
+        response = self.app.post(
+            url('tags'), params, self.json_headers, self.extra_environ_admin,
+            status=400)
+        resp = json.loads(response.body)
+        assert resp['errors']['name'] == (
+            'Enter a value not more than 255 characters long')
+        assert response.content_type == 'application/json'
+
+    @pytest.mark.skip(reason='because')
+    def test_new(self):
+        """Tests that GET /tags/new returns an empty JSON object."""
+        response = self.app.get(url('new_tag'), headers=self.json_headers,
+                                extra_environ=self.extra_environ_contrib)
+        resp = json.loads(response.body)
+        assert resp == {}
+        assert response.content_type == 'application/json'
+
+    @pytest.mark.skip(reason='because')
+    def test_update(self):
+        """Tests that PUT /tags/id updates the tag with id=id."""
+        # Create a tag to update.
+        params = json.dumps({'name': 'name', 'description': 'description'})
+        response = self.app.post(url('tags'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        tag_count = self.dbsession.query(Tag).count()
+        tag_id = resp['id']
+        original_datetime_modified = resp['datetime_modified']
+
+        # Update the tag
+        # Sleep for a second to ensure that MySQL registers a different
+        # datetime_modified for the update.
+        sleep(1)
+        params = json.dumps({
+            'name': 'name',
+            'description': 'More content-ful description.'
+        })
+        response = self.app.put(
+            url('tag', id=tag_id), params, self.json_headers,
+            self.extra_environ_admin)
+        resp = json.loads(response.body)
+        datetime_modified = resp['datetime_modified']
+        new_tag_count = self.dbsession.query(Tag).count()
+        assert tag_count == new_tag_count
+        assert datetime_modified != original_datetime_modified
+        assert response.content_type == 'application/json'
+
+        # Attempt an update with no new input and expect to fail
+        # Sleep for a second to ensure that MySQL could register a different
+        # datetime_modified for the update
+        sleep(1)
+        response = self.app.put(
+            url('tag', id=tag_id), params, self.json_headers,
+            self.extra_environ_admin, status=400)
+        resp = json.loads(response.body)
+        tag_count = new_tag_count
+        new_tag_count = self.dbsession.query(Tag).count()
+        our_tag_datetime_modified = self.dbsession.query(Tag)\
+            .get(tag_id).datetime_modified
+        assert our_tag_datetime_modified.isoformat() == datetime_modified
+        assert tag_count == new_tag_count
+        assert resp['error'] == ('The update request failed because the'
+                                 ' submitted data were not new.')
+        assert response.content_type == 'application/json'
+
+    @pytest.mark.skip(reason='because')
+    def test_delete(self):
+        """Tests that DELETE /tags/id deletes the tag with id=id."""
+        # Create a tag to delete.
+        params = json.dumps({'name': 'name', 'description': 'description'})
+        response = self.app.post(url('tags'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        tag_count = self.dbsession.query(Tag).count()
+        tag_id = resp['id']
+
+        # Now delete the tag
+        response = self.app.delete(
+            url('tag', id=tag_id), headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        new_tag_count = self.dbsession.query(Tag).count()
+        assert new_tag_count == tag_count - 1
+        assert resp['id'] == tag_id
+        assert response.content_type == 'application/json'
+
+        # Trying to get the deleted tag from the db should return None
+        deleted_tag = self.dbsession.query(Tag).get(tag_id)
+        assert deleted_tag is None
+
+        # Delete with an invalid id
+        id_ = 9999999999999
+        response = self.app.delete(
+            url('tag', id=id_), headers=self.json_headers,
+            extra_environ=self.extra_environ_admin, status=404)
+        assert ('There is no tag with id %s' % id_ in
+                json.loads(response.body)['error'])
+        assert response.content_type == 'application/json'
+
+        # Delete without an id
+        response = self.app.delete(
+            url('tag', id=''), status=404, headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        assert json.loads(response.body)['error'] == (
+            'The resource could not be found.')
+        assert response.content_type == 'application/json'
+
+        # Create a form, tag it, delete the tag and show that the form no
+        # longer has the tag.
+        tag = Tag()
+        tag.name = 'tag'
+        form = Form()
+        form.transcription = 'test'
+        form.tags.append(tag)
+        self.dbsession.add_all([form, tag])
+        self.dbsession.commit()
+        form_id = form.id
+        tag_id = tag.id
+        response = self.app.delete(
+            url('tag', id=tag_id), headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        deleted_tag = self.dbsession.query(Tag).get(tag_id)
+        form = self.dbsession.query(Form).get(form_id)
+        assert response.content_type == 'application/json'
+        assert deleted_tag is None
+        assert form.tags == []
+
+    @pytest.mark.skip(reason='because')
+    def test_show(self):
+        """Tests that GET /tags/id returns the tag with id=id or an appropriate
+        error.
+        """
+        # Create a tag to show.
+        params = json.dumps({'name': 'name', 'description': 'description'})
+        response = self.app.post(url('tags'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = json.loads(response.body)
+        tag_id = resp['id']
+
+        # Try to get a tag using an invalid id
+        id_ = 100000000000
+        response = self.app.get(
+            url('tag', id=id_), headers=self.json_headers,
+            extra_environ=self.extra_environ_admin, status=404)
+        resp = json.loads(response.body)
+        assert ('There is no tag with id %s' % id_ in
+                json.loads(response.body)['error'])
+        assert response.content_type == 'application/json'
+
+        # No id
+        response = self.app.get(
+            url('tag', id=''), status=404, headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        assert json.loads(response.body)['error'] == (
+            'The resource could not be found.')
+        assert response.content_type == 'application/json'
+
+        # Valid id
+        response = self.app.get(
+            url('tag', id=tag_id), headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['name'] == 'name'
+        assert resp['description'] == 'description'
+        assert response.content_type == 'application/json'
+
+    @pytest.mark.skip(reason='because')
+    def test_edit(self):
+        """Tests that GET /tags/id/edit returns a JSON object of data necessary
+        to edit the tag with id=id.
+
+        The JSON object is of the form {'tag': {...}, 'data': {...}} or
+        {'error': '...'} (with a 404 status code) depending on whether the id
+        is valid or invalid/unspecified, respectively.
+        """
+        # Create a tag to edit.
+        params = json.dumps({'name': 'name', 'description': 'description'})
+        response = self.app.post(
+            url('tags'), params, self.json_headers, self.extra_environ_admin)
+        resp = json.loads(response.body)
+        tag_id = resp['id']
+
+        # Not logged in: expect 401 Unauthorized
+        response = self.app.get(url('edit_tag', id=tag_id), status=401)
+        resp = json.loads(response.body)
+        assert resp['error'] == (
+            'Authentication is required to access this resource.')
+        assert response.content_type == 'application/json'
+
+        # Invalid id
+        id_ = 9876544
+        response = self.app.get(
+            url('edit_tag', id=id_), headers=self.json_headers,
+            extra_environ=self.extra_environ_admin, status=404)
+        assert ('There is no tag with id %s' % id_ in
+                json.loads(response.body)['error'])
+        assert response.content_type == 'application/json'
+
+        # No id
+        response = self.app.get(
+            url('edit_tag', id=''), status=404, headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        assert json.loads(response.body)['error'] == (
+            'The resource could not be found.')
+        assert response.content_type == 'application/json'
+
+        # Valid id
+        response = self.app.get(
+            url('edit_tag', id=tag_id), headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        resp = json.loads(response.body)
+        assert resp['tag']['name'] == 'name'
+        assert resp['data'] == {}
+        assert response.content_type == 'application/json'

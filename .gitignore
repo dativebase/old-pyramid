@@ -1,3 +1,5 @@
 old.egg-info/
 __pycache__/
 *.py[cod]
+.cache/
+data/

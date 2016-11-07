@@ -30,20 +30,20 @@ def authenticate(target):
 
 class Resources:
 
-    p = inflect.engine()
-    p.classical()
+    inflect_p = inflect.engine()
+    inflect_p.classical()
 
     def __init__(self, request):
         self.request = request
         self.collection_name = self.__class__.__name__.lower()
-        self.member_name = self.p.singular_noun(self.collection_name)
+        self.member_name = self.inflect_p.singular_noun(self.collection_name)
         self._query_builder = None
 
     @property
     def query_builder(self):
         if self._query_builder:
             return self._query_builder
-        model_name = self.p.singular_noun(self.__class__.__name__)
+        model_name = self.inflect_p.singular_noun(self.__class__.__name__)
         self._query_builder = SQLAQueryBuilder(
             model_name, config=request.registry.settings)
         return self._query_builder
