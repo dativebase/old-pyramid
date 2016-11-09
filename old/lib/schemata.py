@@ -38,6 +38,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+
 ################################################################################
 # Login Schemata
 ################################################################################
@@ -838,7 +839,7 @@ class UniqueUnicodeValue(UnicodeString):
         model_ = getattr(model, self.model_name)
         attribute = getattr(model_, self.attribute_name)
         id = getattr(state, 'id', None)
-        query = Session.query(model_)
+        query = state.dbsession.query(model_)
         value = h.normalize(value)
         if (id and query.filter(and_(attribute==value, getattr(model_, 'id')!=id)).first()) or \
         (not id and query.filter(attribute==value).first()):
@@ -945,7 +946,8 @@ class TagSchema(Schema):
     allow_extra_fields = True
     filter_extra_fields = True
     chained_validators = [ValidTagName()]
-    name = UniqueUnicodeValue(max=255, not_empty=True, model_name='Tag', attribute_name='name')
+    name = UniqueUnicodeValue(max=255, not_empty=True,
+                              model_name='Tag', attribute_name='name')
     description = UnicodeString()
 
 class KeyboardSchema(Schema):

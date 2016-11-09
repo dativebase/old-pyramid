@@ -233,7 +233,11 @@ def get_OLD_directory_path(directory_name, **kwargs):
         config = get_config(**kwargs)
         store = config['permanent_store']
         return os.path.join(store, map2directory[directory_name])
-    except Exception:
+    except Exception as e:
+        print('Exception when joining store path to directory_name'
+              ' {}'.format(directory_name))
+        print(config)
+        print(e)
         return None
 
 def get_model_directory_path(model_object, config):
@@ -283,7 +287,9 @@ def create_OLD_directories(**kwargs):
     :param kwargs['config_filename']: the name of a config file, e.g., "test.ini"
 
     """
-    for directory_name in ('files', 'reduced_files', 'users', 'corpora', 'phonologies', 'morphologies', 'morphological_parsers'):
+    for directory_name in ('files', 'reduced_files', 'users', 'corpora',
+                           'phonologies', 'morphologies',
+                           'morphological_parsers'):
         make_directory_safely(get_OLD_directory_path(directory_name, **kwargs))
 
 
@@ -317,7 +323,8 @@ def create_user_directory(user, **kwargs):
         make_directory_safely(os.path.join(
             get_OLD_directory_path('users', **kwargs),
             user.username))
-    except (TypeError, KeyError):
+    except (TypeError, KeyError) as e:
+        print(e)
         raise Exception('The config object was inadequate.')
 
 def destroy_user_directory(user, **kwargs):
@@ -1323,14 +1330,14 @@ class State(object):
     """
     pass
 
-def get_state_object(values):
+def get_state_object(values={}, dbsession=None, logged_in_user=None):
     """Return a State instance with some special attributes needed in the forms
     and oldcollections controllers.
     """
     state = State()
     state.full_dict = values
-    # TODO: how to get the Beaker session here?
-    state.user = session['user']
+    state.dbsession = dbsession
+    state.user = logged_in_user
     return state
 
 ################################################################################
@@ -1380,16 +1387,16 @@ unauthorized_msg = {'error': 'You are not authorized to access this resource.'}
 
 
 def get_RDBMS_name(**kwargs):
-    config = get_config(**kwargs)
+    settings = get_settings(**kwargs)
     try:
-        SQLAlchemyURL = config['sqlalchemy.url']
+        SQLAlchemyURL = settings['sqlalchemy.url']
         return SQLAlchemyURL.split(':')[0]
     except (TypeError, KeyError):
         # WARNING The exception below should be raised during production, development
         # and testing -- however, it must be replaced with the log to allow Sphinx to
         # import the controllers and build the API docs
         #log.warn('The config object was inadequate.')
-        raise Exception('The config object was inadequate.')
+        raise Exception('The settings dict was inadequate.')
 
 
 ################################################################################
@@ -2015,14 +2022,14 @@ def pretty_print_bytes(num_bytes):
         return '%.3g KiB' % (num_bytes / KiB)
 
 
-def get_language_objects(filename, here):
+def get_language_objects(here, truncated=True):
     """Return a list of language models generated from a text file in
     ``public/iso_639_3_languages_data``.
     """
     languages_path = os.path.join(
         here, 'old', 'static', 'iso_639_3_languages_data')
     # Use the truncated languages file if we are running tests
-    if filename == 'test.ini':
+    if truncated:
         iso_639_3FilePath = os.path.join(
             languages_path, 'iso_639_3_trunc.tab')
     else:

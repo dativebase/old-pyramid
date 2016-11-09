@@ -37,51 +37,51 @@ against the Form model.
 1. Simple scalar queries::
 
         ['Form', 'transcription', 'like', '%a%']
-        Session.query(Form).filter(Form.transcription.like('%a%'))
+        self.dbsession.query(Form).filter(Form.transcription.like('%a%'))
 
 2. Scalar relations::
 
         ['Form', 'enterer', 'first_name', 'regex', '^[JS]']
-        Session.query(Form).filter(Form.enterer.has(User.first_name.op('regexp')('^[JS]')))
+        self.dbsession.query(Form).filter(Form.enterer.has(User.first_name.op('regexp')('^[JS]')))
 
 3. Scalar relations presence/absence::
 
         ['Form', 'enterer', '=', 'None']
-        Session.query(Form).filter(Form.enterer==None)
+        self.dbsession.query(Form).filter(Form.enterer==None)
 
 4. Collection relations (w/ SQLA's collection.any() method)::
 
         ['Form', 'files', 'id', 'in', [1, 2, 33, 5]]
-        Session.query(Form).filter(Form.files.any(File.id.in_([1, 2, 33, 5])))
+        self.dbsession.query(Form).filter(Form.files.any(File.id.in_([1, 2, 33, 5])))
 
 5. Collection relations (w/ joins; should return the same results as (4)):
 
         ['File', 'id', 'in', [1, 2, 33, 5]]
         file_alias = aliased(File)
-        Session.query(Form).filter(file_alias.id.in_([1, 2, 33, 5])).outerjoin(file_alias, Form.files)
+        self.dbsession.query(Form).filter(file_alias.id.in_([1, 2, 33, 5])).outerjoin(file_alias, Form.files)
 
 6. Collection relations presence/absence::
 
         ['Form', 'files', '=', None]
-        Session.query(Form).filter(Form.files == None)
+        self.dbsession.query(Form).filter(Form.files == None)
 
 7. Negation::
 
         ['not', ['Form', 'transcription', 'like', '%a%']]
-        Session.query(Form).filter(not_(Form.transcription.like('%a%')))
+        self.dbsession.query(Form).filter(not_(Form.transcription.like('%a%')))
 
 8. Conjunction::
 
         ['and', [['Form', 'transcription', 'like', '%a%'],
                  ['Form', 'elicitor', 'id', '=', 13]]]
-        Session.query(Form).filter(and_(Form.transcription.like('%a%'),
+        self.dbsession.query(Form).filter(and_(Form.transcription.like('%a%'),
                                         Form.elicitor.has(User.id==13)))
 
 9. Disjunction::
 
         ['or', [['Form', 'transcription', 'like', '%a%'],
                 ['Form', 'date_elicited', '<', '2012-01-01']]]
-        Session.query(Form).filter(or_(Form.transcription.like('%a%'),
+        self.dbsession.query(Form).filter(or_(Form.transcription.like('%a%'),
                                        Form.date_elicited < datetime.date(2012, 1, 1)))
 
 10. Complex::
@@ -91,7 +91,7 @@ against the Form model.
                  ['or', [['Form', 'datetime_modified', '<', '2012-03-01T00:00:00'],
                          ['Form', 'datetime_modified', '>', '2012-01-01T00:00:00']]]]]
         translation_alias = aliased(Translation)
-        Session.query(Form).filter(and_(
+        self.dbsession.query(Form).filter(and_(
             translation_alias.transcription.like('%1%'),
             not_(Form.morpheme_break.op('regexp')('[28][5-7]')),
             or_(
@@ -110,7 +110,7 @@ return all forms whose enterer has remembered a form with a transcription like '
 11. Scalar's collection relations::
 
         ['Form', 'enterer', 'remembered_forms', 'transcription', 'like', '%a%']
-        Session.query(Form).filter(Form.enterer.has(User.remembered_forms.any(
+        self.dbsession.query(Form).filter(Form.enterer.has(User.remembered_forms.any(
             Form.transcription.like('%1%'))))
 
 """
@@ -127,20 +127,11 @@ from old.lib.utils import normalize
 log = logging.getLogger(__name__)
 
 
+import json
+import old.models as old_models
 
 try:
-    import simplejson as json
-except ImportError:
-    import json
-
-try:
-    import old.model as old_model
-    from old.model.meta import Session, Model
-except ImportError:
-    pass
-
-try:
-    mysql_engine = Model.__table_args__.get('mysql_engine')
+    mysql_engine = old_models.Model.__table_args__.get('mysql_engine')
 except NameError:
     mysql_engine = None
 
@@ -207,7 +198,7 @@ class OLDSearchParseError(Exception):
 
 class SQLAQueryBuilder(object):
     """Generate an SQLAlchemy query object from a Python dictionary.
-    
+
     Builds SQLAlchemy queries from Python data structures representing
     arbitrarily complex filter expressions.  Joins are inferred from the filter
     expression.  The public method most likely to be used is
@@ -226,7 +217,9 @@ class SQLAQueryBuilder(object):
 
     """
 
-    def __init__(self, model_name='Form', primary_key='id', **kwargs):
+    def __init__(self, dbsession, model_name='Form', primary_key='id',
+            **kwargs):
+        self.dbsession = dbsession
         self.errors = {}
         self.joins = []
         self.model_name = model_name  # The name of the target model, i.e., the one we are querying, e.g., 'Form'
@@ -262,7 +255,7 @@ class SQLAQueryBuilder(object):
         """Input is an array of the form [<model>, <attribute>, <direction>];
         output is an SQLA order_by expression.
         """
-        default_order_by = asc(getattr(getattr(old_model, self.model_name), primary_key))
+        default_order_by = asc(getattr(getattr(old_models, self.model_name), primary_key))
         if order_by is None:
             return default_order_by
         try:
@@ -291,8 +284,8 @@ class SQLAQueryBuilder(object):
             raise OLDSearchParseError(errors)
 
     def _get_base_query(self):
-        query_model = getattr(old_model, self.model_name)
-        return Session.query(query_model)
+        query_model = getattr(old_models, self.model_name)
+        return self.dbsession.query(query_model)
 
     def _add_joins_to_query(self, query):
         for join in self.joins:
@@ -876,7 +869,7 @@ class SQLAQueryBuilder(object):
 
     def _get_model(self, model_name, add_to_joins=True):
         try:
-            model = getattr(old_model, self.model_aliases.get(model_name, model_name))
+            model = getattr(old_models, self.model_aliases.get(model_name, model_name))
         except AttributeError:
             model = None
             self._add_to_errors(model_name, u"The OLD has no model %s" % model_name)
@@ -890,7 +883,7 @@ class SQLAQueryBuilder(object):
             join_models = self.models2joins.get(self.model_name, {})
             if model_name in join_models:
                 join_collection_name = join_models[model_name]
-                join_collection = getattr(getattr(old_model, self.model_name),
+                join_collection = getattr(getattr(old_models, self.model_name),
                                         join_collection_name)
                 model = aliased(model)
                 self.joins.append((model, join_collection))
@@ -951,7 +944,7 @@ class SQLAQueryBuilder(object):
     def _collate_attribute(self, attribute):
         """Append a MySQL COLLATE utf8_bin expression after the column name, if
         appropriate.  This allows regexp and like searches to be case-sensitive.
-        An example SQLA query would be Session.query(model.Form).filter(
+        An example SQLA query would be self.dbsession.query(model.Form).filter(
         collate(model.Form.transcription, 'utf8_bin').like('a%'))
         
         Previously there was a condition on collation that the relation_name be in
@@ -1136,17 +1129,17 @@ class SQLAQueryBuilder(object):
            model.Form.transcription.__eq__('abc')
 
         2. ['Form', 'enterer', 'first_name', 'like', 'J%'] =>
-           Session.query(model.Form)\
+           self.dbsession.query(model.Form)\
                 .filter(model.Form.enterer.has(model.User.first_name.like('J%')))
 
         3. ['Tag', 'name', 'like', '%abc%'] (when searching the Form model) =>
            aliased_tag = aliased(model.Tag)
-           Session.query(model.Form)\
+           self.dbsession.query(model.Form)\
                 .filter(aliased_tag.name.like('%abc%'))\
                 .outerjoin(aliased_tag, model.Form.tags)
 
         4. ['Form', 'tags', 'name', 'like', '%abc%'] =>
-           Session.query(model.Form)\
+           self.dbsession.query(model.Form)\
                 .filter(model.Form.tags.any(model.Tag.name.like('%abc%')))
         """
         model_name = self._get_model_name(args[0])

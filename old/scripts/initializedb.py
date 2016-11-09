@@ -84,7 +84,7 @@ def main(argv=sys.argv):
 
         # ISO-639-3 Language data for the languages table
         log.info('Retrieving ISO-639-3 languages data.')
-        languages = h.get_language_objects(filename, settings['here'])
+        languages = h.get_language_objects(settings['here'])
 
         # Get default users.
         log.info('Creating a default administrator, contributor and viewer.')
@@ -94,7 +94,8 @@ def main(argv=sys.argv):
             settings=settings)
         viewer = h.generate_default_viewer(settings=settings)
 
-        # If we are running tests, make sure the test db contains only language data.
+        # If we are running tests, make sure the test db contains only language
+        # data.
         if filename == 'test.ini':
             # Permanently drop any existing tables
             Base.metadata.drop_all(bind=dbsession.bind, checkfirst=True)

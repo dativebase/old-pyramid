@@ -27,7 +27,7 @@ import inflect
 from paste.deploy.converters import asbool
 from paste.deploy import appconfig
 from pyramid import testing
-from pyramid.threadlocal import get_current_request
+from pyramid.threadlocal import get_current_request, get_current_registry
 import pytest
 import transaction
 import webtest
@@ -36,6 +36,12 @@ from old import main
 import old.lib.helpers as h
 from old.models.meta import Base
 from old.views.tags import Tags
+from old.models import (
+    get_engine,
+    get_session_factory,
+    get_tm_session,
+)
+import old.models as old_models
 
 __all__ = ['TestView', 'url', 'add_SEARCH_to_web_test_valid_methods', 'poll']
 
@@ -46,7 +52,10 @@ __all__ = ['TestView', 'url', 'add_SEARCH_to_web_test_valid_methods', 'poll']
 
 
 def url(route_name, **kwargs):
-    return testing.DummyRequest().route_url(route_name, **kwargs)
+    registry = get_current_registry()
+    request = testing.DummyRequest()
+    request.registry = registry
+    return request.route_url(route_name, **kwargs)
 
 
 def add_SEARCH_to_web_test_valid_methods():
@@ -95,9 +104,20 @@ class TestView(TestCase):
 
     @property
     def dbsession(self):
+        """
         if not self._dbsession:
             self._dbsession = get_current_request().dbsession
         return self._dbsession
+        """
+        engine = get_engine(self.settings)
+        session_factory = get_session_factory(engine)
+        with transaction.manager:
+            return get_tm_session(session_factory, transaction.manager)
+
+    def get_dbsession(self):
+        engine = get_engine(self.settings)
+        session_factory = get_session_factory(engine)
+        return get_tm_session(session_factory, transaction.manager)
 
     def __init__(self, *args, **kwargs):
         config_file = 'test.ini'
@@ -110,7 +130,77 @@ class TestView(TestCase):
         self._setcreateparams()
         self._dbsession = None
         testing.setUp()
+        self.transaction = transaction
+
+        # Create the database tables
+        # SetupCommand('setup-app').run([pylons.test.pylonsapp.config['__file__']])
+        engine = get_engine(self.settings)
+        session_factory = get_session_factory(engine)
+        with transaction.manager:
+            dbsession = get_tm_session(session_factory, transaction.manager)
+            h.create_OLD_directories(settings=self.settings)
+            languages = h.get_language_objects(self.settings['here'],
+                                               truncated=True)
+            administrator = h.generate_default_administrator(
+                settings=self.settings)
+            contributor = h.generate_default_contributor(
+                settings=self.settings)
+            viewer = h.generate_default_viewer(settings=self.settings)
+            Base.metadata.drop_all(bind=dbsession.bind, checkfirst=True)
+            Base.metadata.create_all(bind=dbsession.bind, checkfirst=True)
+            dbsession.add_all(languages + [administrator, contributor, viewer])
+            transaction.commit()
+
         super().__init__(*args, **kwargs)
+
+    def clear_all_models(self, retain=['Language']):
+        """Convenience function for removing all OLD models from the database.
+        The retain parameter is a list of model names that should not be cleared.
+        """
+        with transaction.manager:
+            dbsession = self.get_dbsession()
+            for model_name in h.get_model_names():
+                if model_name not in retain:
+                    model = getattr(old_models, model_name)
+                    if not isinstance(model, old_models.Model):
+                        continue
+                    models = dbsession.query(model).all()
+                    for model in models:
+                        dbsession.delete(model)
+            transaction.commit()
+
+    def tearDown(self, **kwargs):
+        """Clean up after a test."""
+        clear_all_tables = kwargs.get('clear_all_tables', False)
+        dirs_to_clear = kwargs.get('dirs_to_clear', [])
+        del_global_app_set = kwargs.get('del_global_app_set', False)
+        dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
+        if clear_all_tables:
+            h.clear_all_tables(['language'])
+        else:
+            self.clear_all_models()
+        #administrator = h.generate_default_administrator(
+        #    settings=self.settings)
+        #contributor = h.generate_default_contributor(
+        #    settings=self.settings)
+        #viewer = h.generate_default_viewer(
+        #    settings=self.settings)
+        #with transaction.manager:
+        #    dbsession = self.get_dbsession()
+        #    dbsession.add_all([administrator, contributor, viewer])
+        #    transaction.commit()
+        for dir_path in dirs_to_clear:
+            h.clear_directory_of_files(getattr(self, dir_path))
+        for dir_name in dirs_to_destroy:
+            h.destroy_all_directories(self.inflect_p.plural(dir_name),
+                                      'test.ini')
+        # TODO: necessary still?
+        if del_global_app_set:
+            # Perform a vacuous GET just to delete
+            # app_globals.application_settings to clean up for subsequent tests.
+            self.app.get(url('new_form'),
+                         extra_environ=self.extra_environ_admin_appset)
+        testing.tearDown()
 
     def _setattrs(self):
         """Set a whole bunch of instance attributes that are useful in tests."""
@@ -434,34 +524,6 @@ class TestView(TestCase):
             'input_orthography': None,
             'output_orthography': None
         }
-
-    def tearDown(self, **kwargs):
-        """Clean up after a test."""
-        clear_all_tables = kwargs.get('clear_all_tables', False)
-        dirs_to_clear = kwargs.get('dirs_to_clear', [])
-        del_global_app_set = kwargs.get('del_global_app_set', False)
-        dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
-        if clear_all_tables:
-            h.clear_all_tables(['language'])
-        else:
-            h.clear_all_models()
-        administrator = h.generate_default_administrator()
-        contributor = h.generate_default_contributor()
-        viewer = h.generate_default_viewer()
-        self.dbsession.add_all([administrator, contributor, viewer])
-        self.dbsession.commit()
-        for dir_path in dirs_to_clear:
-            h.clear_directory_of_files(getattr(self, dir_path))
-        for dir_name in dirs_to_destroy:
-            h.destroy_all_directories(self.inflect_p.plural(dir_name),
-                                      'test.ini')
-        # TODO: necessary still?
-        if del_global_app_set:
-            # Perform a vacuous GET just to delete
-            # app_globals.application_settings to clean up for subsequent tests.
-            self.app.get(url('new_form'),
-                         extra_environ=self.extra_environ_admin_appset)
-        testing.tearDown()
 
 
 def decompress_gzip_string(compressed_data):

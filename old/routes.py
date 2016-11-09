@@ -26,7 +26,7 @@ def search_connect(config, name):
     return config
 
 
-def test_fix_set_up(request):
+def fix_for_tests(request):
     if 'test.authentication.role' in request.environ:
         role = request.environ['test.authentication.role']
         user = request.dbsession.query(User).filter(User.role==role).first()
@@ -53,7 +53,7 @@ def test_fix_tear_down(request):
 
 def requires_auth(func):
     def wrapper(context, request):
-        request = test_fix_set_up(request)
+        request = fix_for_tests(request)
         if request.session.get('user'):
             resp = func(context, request)
         else:
@@ -84,7 +84,7 @@ def add_resource(config, member_name):
     class_name = collection_name.capitalize()
     view_callable = 'old.views.{}.{}'.format(collection_name, class_name)
     for action in ('create', 'index', 'new', 'edit', 'delete', 'update',
-            'show'):
+                   'show'):
         route_name = '{}_{}'.format(action, member_name)
         if action == 'index':
             route_name = '{}_{}'.format(action, collection_name)
@@ -97,15 +97,11 @@ def add_resource(config, member_name):
             path = '{}/{{id}}'.format(path)
         request_method = {'create': 'POST', 'delete': 'DELETE',
                           'update': 'PUT'}.get(action, 'GET')
-        request_param = 'id'
-        if action in ('create', 'index', 'new'):
-            request_param = None
         config.add_route(route_name, path, request_method=request_method)
         config.add_view(view_callable,
                         attr=action,
                         route_name=route_name,
                         request_method=request_method,
-                        request_param=request_param,
                         renderer='json',
                         decorator=requires_auth)
 

@@ -37,16 +37,12 @@ class Resources:
         self.request = request
         self.collection_name = self.__class__.__name__.lower()
         self.member_name = self.inflect_p.singular_noun(self.collection_name)
-        self._query_builder = None
 
     @property
     def query_builder(self):
-        if self._query_builder:
-            return self._query_builder
         model_name = self.inflect_p.singular_noun(self.__class__.__name__)
-        self._query_builder = SQLAQueryBuilder(
-            model_name, config=request.registry.settings)
-        return self._query_builder
+        return SQLAQueryBuilder(self.request.dbsession,
+            model_name, settings=self.request.registry.settings)
 
     def index(self):
         user = self.request.user

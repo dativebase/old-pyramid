@@ -54,12 +54,16 @@ class Tags(Resources):
             self.request.response.status_int = 400
             return h.JSONDecodeErrorResponse
         try:
-            data = schema.to_python(values)
+            state = h.get_state_object(
+                dbsession=self.request.dbsession,
+                logged_in_user=self.request.session.get('user', {}))
+            data = schema.to_python(values, state)
         except Invalid as error:
             self.request.response.status_int = 400
             return {'errors': error.unpack_errors()}
         tag = create_new_tag(data)
         self.request.dbsession.add(tag)
+        self.request.dbsession.flush()
         return tag
 
     # @h.authorize(['administrator', 'contributor'])
@@ -81,7 +85,7 @@ class Tags(Resources):
         :param str id: the ``id`` value of the tag to be updated.
         :returns: the updated tag model.
         """
-        id_ = self.request.params.get('id')
+        id_ = self.request.matchdict['id']
         tag = self.request.dbsession.query(Tag).get(int(id_))
         if not tag:
             self.request.response.status_int = 404
@@ -92,7 +96,10 @@ class Tags(Resources):
         except ValueError:
             self.request.response.status_int = 400
             return h.JSONDecodeErrorResponse
-        state = h.get_state_object(values)
+        state = h.get_state_object(
+            values=values,
+            dbsession=self.request.dbsession,
+            logged_in_user=self.request.session.get('user', {}))
         state.id = id_
         try:
             data = schema.to_python(values, state)
@@ -106,6 +113,7 @@ class Tags(Resources):
             return {'error': 'The update request failed because the submitted'
                              ' data were not new.'}
         self.request.dbsession.add(tag)
+        self.request.dbsession.flush()
         return tag
 
     # @h.authorize(['administrator', 'contributor'])
@@ -116,7 +124,7 @@ class Tags(Resources):
         :param str id: the ``id`` value of the tag to be deleted.
         :returns: the deleted tag model.
         """
-        id_ = self.request.params.get('id')
+        id_ = self.request.matchdict['id']
         tag = self.request.dbsession.query(Tag).get(id_)
         if not tag:
             self.request.response.status_int = 404
@@ -135,7 +143,7 @@ class Tags(Resources):
         :param str id: the ``id`` value of the tag to be returned.
         :returns: a tag model object.
         """
-        id_ = self.request.params.get('id')
+        id_ = self.request.matchdict['id']
         tag = self.request.dbsession.query(Tag).get(id_)
         if not tag:
             self.request.response.status_int = 404
@@ -156,7 +164,7 @@ class Tags(Resources):
             of the tag and the value of the ``data`` key is an empty
             dictionary.
         """
-        id_ = self.request.params.get('id')
+        id_ = self.request.matchdict['id']
         tag = self.request.dbsession.query(Tag).get(id_)
         if not tag:
             self.request.response.status_int = 404
