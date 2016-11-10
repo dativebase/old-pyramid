@@ -173,7 +173,6 @@ class TestView(TestCase):
         """Clean up after a test."""
         clear_all_tables = kwargs.get('clear_all_tables', False)
         dirs_to_clear = kwargs.get('dirs_to_clear', [])
-        del_global_app_set = kwargs.get('del_global_app_set', False)
         dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
         if clear_all_tables:
             h.clear_all_tables(['language'])
@@ -190,16 +189,12 @@ class TestView(TestCase):
         #    dbsession.add_all([administrator, contributor, viewer])
         #    transaction.commit()
         for dir_path in dirs_to_clear:
+            print('we want to clear dir ', dir_path)
+            print('that dir is ', getattr(self, dir_path))
             h.clear_directory_of_files(getattr(self, dir_path))
         for dir_name in dirs_to_destroy:
             h.destroy_all_directories(self.inflect_p.plural(dir_name),
                                       'test.ini')
-        # TODO: necessary still?
-        if del_global_app_set:
-            # Perform a vacuous GET just to delete
-            # app_globals.application_settings to clean up for subsequent tests.
-            self.app.get(url('new_form'),
-                         extra_environ=self.extra_environ_admin_appset)
         testing.tearDown()
 
     def _setattrs(self):
@@ -221,9 +216,9 @@ class TestView(TestCase):
 
         self.here = self.settings['here']
         self.files_path = h.get_OLD_directory_path(
-            'files', config=self.settings)
+            'files', settings=self.settings)
         self.reduced_files_path = h.get_OLD_directory_path(
-            'reduced_files', config=self.settings)
+            'reduced_files', settings=self.settings)
         self.test_files_path = os.path.join(
             self.here, 'old', 'tests', 'data', 'files')
         self.create_reduced_size_file_copies = asbool(self.settings.get(
@@ -231,7 +226,7 @@ class TestView(TestCase):
         self.preferred_lossy_audio_format = self.settings.get(
             'preferred_lossy_audio_format', 'ogg')
         self.corpora_path = h.get_OLD_directory_path(
-            'corpora', config=self.settings)
+            'corpora', settings=self.settings)
         self.test_datasets_path = os.path.join(
             self.here, 'old', 'tests', 'data', 'datasets')
         self.test_scripts_path = os.path.join(
@@ -243,15 +238,15 @@ class TestView(TestCase):
         self.loremipsum10000_path = os.path.join(
             self.test_datasets_path, 'loremipsum_10000.txt')
         self.users_path = h.get_OLD_directory_path(
-            'users', config=self.settings)
+            'users', settings=self.settings)
         self.morphologies_path = h.get_OLD_directory_path(
-            'morphologies', config=self.settings)
+            'morphologies', settings=self.settings)
         self.morphological_parsers_path = h.get_OLD_directory_path(
-            'morphological_parsers', config=self.settings)
+            'morphological_parsers', settings=self.settings)
         self.phonologies_path = h.get_OLD_directory_path(
-            'phonologies', config=self.settings)
+            'phonologies', settings=self.settings)
         self.morpheme_language_models_path = h.get_OLD_directory_path(
-            'morpheme_language_models', config=self.settings)
+            'morpheme_language_models', settings=self.settings)
         self.test_phonologies_path = os.path.join(
             self.here, 'old', 'tests', 'data', 'phonologies')
         self.test_phonology_script_path = os.path.join(

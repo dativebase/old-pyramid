@@ -51,7 +51,7 @@ class URL:
             return self.RSRC_NEW_PATH.format(collection_name=self.collection_name)
         else:
             return self.RSRC_EDIT_PATH.format(
-                collection_name=self.collection_name, id_=kargs.get('id'))
+                collection_name=self.collection_name, id_=kwargs.get('id'))
 
 
 class Model(object):

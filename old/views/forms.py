@@ -148,7 +148,7 @@ class Forms(Resources):
         return result
 
     # @h.authorize(['administrator', 'contributor'])
-    def create(self):
+    def create_(self):
         """Create a new form resource and return it.
 
         :URL: ``POST /forms``
@@ -173,6 +173,9 @@ class Forms(Resources):
         # update_application_settings_if_form_is_foreign_word(form)
         self.update_forms_containing_this_form_as_morpheme(form)
         return form
+
+    def _post_create(self, form_model):
+        self.update_forms_containing_this_form_as_morpheme(form_model)
 
     # @h.authorize(['administrator', 'contributor'])
     def new(self):
@@ -602,6 +605,8 @@ class Forms(Resources):
 
     def create_new_form(self, data):
         """Create a new form.
+
+        TODO: START FROM HERE!
 
         :param dict data: the form to be created.
         :returns: an SQLAlchemy model object representing the form.

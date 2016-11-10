@@ -74,6 +74,7 @@ class Resources(abc.ABC):
             self.request.response.status_int = 400
             return h.JSONDecodeErrorResponse
         state = h.get_state_object(
+            values=values,
             dbsession=self.request.dbsession,
             logged_in_user=self.request.session.get('user', {}))
         try:
@@ -84,6 +85,7 @@ class Resources(abc.ABC):
         resource = self._create_new_resource(data)
         self.request.dbsession.add(resource)
         self.request.dbsession.flush()
+        self._post_create(resource)
         return resource
 
     # @h.authorize(['administrator', 'contributor'])
@@ -313,6 +315,13 @@ class Resources(abc.ABC):
         """
         id_ = self.request.matchdict['id']
         return self.request.dbsession.query(self.model_cls).get(int(id_)), id_
+
+    def _post_create(self, resource_model):
+        """Perform some action after creating a new resource model in the
+        database. E.g., with forms we have to update all of the forms that
+        contain the newly entered form as a morpheme.
+        """
+        pass
 
     ###########################################################################
     # Abstract Methods --- must be defined in subclasses
