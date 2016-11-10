@@ -122,7 +122,6 @@ def add_resource(config, member_name):
                      '/{}/{{id}}'.format(collection_name), request_method='GET')
     """
 
-
 def includeme(config):
     # Pyramid boilerplate
     config.add_static_view('static', 'static', cache_max_age=3600)

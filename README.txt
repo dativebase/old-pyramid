@@ -69,8 +69,9 @@ Done
 
 ├── lib
 │   ├── __init__.py
+│   ├── auth.py
     ├── parser.py
-    ├── pyramid_routehelper.py
+    ├── pyramid_routehelper.py TODO: DELETE
 │   ├── simplelm
 │   │   ├── NGramStack.py
 │   │   ├── README.md
@@ -93,25 +94,12 @@ Done
 Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-├── lib
-│   ├── auth.py
+├── controllers
+│   ├── collectionbackups.py
+
 
 TODO
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-├── lib
-│   ├── base.py
-│   ├── bibtex.py
-│   ├── foma_worker.py
-│   ├── helpers.py
-│   ├── orthography.py
-│   ├── parse.py
-│   ├── parser.py
-│   ├── resize.py
-│   ├── schemata.py
-
-│   ├── simplelmc
-│   ├── utils.py
 
 ├── controllers
 │   ├── collectionbackups.py
@@ -144,6 +132,20 @@ TODO
 │   ├── speakers.py
 │   ├── syntacticcategories.py
 │   ├── users.py
+
+├── lib
+│   ├── base.py
+│   ├── bibtex.py
+│   ├── foma_worker.py
+│   ├── helpers.py
+│   ├── orthography.py
+│   ├── parse.py
+│   ├── parser.py
+│   ├── resize.py
+│   ├── schemata.py
+
+│   ├── simplelmc
+│   ├── utils.py
 
 ├── model
 │   ├── db_update_scripts

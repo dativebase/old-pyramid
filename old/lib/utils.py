@@ -42,6 +42,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy.sql import or_, not_, desc, asc
 from sqlalchemy.orm import subqueryload, joinedload, sessionmaker
 from .. import models
+#import old.models
 model = models
 from ..models import Form, File, Collection
 from ..models.meta import Model, Base
@@ -1318,19 +1319,22 @@ def get_int(input_):
     except Exception:
         return None
 
+
 class FakeForm(object):
     pass
 
+
 class State(object):
     """Empty class used to create a state instance with a 'full_dict' attribute
-    that points to a dict of values being validated by a schema.  For example,
+    that points to a dict of values being validated by a schema. For example,
     the call to FormSchema().to_python in controllers/forms.py requires this
     State() instance as its second argument in order to make the inventory-based
     validators work correctly (see, e.g., ValidOrthographicTranscription).
     """
     pass
 
-def get_state_object(values={}, dbsession=None, logged_in_user=None):
+
+def get_state_object(values={}, dbsession=None, logged_in_user=None, **kwargs):
     """Return a State instance with some special attributes needed in the forms
     and oldcollections controllers.
     """
@@ -1338,6 +1342,8 @@ def get_state_object(values={}, dbsession=None, logged_in_user=None):
     state.full_dict = values
     state.dbsession = dbsession
     state.user = logged_in_user
+    for key, val in kwargs.items():
+        setattr(state, key, val)
     return state
 
 ################################################################################

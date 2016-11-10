@@ -16,7 +16,43 @@
 
 import json
 import logging
-log = logging.getLogger(__name__)
+
+import inflect
+inflect_p = inflect.engine()
+inflect_p.classical()
+
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+class URL:
+    """The URL class re-creates Pylons' global ``url`` function but just for
+    resources. You construct a ``URLs`` instance by providing the plural name
+    of the resource. Then you can get the URL for 'create', 'show', 'delete',
+    etc. by calling ``url('create')``, ``url('show', id=1)``, etc.
+    """
+
+    RSRCS_PATH = '/{collection_name}'
+    RSRC_PATH = '/{collection_name}/{id_}'
+    RSRC_EDIT_PATH = '/{collection_name}/{id_}/edit'
+    RSRC_NEW_PATH = '/{collection_name}/new'
+
+    def __init__(self, collection_name='resources'):
+        self.collection_name = collection_name
+
+    def __call__(self, route_name, **kwargs):
+        if route_name in ('index', 'create', 'search'):
+            return self.RSRCS_PATH.format(collection_name=self.collection_name)
+        elif route_name in ('show', 'delete', 'update'):
+            return self.RSRC_PATH.format(collection_name=self.collection_name,
+                                         id_=kwargs.get('id'))
+        elif route_name == 'new':
+            return self.RSRC_NEW_PATH.format(collection_name=self.collection_name)
+        else:
+            return self.RSRC_EDIT_PATH.format(
+                collection_name=self.collection_name, id_=kargs.get('id'))
+
 
 class Model(object):
     """The Model class holds methods needed (potentially) by all models.  All
@@ -28,6 +64,13 @@ class Model(object):
         'mysql_charset': 'utf8',
         'mysql_engine': 'MyISAM'  # Possible values: MyISAM, InnoDB
     }
+
+    @classmethod
+    def _url(cls):
+        __url = getattr(cls, '__url', None)
+        if not __url:
+            cls.__url = URL(inflect_p.plural(cls.__tablename__))
+        return cls.__url
 
     # Maps names of tables to the sets of attributes required for mini-dict creation
     table_name2core_attributes = {
@@ -147,16 +190,12 @@ class Model(object):
         pass
 
     def set_attr(self, name, value, changed):
-        """Set the value of ``self.name`` to ``value`` only if ``self.name != value``.
-        Set ``changed`` to ``True`` if ``self.name`` has changed as a result.  Return
-        ``changed``.  Useful in the ``update_<model>`` function of the controllers.
-
+        """Set the value of ``self.name`` to ``value`` only if ``self.name !=
+        value``.  Set ``changed`` to ``True`` if ``self.name`` has changed as a
+        result.  Return ``changed``.  Useful in the ``update_<model>`` function
+        of the controllers.
         """
-
         if getattr(self, name) != value:
             setattr(self, name, value)
             changed = True
         return changed
-
-
-
