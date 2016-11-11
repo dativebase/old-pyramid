@@ -84,7 +84,7 @@ class Forms(Resources):
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         try:
             sqla_query = self.query_builder.get_SQLA_query(
                 python_search_params.get('query'))
@@ -100,7 +100,7 @@ class Forms(Resources):
             return {'error': 'The specified search parameters generated an'
                              'invalid database query'}
         query = h.eagerload_form(sqla_query)
-        query = h.filter_restricted_models('Form', sqla_query)
+        query = self._filter_restricted_models('Form', sqla_query)
         return h.add_pagination(query, python_search_params.get('paginator'))
 
     def new_search(self):
@@ -127,7 +127,7 @@ class Forms(Resources):
         query = h.eagerload_form(self.request.dbsession.query(Form))
         get_params = dict(self.request.GET)
         query = h.add_order_by(query, get_params, self.query_builder)
-        query = h.filter_restricted_models('Form', query)
+        query = self._filter_restricted_models('Form', query)
         try:
             result = h.add_pagination(query, get_params)
         except Invalid as error:
@@ -160,7 +160,7 @@ class Forms(Resources):
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         state = h.get_state_object(values)
         try:
             data = schema.to_python(values, state)
@@ -175,6 +175,17 @@ class Forms(Resources):
         return form
 
     def _post_create(self, form_model):
+        """Create the morphological analysis-related attributes on the form
+        model. Then update any morphologically complex forms that may contain
+        this form as a morpheme.
+        """
+        (
+            form_model.morpheme_break_ids,
+            form_model.morpheme_gloss_ids,
+            form_model.syntactic_category_string,
+            form_model.break_gloss_category,
+            cache
+        ) = self.compile_morphemic_analysis(form_model)
         self.update_forms_containing_this_form_as_morpheme(form_model)
 
     # @h.authorize(['administrator', 'contributor'])
@@ -218,7 +229,7 @@ class Forms(Resources):
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         state = h.get_state_object(values)
         try:
             data = schema.to_python(values, state)
@@ -265,7 +276,7 @@ class Forms(Resources):
             return h.unauthorized_msg
         form_dict = form.get_dict()
         self.backup_form(form_dict)
-        self.update_collections_referencing_this_form(form)
+        self._update_collections_referencing_this_form(form)
         self.request.dbsession.delete(form)
         self.request.dbsession.flush()
         # update_application_settings_if_form_is_foreign_word(form)
@@ -359,7 +370,7 @@ class Forms(Resources):
                                                      unrestricted_users)
         previous_versions_are_restricted = (
             previous_versions and not unrestricted_previous_versions)
-        if form_is_restricted or previous_versions_are_restricted :
+        if form_is_restricted or previous_versions_are_restricted:
             self.request.response.status_int = 403
             return h.unauthorized_msg
         return {'form': form,
@@ -381,7 +392,7 @@ class Forms(Resources):
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         try:
             data = schema.to_python(values)
         except Invalid as error:
@@ -603,208 +614,152 @@ class Forms(Resources):
         collection_backup.vivify(collection_dict)
         self.request.dbsession.add(collection_backup)
 
-    def create_new_form(self, data):
-        """Create a new form.
-
-        TODO: START FROM HERE!
-
-        :param dict data: the form to be created.
-        :returns: an SQLAlchemy model object representing the form.
+    def _create_new_resource(self, data):
+        """Create a new form resource.
+        :param dict data: the data for the resource to be created.
+        :returns: an SQLAlchemy model object representing the resource.
+        Note: we override this super-class method because forms are special: we
+        need to add the model to the database and get an id value so that forms
+        can reference themselves in their morphological analysis-related
+        attributes.
         """
-        form = Form()
-        form.UUID = str(uuid4())
+        form_model = super()._create_new_resource(data)
+        self.request.dbsession.add(form_model)
+        (
+            form_model.morpheme_break_ids,
+            form_model.morpheme_gloss_ids,
+            form_model.syntactic_category_string,
+            form_model.break_gloss_category,
+            cache
+        ) = self.compile_morphemic_analysis(form_model)
+        return form_model
 
-        # Unicode Data
-        form.transcription = h.to_single_space(h.normalize(data['transcription']))
-        form.phonetic_transcription = h.to_single_space(
-            h.normalize(data['phonetic_transcription']))
-        form.narrow_phonetic_transcription = h.to_single_space(
-            h.normalize(data['narrow_phonetic_transcription']))
-        form.morpheme_break = h.to_single_space(h.normalize(data['morpheme_break']))
-        form.morpheme_gloss = h.to_single_space(h.normalize(data['morpheme_gloss']))
-        form.comments = h.normalize(data['comments'])
-        form.speaker_comments = h.normalize(data['speaker_comments'])
-        form.syntax = h.normalize(data['syntax'])
-        form.semantics = h.normalize(data['semantics'])
-        form.grammaticality = data['grammaticality']
-        form.status = data['status']
+    def _update_resource_model(self, form_model, data):
+        """Update ``form_model`` with ``data`` and return something other
+        than ``False`` if form_model has changed as a result.
+        :param form_model: the resource model to be updated.
+        :param dict data: user-supplied representation of the updated resource.
+        :returns: the updated resource model or, if ``changed`` has not been set
+            to ``True``, ``False``.
+        """
+        changed = super()._update_resource_model(form_model, data)
+        if changed:
+            data = changed
+        (
+            data['morpheme_break_ids'],
+            data['morpheme_gloss_ids'],
+            data['syntactic_category_string'],
+            data['break_gloss_category'],
+            cache
+        ) = self.compile_morphemic_analysis(form_model)
+        MORPH_ATTRS = ('morpheme_break_ids', 'morpheme_gloss_ids',
+                       'syntactic_category_string', 'break_gloss_category')
+        if not changed:
+            for attr in MORPH_ATTRS:
+                if self._distinct(attr, data[attr], getattr(form_model, attr)):
+                    changed = True
+                    break
+        if changed:
+            for attr in MORPH_ATTRS:
+                setattr(form_model, attr, data[attr])
+            return form_model
+        return changed
 
-        # User-entered date: date_elicited
-        form.date_elicited = data['date_elicited']
+    def _distinct(self, attr, new_val, existing_val):
+        """Return true if ``new_val`` is distinct from ``existing_val``. The
+        ``attr`` value is provided so that certain attributes (e.g., m2m) can
+        have a special definition of "distinct".
+        """
+        if attr == 'translations':
+            # Check if the user has made any changes to the translations.
+            # If there are changes, then delete all translations and replace
+            # with ones. (Note: this will result in the deletion of a
+            # translation and the recreation of an identical one with a
+            # different index. There may be a "better" way of doing this, but
+            # this way is simple...)
+            existing_translations = [
+                (t.transcription, t.grammaticality) for t in existing_val]
+            new_translations = [
+                (t.transcription, t.grammaticality) for t in new_val]
+            if set(existing_translations) == set(new_translations):
+                return False
+            return True
+        elif attr in ('files', 'tags'):
+            if set(new_val) == set(existing_val):
+                return False
+            return True
+        else:
+            return new_val != existing_val
 
-        # Many-to-One
-        form.elicitation_method = data['elicitation_method']
-        form.syntactic_category = data['syntactic_category']
-        form.source = data['source']
-        form.elicitor = data['elicitor']
-        form.verifier = data['verifier']
-        form.speaker = data['speaker']
+    def _get_create_data(self, data):
+        user_data = self._get_user_data(data)
+        now = h.now()
+        user_dict = self.request.session['user']
+        user_model = self.request.dbsession.query(User).get(user_dict['id'])
+        user_data.update({
+            'datetime_modified': now,
+            'datetime_entered': now,
+            'UUID': str(uuid4()),
+            'enterer': user_model,
+            'modifier': user_model
+        })
+        return user_data
 
-        # One-to-Many Data: translations
-        form.translations = data['translations']
+    def _get_update_data(self, user_data):
+        now = h.now()
+        user_dict = self.request.session['user']
+        user_model = self.request.dbsession.query(User).get(user_dict['id'])
+        user_data.update({
+            'datetime_modified': now,
+            'modifier': user_model
+        })
+        return user_data
 
-        # Many-to-Many Data: tags & files
-        form.tags = [t for t in data['tags'] if t]
-        form.files = [f for f in data['files'] if f]
-
+    def _get_user_data(self, data):
+        user_data = {
+            # Unicode Data
+            'transcription': h.to_single_space(
+                h.normalize(data['transcription'])),
+            'phonetic_transcription': h.to_single_space(
+                h.normalize(data['phonetic_transcription'])),
+            'narrow_phonetic_transcription': h.to_single_space(
+                h.normalize(data['narrow_phonetic_transcription'])),
+            'morpheme_break': h.to_single_space(
+                h.normalize(data['morpheme_break'])),
+            'morpheme_gloss': h.to_single_space(
+                h.normalize(data['morpheme_gloss'])),
+            'comments': h.normalize(data['comments']),
+            'speaker_comments': h.normalize(data['speaker_comments']),
+            'syntax': h.normalize(data['syntax']),
+            'semantics': h.normalize(data['semantics']),
+            'grammaticality': data['grammaticality'],
+            'status': data['status'],
+            # User-entered date: date_elicited
+            'date_elicited': data['date_elicited'],
+            # Many-to-One
+            'elicitation_method': data['elicitation_method'],
+            'syntactic_category': data['syntactic_category'],
+            'source': data['source'],
+            'elicitor': data['elicitor'],
+            'verifier': data['verifier'],
+            'speaker': data['speaker'],
+            # One-to-Many Data: translations
+            'translations': data['translations'],
+            # Many-to-Many Data: tags & files
+            'tags': [t for t in data['tags'] if t],
+            'files': [f for f in data['files'] if f]
+        }
         # Restrict the entire form if it is associated to restricted files.
-        tags = [f.tags for f in form.files]
+        tags = [f.tags for f in user_data['files']]
         tags = [tag for tag_list in tags for tag in tag_list]
         restricted_tags = [tag for tag in tags if tag.name == 'restricted']
         if restricted_tags:
             restricted_tag = restricted_tags[0]
-            if restricted_tag not in form.tags:
-                form.tags.append(restricted_tag)
+            if restricted_tag not in user_data['tags']:
+                user_data['tags'].append(restricted_tag)
+        return user_data
 
-        # OLD-generated Data
-        form.datetime_entered = form.datetime_modified = h.now()
-        # Because of SQLAlchemy's uniqueness constraints, we may need to set the
-        # enterer to the elicitor/verifier.
-        if data['elicitor'] and (data['elicitor'].id ==
-                                 self.request.session['user']['id']):
-            form.enterer = form.modifier = data['elicitor']
-        elif data['verifier'] and (data['verifier'].id ==
-                                   self.request.session['user']['id']):
-            form.enterer = form.modifier = data['verifier']
-        else:
-            user_dict = self.request.session['user']
-            user_model = self.request.dbsession.query(User).get(user_dict['id'])
-            form.enterer = form.modifier = user_model
-
-        # Create the morpheme_break_ids and morpheme_gloss_ids attributes.
-        # We add the form first to get an ID so that monomorphemic Forms can be
-        # self-referential.
-        self.request.dbsession.add(form)
-        (
-            form.morpheme_break_ids,
-            form.morpheme_gloss_ids,
-            form.syntactic_category_string,
-            form.break_gloss_category,
-            cache
-        ) = self.compile_morphemic_analysis(form)
-        return form
-
-    def update_form(self, form, data):
-        """Update a form model.
-
-        :param form: the form model to be updated.
-        :param dict data: representation of the updated form.
-        :returns: the updated form model or, if ``changed`` has not been set to
-            ``True``, then ``False``.
-        """
-        changed = False
-        # Unicode Data
-        changed = form.set_attr(
-            'transcription',
-            h.to_single_space(h.normalize(data['transcription'])),
-            changed)
-        changed = form.set_attr(
-            'phonetic_transcription',
-            h.to_single_space(h.normalize(data['phonetic_transcription'])),
-            changed)
-        changed = form.set_attr(
-            'narrow_phonetic_transcription',
-            h.to_single_space(
-                h.normalize(data['narrow_phonetic_transcription'])),
-            changed)
-        changed = form.set_attr(
-            'morpheme_break',
-            h.to_single_space(h.normalize(data['morpheme_break'])),
-            changed)
-        changed = form.set_attr(
-            'morpheme_gloss',
-            h.to_single_space(h.normalize(data['morpheme_gloss'])),
-            changed)
-        changed = form.set_attr(
-            'comments', h.normalize(data['comments']), changed)
-        changed = form.set_attr(
-            'speaker_comments', h.normalize(data['speaker_comments']), changed)
-        changed = form.set_attr('syntax', h.normalize(data['syntax']), changed)
-        changed = form.set_attr(
-            'semantics', h.normalize(data['semantics']), changed)
-        changed = form.set_attr(
-            'grammaticality', data['grammaticality'], changed)
-        changed = form.set_attr('status', data['status'], changed)
-
-        # User-entered date: date_elicited
-        changed = form.set_attr('date_elicited', data['date_elicited'], changed)
-
-        # One-to-Many Data: Translations
-        # First check if the user has made any changes to the translations.
-        # If there are changes, then delete all translations and replace with
-        # new ones. (Note: this will result in the deletion of a translation
-        # and the recreation of an identical one with a different index. There
-        # may be a "better" way of doing this, but this way is simple...
-        translations_we_have = [(t.transcription, t.grammaticality) for t in
-                                form.translations]
-        translations_to_add = [(t.transcription, t.grammaticality) for t in
-                               data['translations']]
-        if set(translations_we_have) != set(translations_to_add):
-            form.translations = data['translations']
-            changed = True
-
-        # Many-to-One Data
-        changed = form.set_attr(
-            'elicitation_method', data['elicitation_method'], changed)
-        changed = form.set_attr(
-            'syntactic_category', data['syntactic_category'], changed)
-        changed = form.set_attr('source', data['source'], changed)
-        changed = form.set_attr('elicitor', data['elicitor'], changed)
-        changed = form.set_attr('verifier', data['verifier'], changed)
-        changed = form.set_attr('speaker', data['speaker'], changed)
-
-        # Many-to-Many Data: tags & files
-        # Update only if the user has made changes.
-        files_to_add = [f for f in data['files'] if f]
-        tags_to_add = [t for t in data['tags'] if t]
-
-        if set(files_to_add) != set(form.files):
-            form.files = files_to_add
-            changed = True
-
-            # Cause the entire form to be tagged as restricted if any one of its
-            # files are so tagged.
-            tags = [f.tags for f in form.files]
-            tags = [tag for tag_list in tags for tag in tag_list]
-            restricted_tags = [tag for tag in tags if tag.name == 'restricted']
-            if restricted_tags:
-                restricted_tag = restricted_tags[0]
-                if restricted_tag not in tags_to_add:
-                    tags_to_add.append(restricted_tag)
-
-        if set(tags_to_add) != set(form.tags):
-            form.tags = tags_to_add
-            changed = True
-
-        # Create the morpheme_break_ids and morpheme_gloss_ids attributes.
-        (
-            morpheme_break_ids,
-            morpheme_gloss_ids,
-            syntactic_category_string,
-            break_gloss_category,
-            cache
-        ) = self.compile_morphemic_analysis(form)
-
-        changed = form.set_attr('morpheme_break_ids', morpheme_break_ids,
-                                changed)
-        changed = form.set_attr('morpheme_gloss_ids', morpheme_gloss_ids,
-                                changed)
-        changed = form.set_attr(
-            'syntactic_category_string', syntactic_category_string, changed)
-        changed = form.set_attr(
-            'break_gloss_category', break_gloss_category, changed)
-
-        if changed:
-            form.datetime_modified = h.now()
-            user_dict = self.request.session['user']
-            user_model = self.request.dbsession.query(User).get(user_dict['id'])
-            self.request.session['user'] = user_model.get_dict()
-            # No longer necessary I think: dbsession.merge(session['user'])
-            form.modifier = user_model
-            return form
-        return changed
-
-    def update_collections_referencing_this_form(self, form):
+    def _update_collections_referencing_this_form(self, form):
         """Update all collections that reference the input form in their
         ``contents`` value.
 
@@ -1257,6 +1212,12 @@ class Forms(Resources):
             else:
                 self.update_morpheme_references_of_forms(
                     matches, morpheme_delimiters, lexical_items=[form])
+
+    def form_is_foreign_word(self, form_model):
+        foreign_word_tag = self.db.get_foreign_word_tag()
+        if foreign_word_tag in form_model.tags:
+            return True
+        return False
 
 
 def update_has_changed_the_analysis(form, form_dict):

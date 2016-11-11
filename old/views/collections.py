@@ -93,7 +93,7 @@ class Collections(Resources):
             return h.add_pagination(query, python_search_params.get('paginator'))
         except h.JSONDecodeError:
             response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         except (OLDSearchParseError, Invalid) as e:
             response.status_int = 400
             return {'errors': e.unpack_errors()}
@@ -174,7 +174,7 @@ class Collections(Resources):
             return collection.get_full_dict()
         except h.JSONDecodeError:
             response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         except InvalidCollectionReferenceError as e:
             response.status_int = 400
             return {'error': u'Invalid collection reference error: there is no collection with id %d' % e.args[0]}
@@ -249,7 +249,7 @@ class Collections(Resources):
                             u'The update request failed because the submitted data were not new.'}
                 except h.JSONDecodeError:
                     response.status_int = 400
-                    return h.JSONDecodeErrorResponse
+                    return self.JSONDecodeErrorResponse
                 except CircularCollectionReferenceError as e:
                     response.status_int = 400
                     return {'error':

@@ -36,7 +36,7 @@ def fix_for_tests(request):
         user = request.dbsession.query(User).get(
             request.environ['test.authentication.id'])
         if user:
-            request.session['user'] = user
+            request.session['user'] = user.get_dict()
     # TODO: app_globals.application_settings ? ...
     # if request.environ.get('test.application_settings'):
     #     app_globals.application_settings = h.ApplicationSettings()

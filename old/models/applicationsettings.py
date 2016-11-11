@@ -1,10 +1,16 @@
 """ApplicationSettings model"""
 
+import logging
+import re
+import unicodedata
+
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
-from .meta import Base, now
-import logging
+
+from old.lib.utils import esc_RE_meta_chars
+from old.models.meta import Base, now
+
 
 log = logging.getLogger(__name__)
 
@@ -54,17 +60,24 @@ class ApplicationSettings(Base):
     morpheme_delimiters = Column(Unicode(255))
     punctuation = Column(UnicodeText)
     grammaticalities = Column(Unicode(255))
-    storage_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
-    storage_orthography = relation('Orthography',
+    storage_orthography_id = Column(
+        Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
+    storage_orthography = relation(
+        'Orthography',
         primaryjoin='ApplicationSettings.storage_orthography_id==Orthography.id')
-    input_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
-    input_orthography = relation('Orthography',
+    input_orthography_id = Column(
+        Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
+    input_orthography = relation(
+        'Orthography',
         primaryjoin='ApplicationSettings.input_orthography_id==Orthography.id')
-    output_orthography_id = Column(Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
-    output_orthography = relation('Orthography',
+    output_orthography_id = Column(
+        Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
+    output_orthography = relation(
+        'Orthography',
         primaryjoin='ApplicationSettings.output_orthography_id==Orthography.id')
     datetime_modified = Column(DateTime, default=now)
-    unrestricted_users = relation('User', secondary=ApplicationSettingsUser.__table__)
+    unrestricted_users = relation(
+        'User', secondary=ApplicationSettingsUser.__table__)
 
     def get_dict(self):
         """Return a Python dictionary representation of the ApplicationSettings.
@@ -97,3 +110,141 @@ class ApplicationSettings(Base):
             'unrestricted_users': self.get_mini_list(self.unrestricted_users)
         }
 
+    @property
+    def morpheme_delimiters_list(self):
+        return self..morpheme_delimiters.split(',')
+
+    @property
+    def morpheme_delimiters_inventory(self):
+        return Inventory(self.morpheme_delimiters_list)
+
+    @property
+    def punctuation_list(self):
+        return list(self.punctuation)
+
+    @property
+    def punctuation_inventory(self):
+        return Inventory(self.punctuation_list)
+
+    @property
+    def grammaticalities_list(self):
+        grammaticalities = self.grammaticalities
+        if grammaticalities:
+            return [''] + self.grammaticalities.split(',')
+        return ['']
+
+    @property
+    def storage_orthography_list(self):
+        if self.storage_orthography and self.storage_orthography.orthography:
+            return self.storage_orthography.orthography.split(',')
+        return []
+
+    def get_transcription_inventory(type_, dbsession):
+        """Return an ``Inventory`` instance for one of the transcription-type
+        attributes of forms, as indicated by ``type_``, which should be one of
+        'orthographic', 'broad_phonetic', 'narrow_phonetic', or
+        'morpheme_break'. The ``dbsession`` must be supplied.
+
+        foreign_word_narrow_phonetic_transcriptions, \
+        foreign_word_broad_phonetic_transcriptions, \
+        foreign_word_orthographic_transcriptions, \
+        foreign_word_morphemic_transcriptions = get_foreign_word_transcriptions()
+
+        self.narrow_phonetic_inventory = Inventory(
+            foreign_word_narrow_phonetic_transcriptions + [' '] + 
+            self.application_settings.narrow_phonetic_inventory.split(','))
+        self.broad_phonetic_inventory = Inventory(
+            foreign_word_broad_phonetic_transcriptions + [' '] + 
+            self.application_settings.broad_phonetic_inventory.split(','))
+        self.orthographic_inventory = Inventory(
+            foreign_word_orthographic_transcriptions + 
+            self.punctuation + [' '] + self.storage_orthography)
+        if self.application_settings.morpheme_break_is_orthographic:
+            self.morpheme_break_inventory = Inventory(
+                foreign_word_morphemic_transcriptions +
+                self.morpheme_delimiters + [' '] + self.storage_orthography)
+        else:
+            self.morpheme_break_inventory = Inventory(
+                foreign_word_morphemic_transcriptions + 
+                self.morpheme_delimiters + [' '] +
+                self.application_settings.phonemic_inventory.split(','))
+
+        """
+
+
+class Inventory:
+    """An inventory is a set of graphemes/polygraphs/characters. Initialization
+    requires a list.
+
+    This class should be the base class from which the Orthography class
+    inherits but I don't have time to implement that right now.
+    """
+    def __init__(self, input_list):
+        self.input_list = input_list
+        self._get_unicode_metadata(input_list)
+        self._set_regex_validator(input_list)
+        self._compile_regex_validator(self.regex_validator)
+
+    def _get_unicode_metadata(self, input_list):
+        self.inventory_with_unicode_metadata = [
+            self._get_names_and_code_points(g) for g in input_list]
+
+    def _get_names_and_code_points(self, graph):
+        return (graph,
+                self.get_unicode_names(graph),
+                self.get_unicode_code_points(graph))
+
+    def get_unicode_names(self, string):
+        """Returns a string of comma-delimited unicode character names corresponding
+        to the characters in the input string.
+        """
+        try:
+            return ', '.join([unicodedata.name(c, '<no name>') for c in
+                              string])
+        except TypeError:
+            return ', '.join([unicodedata.name(str(c), '<no name>')
+                              for c in string])
+        except UnicodeDecodeError:
+            return string
+
+    def get_unicode_code_points(self, string):
+        """Returns a string of comma-delimited unicode code points corresponding
+        to the characters in the input string.
+        """
+        return ', '.join(['U+%04X' % ord(c) for c in string])
+
+    def _set_regex_validator(self, input_list):
+        disj_patt = '|'.join([esc_RE_meta_chars(g) for g in input_list])
+        self.regex_validator = '^(%s)*$' % disj_patt
+
+    def _compile_regex_validator(self, regex_validator):
+        self.compiled_regex_validator = re.compile(regex_validator)
+
+    def get_input_list(self):
+        return self.input_list
+
+    def get_regex_validator(self, substr=False):
+        """Returns a regex that matches only strings composed of zero or more
+        of the graphemes in the inventory (plus the space character).
+        """
+        return self.regex_validator
+
+    def get_non_matching_substrings(self, string):
+        """Return a list of substrings of string that are not constructable
+        using the inventory.  This is useful for showing invalid substrings.
+        """
+        regex = '|'.join([esc_RE_meta_chars(g) for g in self.input_list])
+        regex = '(%s)+' % regex
+        patt = re.compile(regex)
+        list_ = patt.split(string)
+        non_matching_substrings = [
+            esc_RE_meta_chars(x) for x in list_[::2] if x]
+        return non_matching_substrings
+
+    def string_is_valid(self, string):
+        """Return False if string cannot be generated by concatenating the
+        elements of the orthography; otherwise, return True.
+        """
+        if self.compiled_regex_validator.match(string):
+            return True
+        return False

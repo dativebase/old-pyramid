@@ -4,6 +4,7 @@ import json
 from formencode.validators import Invalid
 from old.lib.schemata import LoginSchema, PasswordResetSchema
 import old.lib.helpers as h
+from old.views.resources import Resources
 from ..models import User, Page
 from pyramid.security import remember, forget
 from pyramid.view import view_config
@@ -18,7 +19,7 @@ def login(request):
         values = json.loads(request.body.decode(request.charset))
     except ValueError:
         request.response.status_int = 400
-        return h.JSONDecodeErrorResponse
+        return Resources.JSONDecodeErrorResponse
     try:
         result = schema.to_python(values)
     except Invalid as e:
@@ -76,7 +77,7 @@ def email_reset_password(request):
         values = json.loads(unicode(request.body, request.charset))
     except ValueError:
         request.response.status_int = 400
-        return h.JSONDecodeErrorResponse
+        return Resources.JSONDecodeErrorResponse
     try:
         result = schema.to_python(values)
     except Invalid as e:

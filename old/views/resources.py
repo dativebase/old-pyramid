@@ -6,6 +6,7 @@ from formencode.validators import Invalid
 import inflect
 
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from old.lib.dbutils import DBUtils
 import old.lib.helpers as h
 import old.lib.schemata as old_schemata
 import old.models as old_models
@@ -41,6 +42,7 @@ class Resources(abc.ABC):
 
     def __init__(self, request):
         self.request = request
+        self._db = None
         # Names
         self.collection_name = self.__class__.__name__.lower()
         self.member_name = self.inflect_p.singular_noun(self.collection_name)
@@ -51,10 +53,23 @@ class Resources(abc.ABC):
         self.schema_cls = getattr(old_schemata, self.schema_cls_name)
 
     @property
+    def db(self):
+        if not self._db:
+            self._db = DBUtils(self.request.dbsession,
+                               self.request.registry.settings)
+        return self._db
+
+    @property
     def query_builder(self):
         return SQLAQueryBuilder(
             self.request.dbsession, self.model_name,
             settings=self.request.registry.settings)
+
+    @property
+    def logged_in_user(self):
+        user_dict = self.request.session['user']
+        return self.request.dbsession.query(
+            old_models.User).get(user_dict['id'])
 
     ###########################################################################
     # Public CRUD(S) Methods
@@ -72,7 +87,7 @@ class Resources(abc.ABC):
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         state = h.get_state_object(
             values=values,
             dbsession=self.request.dbsession,
@@ -154,7 +169,7 @@ class Resources(abc.ABC):
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         state = h.get_state_object(
             values=values,
             dbsession=self.request.dbsession,
@@ -232,7 +247,7 @@ class Resources(abc.ABC):
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return h.JSONDecodeErrorResponse
+            return self.JSONDecodeErrorResponse
         try:
             sqla_query = self.query_builder.get_SQLA_query(
                 python_search_params.get('query'))
@@ -291,17 +306,23 @@ class Resources(abc.ABC):
             to ``True``, ``False``.
         """
         changed = False
-        update_data = self._get_update_data(data)
-        for attr, val in update_data.items():
-            if getattr(resource_model, attr) != val:
+        user_data = self._get_user_data(data)
+        for attr, val in user_data.items():
+            if self._distinct(attr, val, getattr(resource_model, attr)):
                 changed = True
                 break
         if changed:
-            create_data = self._get_create_data(data, update_data=update_data)
-            for attr, val in create_data.items():
+            for attr, val in self._get_update_data(user_data).items():
                 setattr(resource_model, attr, val)
             return resource_model
         return changed
+
+    def _distinct(self, attr, new_val, existing_val):
+        """Return true if ``new_val`` is distinct from ``existing_val``. The
+        ``attr`` value is provided so that certain attributes (e.g., m2m) can
+        have a special definition of "distinct".
+        """
+        return new_val != existing_val
 
     def _delete_impossible(self, resource_model):
         """Return something other than false in a sub-class if this particular
@@ -324,23 +345,92 @@ class Resources(abc.ABC):
         pass
 
     ###########################################################################
+    # Utilities --- should be in other co-super-class; from utils.py
+    ###########################################################################
+
+    def _filter_restricted_models(self, query):
+        user = self.logged_in_user
+        userIsUnrestricted_ = user_is_unrestricted(user, unrestricted_users)
+        if userIsUnrestricted_:
+            return query
+        else:
+            return filter_restricted_models_from_query(model_name, query, user)
+
+    ###########################################################################
     # Abstract Methods --- must be defined in subclasses
     ###########################################################################
 
     @abc.abstractmethod
-    def _get_create_data(self, data, update_data=None):
-        """Process the user-provided ``data`` dict, crucially returning a *new*
-        dict created from it which is ready for construction of a resource
-        model. The ``update_data`` param, if provided, is expected to be a dict
-        created by a call to ``self._get_update_data``; the idea is that
-        ``_get_update_data`` returns a subset of the full attributes needed to
-        create a new resource. This method usually just provides the
-        datetime_modified value.
-        """
-
-    @abc.abstractmethod
-    def _get_update_data(self, data):
+    def _get_user_data(self, data):
         """Process the user-provided ``data`` dict, crucially returning a *new*
         dict created from it which is ready for construction of a resource
         model.
         """
+
+    @abc.abstractmethod
+    def _get_create_data(self, data):
+        """Generate a dict representing a resource to be created; add any
+        creation-specific data. The ``data`` dict should be expected to be
+        unprocessed, i.e., a JSON-decoded dict from the request body.
+        """
+
+    @abc.abstractmethod
+    def _get_update_data(self, user_data):
+        """Generate a dict representing the updated state of a specific
+        resource. The ``user_data`` dict should be expected to be the output of
+        ``self._get_user_data(data)``.
+        """
+
+
+    def get_data_for_new_action(self, GET_params, getter_map, model_name_map,
+                                mandatory_attributes=[]):
+        """Return the data needed to create a new model or edit an existing one.
+
+        :param GET_params: the Pylons dict-like object containing the query
+            string parameters of the request.
+        :param dict getter_map: maps attribute names to functions that get the
+            relevant resources.
+        :param dict model_name_map: maps attribute names to the relevant model
+            name.
+        :param list mandatory_attributes: names of attributes whose values are
+            always included in the result
+        :returns: a dictionary from plural resource names to lists of resources.
+
+        If no GET parameters are provided (i.e., GET_params is empty), then
+        retrieve all data (using getter_map) return them.
+
+        If GET parameters are specified, then for each parameter whose value is
+        a non-empty string (and is not a valid ISO 8601 datetime), retrieve and
+        return the appropriate list of objects.
+
+        If the value of a GET parameter is a valid ISO 8601 datetime string,
+        retrieve and return the appropriate list of objects *only* if the
+        datetime param does *not* match the most recent datetime_modified value
+        of the relevant data store (i.e., model object).  This makes sense
+        because a non-match indicates that the requester has out-of-date data.
+        """
+        result = {key: [] for key in getter_map}
+        if GET_params:
+            for key in getter_map:
+                if key in mandatory_attributes:
+                    result[key] = getter_map[key]()
+                else:
+                    val = GET_params.get(key)
+                    if val:
+                        val_as_datetime_obj = h.datetime_string2datetime(val)
+                        if val_as_datetime_obj:
+                            most_recent_mod_time = self.db\
+                                .get_most_recent_modification_datetime(
+                                    model_name_map[key])
+                            if val_as_datetime_obj != most_recent_mod_time:
+                                result[key] = getter_map[key]()
+                        else:
+                            result[key] = getter_map[key]()
+        else:
+            for key in getter_map:
+                result[key] = getter_map[key]()
+        return result
+
+    JSONDecodeErrorResponse = {
+        'error': 'JSON decode error: the parameters provided were not valid'
+                 ' JSON.'}

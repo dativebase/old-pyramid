@@ -105,9 +105,42 @@ class TestFormsView(TestView):
             params = json.dumps(params)
             response = self.app.post(url('create'), params, self.json_headers,
                                      extra_environ)
-            resp = json.loads(response.body)
             resp = response.json_body
             restricted_form_id = resp['id']
+
+            # Create the unrestricted form.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test restricted tag transcription 2',
+                'translations': [{
+                    'transcription': 'test restricted tag translation 2',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ)
+            resp = response.json_body
+
+            # Expectation: the administrator, the default contributor (qua
+            # enterer) and the unrestricted my_contributor should all be able
+            # to view both forms. The viewer will only receive the unrestricted
+            # form.
+
+            # An administrator should be able to view both forms.
+            extra_environ = {'test.authentication.role': 'administrator',
+                             'test.application_settings': True}
+            response = self.app.get(url('index'), headers=self.json_headers,
+                                    extra_environ=extra_environ)
+            resp = response.json_body
+            assert len(resp) == 2
+            assert resp[0]['transcription'] == 'test restricted tag transcription'
+            assert resp[0]['morpheme_break_ids'] == None
+            assert resp[0]['morpheme_break_ids'] == None
+            assert resp[0]['translations'][0]['transcription'] == 'test restricted tag translation'
+            assert type(resp[0]['translations'][0]['id']) == type(1)
+            assert type(resp[0]['id']) == type(1)
+            assert response.content_type == 'application/json'
 
     def _tmp_test_index(self):
         """Tests that GET /forms returns an array of all forms and that order_by

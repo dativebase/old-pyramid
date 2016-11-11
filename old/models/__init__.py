@@ -1,8 +1,8 @@
 import re
+
 from sqlalchemy import engine_from_config, event
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import configure_mappers
+from sqlalchemy.orm import configure_mappers, sessionmaker
 import zope.sqlalchemy
 
 # import or define all models here to ensure they are attached to the

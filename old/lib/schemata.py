@@ -75,6 +75,8 @@ class ValidTranslations(FancyValidator):
                 u'grammaticality does not match any of the available options.'])
     }
 
+    accept_iterator = True
+
     def _to_python(self, value, state):
         def create_translation(dict_):
             translation = model.Translation()
@@ -278,7 +280,8 @@ class ValidOLDModelObject(FancyValidator):
             return None
         else:
             id = Int().to_python(value, state)
-            model_object = Session.query(getattr(model, self.model_name)).get(id)
+            model_object = state.dbsession.query(
+                getattr(model, self.model_name)).get(id)
             if model_object is None:
                 raise Invalid(self.message("invalid_model", state, id=id,
                     model_name_eng=h.camel_case2lower_space(self.model_name)),
