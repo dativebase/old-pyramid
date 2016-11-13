@@ -18,6 +18,8 @@ from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation
 from .meta import Base, now
+from old.models import Form, File, Collection
+
 
 class UserForm(Base):
 
@@ -28,6 +30,7 @@ class UserForm(Base):
     form_id = Column(Integer, ForeignKey('form.id'))
     user_id = Column(Integer, ForeignKey('user.id'))
     datetime_modified = Column(DateTime, default=now)
+
 
 class User(Base):
 
@@ -80,3 +83,27 @@ class User(Base):
 
     def get_full_dict(self):
         return self.get_dict()
+
+    def is_authorized_to_access_model(self, model_object, unrestricted_users):
+        """Return True if the user is authorized to access the model object.
+        Models tagged with the 'restricted' tag are only accessible to
+        administrators, their enterers and unrestricted users.
+        NOTE: previously named ``user_is_authorized_to_access_model``
+        """
+        if user.role == 'administrator':
+            return True
+        if isinstance(model_object, (Form, File, Collection)):
+            tags = model_object.tags
+            tag_names = [t.name for t in tags]
+            enterer_id = model_object.enterer_id
+        else:
+            model_backup_dict = model_object.get_dict()
+            tags = model_backup_dict['tags']
+            tag_names = [t['name'] for t in tags]
+            enterer_id = model_backup_dict['enterer'].get('id', None)
+        return (
+            not tags or
+            'restricted' not in tag_names or
+            user in unrestricted_users or
+            user.id == enterer_id
+        )

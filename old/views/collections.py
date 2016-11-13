@@ -130,7 +130,7 @@ class Collections(Resources):
            query string parameters that effect ordering and pagination.
 
         .. note::
-        
+
             ``GET /collections`` does not return the forms of the collections
             returned.  For that, a second request is required, i.e., to
             ``GET /collections/id`` with the relevant ``id`` value.
@@ -138,7 +138,7 @@ class Collections(Resources):
         """
         try:
             query = h.eagerload_collection(Session.query(Collection))
-            query = h.add_order_by(query, dict(request.GET), self.query_builder)
+            query = self.add_order_by(query, dict(request.GET), self.query_builder)
             query = h.filter_restricted_models('Collection', query)
             return h.add_pagination(query, dict(request.GET))
         except Invalid as e:

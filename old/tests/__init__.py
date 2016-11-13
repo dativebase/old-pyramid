@@ -34,7 +34,9 @@ import webtest
 
 from old import main
 import old.lib.helpers as h
+from old.lib.dbutils import get_model_names
 from old.models.meta import Base
+import old.models.modelbuilders as omb
 from old.views.tags import Tags
 from old.models import (
     get_engine,
@@ -138,14 +140,14 @@ class TestView(TestCase):
         session_factory = get_session_factory(engine)
         with transaction.manager:
             dbsession = get_tm_session(session_factory, transaction.manager)
-            h.create_OLD_directories(settings=self.settings)
-            languages = h.get_language_objects(self.settings['here'],
+            h.create_OLD_directories(self.settings)
+            languages = omb.get_language_objects(self.settings['here'],
                                                truncated=True)
-            administrator = h.generate_default_administrator(
+            administrator = omb.generate_default_administrator(
                 settings=self.settings)
-            contributor = h.generate_default_contributor(
+            contributor = omb.generate_default_contributor(
                 settings=self.settings)
-            viewer = h.generate_default_viewer(settings=self.settings)
+            viewer = omb.generate_default_viewer(settings=self.settings)
             Base.metadata.drop_all(bind=dbsession.bind, checkfirst=True)
             Base.metadata.create_all(bind=dbsession.bind, checkfirst=True)
             dbsession.add_all(languages + [administrator, contributor, viewer])
@@ -159,7 +161,7 @@ class TestView(TestCase):
         """
         with transaction.manager:
             dbsession = self.get_dbsession()
-            for model_name in h.get_model_names():
+            for model_name in get_model_names():
                 if model_name not in retain:
                     model = getattr(old_models, model_name)
                     if not isinstance(model, old_models.Model):
@@ -215,9 +217,9 @@ class TestView(TestCase):
         self.json_headers = {'Content-Type': 'application/json'}
 
         self.here = self.settings['here']
-        self.files_path = h.get_OLD_directory_path(
+        self.files_path = h.get_old_directory_path(
             'files', settings=self.settings)
-        self.reduced_files_path = h.get_OLD_directory_path(
+        self.reduced_files_path = h.get_old_directory_path(
             'reduced_files', settings=self.settings)
         self.test_files_path = os.path.join(
             self.here, 'old', 'tests', 'data', 'files')
@@ -225,7 +227,7 @@ class TestView(TestCase):
             'create_reduced_size_file_copies', False))
         self.preferred_lossy_audio_format = self.settings.get(
             'preferred_lossy_audio_format', 'ogg')
-        self.corpora_path = h.get_OLD_directory_path(
+        self.corpora_path = h.get_old_directory_path(
             'corpora', settings=self.settings)
         self.test_datasets_path = os.path.join(
             self.here, 'old', 'tests', 'data', 'datasets')
@@ -237,15 +239,15 @@ class TestView(TestCase):
             self.test_datasets_path, 'loremipsum_1000.txt')
         self.loremipsum10000_path = os.path.join(
             self.test_datasets_path, 'loremipsum_10000.txt')
-        self.users_path = h.get_OLD_directory_path(
+        self.users_path = h.get_old_directory_path(
             'users', settings=self.settings)
-        self.morphologies_path = h.get_OLD_directory_path(
+        self.morphologies_path = h.get_old_directory_path(
             'morphologies', settings=self.settings)
-        self.morphological_parsers_path = h.get_OLD_directory_path(
+        self.morphological_parsers_path = h.get_old_directory_path(
             'morphological_parsers', settings=self.settings)
-        self.phonologies_path = h.get_OLD_directory_path(
+        self.phonologies_path = h.get_old_directory_path(
             'phonologies', settings=self.settings)
-        self.morpheme_language_models_path = h.get_OLD_directory_path(
+        self.morpheme_language_models_path = h.get_old_directory_path(
             'morpheme_language_models', settings=self.settings)
         self.test_phonologies_path = os.path.join(
             self.here, 'old', 'tests', 'data', 'phonologies')

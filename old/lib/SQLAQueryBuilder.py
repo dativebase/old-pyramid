@@ -218,13 +218,15 @@ class SQLAQueryBuilder(object):
     """
 
     def __init__(self, dbsession, model_name='Form', primary_key='id',
-            **kwargs):
+                 settings=None):
         self.dbsession = dbsession
         self.errors = {}
         self.joins = []
         self.model_name = model_name  # The name of the target model, i.e., the one we are querying, e.g., 'Form'
         self.primary_key = primary_key    # Some models have a primary key other than 'id' ...
-        self.RDBMSName = get_RDBMS_name(**kwargs) # i.e., mysql or sqlite
+        if not settings:
+            settings = {}
+        self.RDBMSName = get_RDBMS_name(settings) # i.e., mysql or sqlite
 
     def get_SQLA_query(self, python):
         self.clear_errors()

@@ -2,11 +2,17 @@ import abc
 import json
 import logging
 
+from formencode.schema import Schema
 from formencode.validators import Invalid
 import inflect
+from sqlalchemy.sql import or_, not_, desc, asc
 
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
-from old.lib.dbutils import DBUtils
+from old.lib.dbutils import (
+    add_pagination,
+    DBUtils,
+    _filter_restricted_models_from_query,
+)
 import old.lib.helpers as h
 import old.lib.schemata as old_schemata
 import old.models as old_models
@@ -88,9 +94,10 @@ class Resources(abc.ABC):
         except ValueError:
             self.request.response.status_int = 400
             return self.JSONDecodeErrorResponse
-        state = h.get_state_object(
-            values=values,
-            dbsession=self.request.dbsession,
+        # TODO/NOTE: in corpus validation, the state needs a settings dict attr
+        state = SchemaState(
+            full_dict=values,
+            db=self.db,
             logged_in_user=self.request.session.get('user', {}))
         try:
             data = schema.to_python(values, state)
@@ -126,9 +133,9 @@ class Resources(abc.ABC):
             self.request.dbsession.query(self.model_cls))
         get_params = dict(self.request.GET)
         try:
-            query = h.add_order_by(query, get_params, self.query_builder)
+            query = self.add_order_by(query, get_params)
             query = self._filter_query(query)
-            result = h.add_pagination(query, get_params)
+            result = add_pagination(query, get_params)
         except Invalid as error:
             self.request.response.status_int = 400
             return {'errors': error.unpack_errors()}
@@ -170,9 +177,9 @@ class Resources(abc.ABC):
         except ValueError:
             self.request.response.status_int = 400
             return self.JSONDecodeErrorResponse
-        state = h.get_state_object(
-            values=values,
-            dbsession=self.request.dbsession,
+        state = SchemaState(
+            full_dict=values,
+            db=self.db,
             logged_in_user=self.request.session.get('user', {}),
             id=id_
         )
@@ -264,7 +271,7 @@ class Resources(abc.ABC):
                              'invalid database query'}
         query = self._eagerload_model(sqla_query)
         query = self._filter_query(query)
-        return h.add_pagination(query, python_search_params.get('paginator'))
+        return add_pagination(query, python_search_params.get('paginator'))
 
     ###########################################################################
     # Private Methods for Override: redefine in views for custom behaviour
@@ -350,11 +357,11 @@ class Resources(abc.ABC):
 
     def _filter_restricted_models(self, query):
         user = self.logged_in_user
-        userIsUnrestricted_ = user_is_unrestricted(user, unrestricted_users)
-        if userIsUnrestricted_:
+        if self.db.user_is_unrestricted(user):
             return query
         else:
-            return filter_restricted_models_from_query(model_name, query, user)
+            return _filter_restricted_models_from_query(self.model_name, query,
+                                                        user)
 
     ###########################################################################
     # Abstract Methods --- must be defined in subclasses
@@ -434,3 +441,60 @@ class Resources(abc.ABC):
     JSONDecodeErrorResponse = {
         'error': 'JSON decode error: the parameters provided were not valid'
                  ' JSON.'}
+
+    unauthorized_msg = {'error': 'You are not authorized to access this'
+                                 ' resource.'}
+
+    def add_order_by(self, query, order_by_params, primary_key='id'):
+        """Add an ORDER BY clause to the query using the get_SQLA_order_by
+        method of the instance's query_builder (if possible) or using a default
+        ORDER BY <primary_key> ASC.
+        """
+        if (order_by_params and order_by_params.get('order_by_model') and
+                order_by_params.get('order_by_attribute') and
+                order_by_params.get('order_by_direction')):
+            order_by_params = old_schemata.OrderBySchema.to_python(
+                order_by_params)
+            order_by_params = [
+                order_by_params['order_by_model'],
+                order_by_params['order_by_attribute'],
+                order_by_params['order_by_direction']
+            ]
+            order_by_expression = self.query_builder.get_SQLA_order_by(
+                order_by_params, primary_key)
+            self.query_builder.clear_errors()
+            return query.order_by(order_by_expression)
+        else:
+            model_ = getattr(old_models, self.query_builder.model_name)
+            return query.order_by(asc(getattr(model_, primary_key)))
+
+    def get_search_parameters(self):
+        """Given an SQLAQueryBuilder instance, return (relative to the model being
+        searched) the list of attributes and their aliases and licit relations
+        relevant to searching.
+        """
+        return {
+            'attributes':
+                self.query_builder.schema[self.query_builder.model_name],
+            'relations': self.query_builder.relations
+        }
+
+
+class SchemaState:
+    """Empty class used to create a state instance with a 'full_dict' attribute
+    that points to a dict of values being validated by a schema. For example,
+    the call to FormSchema().to_python in controllers/forms.py requires this
+    State() instance as its second argument in order to make the inventory-based
+    validators work correctly (see, e.g., ValidOrthographicTranscription).
+    """
+
+    def __init__(self, full_dict=None, db=None, logged_in_user=None,
+                 **kwargs):
+        """Return a State instance with some special attributes needed in the
+        forms and oldcollections controllers.
+        """
+        self.full_dict = full_dict
+        self.db = db
+        self.user = logged_in_user
+        for key, val in kwargs.items():
+            setattr(self, key, val)

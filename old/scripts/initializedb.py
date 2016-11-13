@@ -46,6 +46,7 @@ from ..models import Tag
 from ..models import Translation
 from ..models import User
 import old.lib.helpers as h
+import old.models.modelbuilders as omb
 
 log = logging.getLogger(__name__)
 
@@ -80,19 +81,19 @@ def main(argv=sys.argv):
         # Create the ``store`` directory and those for file, analysis and
         # corpora objects and their subdirectories.  See ``lib.utils.py`` for
         # details.
-        h.create_OLD_directories(settings=settings)
+        h.create_OLD_directories(settings)
 
         # ISO-639-3 Language data for the languages table
         log.info('Retrieving ISO-639-3 languages data.')
-        languages = h.get_language_objects(settings['here'])
+        languages = omb.get_language_objects(settings['here'])
 
         # Get default users.
         log.info('Creating a default administrator, contributor and viewer.')
-        administrator = h.generate_default_administrator(
+        administrator = omb.generate_default_administrator(
             settings=settings)
-        contributor = h.generate_default_contributor(
+        contributor = omb.generate_default_contributor(
             settings=settings)
-        viewer = h.generate_default_viewer(settings=settings)
+        viewer = omb.generate_default_viewer(settings=settings)
 
         # If we are running tests, make sure the test db contains only language
         # data.
@@ -125,20 +126,20 @@ def main(argv=sys.argv):
 
             # Get default home & help pages.
             log.info("Creating default home and help pages.")
-            homepage = h.generate_default_home_page()
-            helppage = h.generate_default_help_page()
+            homepage = omb.generate_default_home_page()
+            helppage = omb.generate_default_help_page()
 
             # Get default application settings.
             log.info("Generating default application settings.")
-            application_settings = h.generate_default_application_settings()
+            application_settings = omb.generate_default_application_settings()
 
             # Get default tags and categories
             log.info("Creating some useful tags and categories.")
-            restricted_tag = h.generate_restricted_tag()
-            foreign_word_tag = h.generate_foreign_word_tag()
-            S = h.generate_s_syntactic_category()
-            N = h.generate_n_syntactic_category()
-            V = h.generate_v_syntactic_category()
+            restricted_tag = omb.generate_restricted_tag()
+            foreign_word_tag = omb.generate_foreign_word_tag()
+            S = omb.generate_s_syntactic_category()
+            N = omb.generate_n_syntactic_category()
+            V = omb.generate_v_syntactic_category()
 
             # Initialize the database
             log.info("Adding defaults.")

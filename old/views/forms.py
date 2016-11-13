@@ -56,7 +56,7 @@ class Forms(Resources):
         """
         # HTTP Cache Headers. Browsers can cache GET /forms requests if
         # they haven't changed on the server.
-        last_modified = h.get_last_modified(result)
+        last_modified = self.db.get_last_modified(result)
         if last_modified:
             self.request.response.last_modified = last_modified
             self.request.response.cache_control = 'private, max-age=31536000'
@@ -121,12 +121,12 @@ class Forms(Resources):
 
         .. note::
 
-           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for the
+           See :func:`self.add_order_by` and :func:`utils.add_pagination` for the
            query string parameters that effect ordering and pagination.
         """
         query = h.eagerload_form(self.request.dbsession.query(Form))
         get_params = dict(self.request.GET)
-        query = h.add_order_by(query, get_params, self.query_builder)
+        query = self.add_order_by(query, get_params, self.query_builder)
         query = self._filter_restricted_models('Form', query)
         try:
             result = h.add_pagination(query, get_params)
@@ -1218,6 +1218,26 @@ class Forms(Resources):
         if foreign_word_tag in form_model.tags:
             return True
         return False
+
+    def is_lexical(form):
+        """Return True if the input form is lexical, i.e, if neither its
+        morpheme break nor its morpheme gloss lines contain the space character
+        or any of the morpheme delimiters.  Note: designed to work on dict
+        representations of forms also.
+        """
+        delimiters = self.db.get_morpheme_delimiters() + [' ']
+        try:
+            return (bool(form.morpheme_break) and
+                    bool(form.morpheme_gloss) and not (
+                        set(delimiters) & set(form.morpheme_break) and
+                        set(delimiters) & set(form.morpheme_gloss)))
+        except AttributeError:
+            return (bool(form['morpheme_break']) and
+                    bool(form['morpheme_gloss']) and not (
+                        set(delimiters) & set(form['morpheme_break']) and
+                        set(delimiters) & set(form['morpheme_gloss'])))
+        except:
+            return False
 
 
 def update_has_changed_the_analysis(form, form_dict):
