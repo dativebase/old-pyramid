@@ -45,19 +45,12 @@ from old.models import (
 )
 import old.models as old_models
 
-__all__ = ['TestView', 'url', 'add_SEARCH_to_web_test_valid_methods', 'poll']
+__all__ = ['TestView', 'add_SEARCH_to_web_test_valid_methods', 'poll']
 
 
 # TODO: how to initialize the test database?
 # In Pylons, we did:
 # SetupCommand('setup-app').run([pylons.test.pylonsapp.config['__file__']])
-
-
-def url(route_name, **kwargs):
-    registry = get_current_registry()
-    request = testing.DummyRequest()
-    request.registry = registry
-    return request.route_url(route_name, **kwargs)
 
 
 def add_SEARCH_to_web_test_valid_methods():
@@ -135,14 +128,11 @@ class TestView(TestCase):
         self.transaction = transaction
 
         # Create the database tables
-        # SetupCommand('setup-app').run([pylons.test.pylonsapp.config['__file__']])
-        engine = get_engine(self.settings)
-        session_factory = get_session_factory(engine)
         with transaction.manager:
-            dbsession = get_tm_session(session_factory, transaction.manager)
+            dbsession = self.get_dbsession()
             h.create_OLD_directories(self.settings)
             languages = omb.get_language_objects(self.settings['here'],
-                                               truncated=True)
+                                                 truncated=True)
             administrator = omb.generate_default_administrator(
                 settings=self.settings)
             contributor = omb.generate_default_contributor(

@@ -19,6 +19,7 @@
 
 """
 
+from collections import defaultdict
 import logging
 import re
 import json
@@ -29,6 +30,7 @@ from sqlalchemy import bindparam
 from sqlalchemy.sql import asc, or_
 from sqlalchemy.orm import subqueryload
 
+from old.lib.dbutils import get_last_modified
 import old.lib.helpers as h
 from old.lib.schemata import FormSchema, FormIdsSchema
 from old.lib.SQLAQueryBuilder import OLDSearchParseError
@@ -48,15 +50,21 @@ class Forms(Resources):
     REST Controller styled on the Atom Publishing Protocol.
     """
 
-    # TODO: integrate this
-    def _headers_control_FOR_FORMS(self, result):
-        """Take actions based on header values and/or modify headers. If
-        something other than ``False`` is returned, that will be the response.
-        Useful for Last-Modified/If-Modified-Since caching, e.g., in Forms view.
+    # Index
+
+    def _filter_query(self, query_obj, **kwargs):
+        """Depending on the unrestrictedness of the user and the
+        unrestrictedness of the forms in the query, filter it, or not.
+        """
+        return self._filter_restricted_models(query_obj)
+
+    def _headers_control(self, result):
+        """Set Last-Modified in response header and return 304 if the requester
+        already has an up-to-date cache of the results of this call to index/
         """
         # HTTP Cache Headers. Browsers can cache GET /forms requests if
         # they haven't changed on the server.
-        last_modified = self.db.get_last_modified(result)
+        last_modified = get_last_modified(result)
         if last_modified:
             self.request.response.last_modified = last_modified
             self.request.response.cache_control = 'private, max-age=31536000'
@@ -67,112 +75,6 @@ class Forms(Resources):
             self.request.response.status_int = 304
             return ''
         return False
-
-    def search(self):
-        """Return the list of form resources matching the input JSON query.
-
-        :URL: ``SEARCH /forms`` (or ``POST /forms/search``)
-        :request body: A JSON object of the form::
-
-                {"query": {"filter": [ ... ], "order_by": [ ... ]},
-                 "paginator": { ... }}
-
-            where the ``order_by`` and ``paginator`` attributes are optional.
-        """
-        try:
-            python_search_params = json.loads(
-                self.request.body.decode(self.request.charset))
-        except ValueError:
-            self.request.response.status_int = 400
-            return self.JSONDecodeErrorResponse
-        try:
-            sqla_query = self.query_builder.get_SQLA_query(
-                python_search_params.get('query'))
-        except (OLDSearchParseError, Invalid) as error:
-            self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
-        except Exception as error:  # FIX: too general exception
-            LOGGER.warning('%s\'s filter expression (%s) raised an unexpected'
-                           ' exception: %s.',
-                           h.get_user_full_name(self.request.session['user']),
-                           self.request.body, error)
-            self.request.response.status_int = 400
-            return {'error': 'The specified search parameters generated an'
-                             'invalid database query'}
-        query = h.eagerload_form(sqla_query)
-        query = self._filter_restricted_models('Form', sqla_query)
-        return h.add_pagination(query, python_search_params.get('paginator'))
-
-    def new_search(self):
-        """Return the data necessary to search the form resources.
-
-        :URL: ``GET /forms/new_search``
-        :returns: ``{"search_parameters": {"attributes": { ... }, "relations": { ... }}``
-        """
-        return {'search_parameters':
-                h.get_search_parameters(self.query_builder)}
-
-    def index(self):
-        """Get all form resources.
-
-        :URL: ``GET /forms`` with optional query string parameters for ordering
-            and pagination.
-        :returns: a list of all form resources.
-
-        .. note::
-
-           See :func:`self.add_order_by` and :func:`utils.add_pagination` for the
-           query string parameters that effect ordering and pagination.
-        """
-        query = h.eagerload_form(self.request.dbsession.query(Form))
-        get_params = dict(self.request.GET)
-        query = self.add_order_by(query, get_params, self.query_builder)
-        query = self._filter_restricted_models('Form', query)
-        try:
-            result = h.add_pagination(query, get_params)
-        except Invalid as error:
-            self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
-        # HTTP Cache Headers. Browsers can cache GET /forms requests if
-        # they haven't changed on the server.
-        last_modified = h.get_last_modified(result)
-        if last_modified:
-            self.request.response.last_modified = last_modified
-            self.request.response.cache_control = 'private, max-age=31536000'
-        if_modified_since = self.request.if_modified_since
-        if (last_modified and if_modified_since and
-                last_modified == if_modified_since):
-            # In this case, the browser will use its cached response.
-            self.request.response.status_int = 304
-            return ''
-        return result
-
-    # @h.authorize(['administrator', 'contributor'])
-    def create_(self):
-        """Create a new form resource and return it.
-
-        :URL: ``POST /forms``
-        :request body: JSON object representing the form to create.
-        :returns: the newly created form.
-        """
-        schema = FormSchema()
-        try:
-            values = json.loads(self.request.body.decode(self.request.charset))
-        except ValueError:
-            self.request.response.status_int = 400
-            return self.JSONDecodeErrorResponse
-        state = h.get_state_object(values)
-        try:
-            data = schema.to_python(values, state)
-        except Invalid as error:
-            self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
-        form = self.create_new_form(data)
-        self.request.dbsession.add(form)
-        self.request.dbsession.flush()
-        # update_application_settings_if_form_is_foreign_word(form)
-        self.update_forms_containing_this_form_as_morpheme(form)
-        return form
 
     def _post_create(self, form_model):
         """Create the morphological analysis-related attributes on the form
@@ -188,20 +90,19 @@ class Forms(Resources):
         ) = self.compile_morphemic_analysis(form_model)
         self.update_forms_containing_this_form_as_morpheme(form_model)
 
-    # @h.authorize(['administrator', 'contributor'])
-    def new(self):
-        """Return the data necessary to create a new form.
-
-        :URL: ``GET /forms/new`` with optional query string parameters
-        :returns: A dictionary of lists of resources
-
-        .. note::
-
-           See :func:`get_new_edit_form_data` to understand how the query string
-           parameters can affect the contents of the lists in the returned
-           dictionary.
+    def _get_new_edit_collections(self):
+        """Returns the names of the collections that are required in order to
+        create a new, or edit an existing, form.
         """
-        return self.get_new_edit_form_data(self.request.GET)
+        return (
+            'grammaticalities',
+            'elicitation_methods',
+            'tags',
+            'syntactic_categories',
+            'speakers',
+            'users',
+            'sources'
+        )
 
     # @h.authorize(['administrator', 'contributor'])
     def update(self):
@@ -324,7 +225,7 @@ class Forms(Resources):
 
            This action can be thought of as a combination of
            :func:`FormsController.show` and :func:`FormsController.new`.  See
-           :func:`get_new_edit_form_data` to understand how the query string
+           :func:`_get_new_edit_data` to understand how the query string
            parameters can affect the contents of the lists in the ``data``
            dictionary.
         """
@@ -338,7 +239,7 @@ class Forms(Resources):
                 self.request.session['user'], form, unrestricted_users):
             self.request.response.status_int = 403
             return h.unauthorized_msg
-        return {'data': self.get_new_edit_form_data(self.request.GET),
+        return {'data': self._get_new_edit_data(self.request.GET),
                 'form': form}
 
     def history(self):
@@ -523,76 +424,6 @@ class Forms(Resources):
             self.request.dbsession.add_all(formbackup_buffer)
             self.request.dbsession.flush()
         return [f['id_'] for f in form_buffer]
-
-    def get_new_edit_form_data(self, get_params):
-        """Return the data necessary to create a new OLD form or update an
-        existing one.
-
-        :param get_params: the ``request.GET`` dictionary-like object generated
-            by Pylons which contains the query string parameters of the request.
-        :returns: A dictionary whose values are lists of objects needed to
-            create or update forms.
-
-        If ``get_params`` has no keys, then return all data, i.e.,
-        grammaticalities, speakers, etc.  If ``get_params`` does have keys,
-        then for each key whose value is a non-empty string (and not a valid
-        ISO 8601 datetime) add the appropriate list of objects to the return
-        dictionary.  If the value of a key is a valid ISO 8601 datetime string,
-        add the corresponding list of objects *only* if the datetime does *not*
-        match the most recent ``datetime_modified`` value of the resource.
-        That is, a non-matching datetime indicates that the requester has
-        out-of-date data.
-        """
-        # Map param names to the OLD model objects from which they are derived.
-        param_name2model_name = {
-            'grammaticalities': 'ApplicationSettings',
-            'elicitation_methods': 'ElicitationMethod',
-            'tags': 'Tag',
-            'syntactic_categories': 'SyntacticCategory',
-            'speakers': 'Speaker',
-            'users': 'User',
-            'sources': 'Source'
-        }
-        # map_ maps param names to functions that retrieve the appropriate data
-        # from the db.
-        map_ = {
-            'grammaticalities': h.get_grammaticalities,
-            'elicitation_methods': h.get_mini_dicts_getter('ElicitationMethod'),
-            'tags': h.get_mini_dicts_getter('Tag'),
-            'syntactic_categories':
-                h.get_mini_dicts_getter('SyntacticCategory'),
-            'speakers': h.get_mini_dicts_getter('Speaker'),
-            'users': h.get_mini_dicts_getter('User'),
-            'sources': h.get_mini_dicts_getter('Source')
-        }
-        # result is initialized as a dict with empty list values.
-        result = dict([(key, []) for key in map_])
-        # There are GET params, so we are selective in what we return.
-        if get_params:
-            for key in map_:
-                val = get_params.get(key)
-                # Proceed so long as val is not an empty string.
-                if val:
-                    val_as_datetime_obj = h.datetime_string2datetime(val)
-                    if val_as_datetime_obj:
-                        # Value of param is an ISO 8601 datetime string that
-                        # does not match the most recent datetime_modified of
-                        # the relevant model in the db: therefore we return a
-                        # list of objects/dicts. If the datetimes do match,
-                        # this indicates that the requester's own stores are
-                        # up-to-date so we return nothing.
-                        if (val_as_datetime_obj !=
-                                h.get_most_recent_modification_datetime(
-                                    param_name2model_name[key])):
-                            result[key] = map_[key]()
-                    else:
-                        result[key] = map_[key]()
-        # There are no GET params, so we get everything from the db and return
-        # it.
-        else:
-            for key in map_:
-                result[key] = map_[key]()
-        return result
 
     def backup_form(self, form_dict):
         """Backup a form.
@@ -1171,7 +1002,7 @@ class Forms(Resources):
             update.
         :returns: ``None``
         """
-        if h.is_lexical(form):
+        if self.is_lexical(form):
             # Here we construct the query to get all forms that may have been
             # affected by the change to the lexical item (i.e., form).
             morpheme_delimiters = h.get_morpheme_delimiters()
@@ -1190,7 +1021,7 @@ class Forms(Resources):
             matches_query = self.request.dbsession.query(Form).options(
                 subqueryload(Form.syntactic_category))
             # Updates entail a wider range of possibly affected forms
-            if previous_version and h.is_lexical(previous_version):
+            if previous_version and self.is_lexical(previous_version):
                 if previous_version['morpheme_break'] != form.morpheme_break:
                     morpheme_patt_pv = '%s%s%s' % (
                         start_patt, previous_version['morpheme_break'],
@@ -1219,7 +1050,7 @@ class Forms(Resources):
             return True
         return False
 
-    def is_lexical(form):
+    def is_lexical(self, form):
         """Return True if the input form is lexical, i.e, if neither its
         morpheme break nor its morpheme gloss lines contain the space character
         or any of the morpheme delimiters.  Note: designed to work on dict

@@ -1,4 +1,5 @@
 import abc
+from collections import defaultdict, namedtuple
 import json
 import logging
 
@@ -12,6 +13,7 @@ from old.lib.dbutils import (
     add_pagination,
     DBUtils,
     _filter_restricted_models_from_query,
+    get_eagerloader
 )
 import old.lib.helpers as h
 import old.lib.schemata as old_schemata
@@ -19,6 +21,11 @@ import old.models as old_models
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+# ResCol is a resource collection object factory. Holds the relevant model name
+# and instance getter for a given resource collection name.
+ResCol = namedtuple('ResCol', ['model_name', 'getter'])
 
 
 class Resources(abc.ABC):
@@ -49,6 +56,7 @@ class Resources(abc.ABC):
     def __init__(self, request):
         self.request = request
         self._db = None
+        self._logged_in_user = None
         # Names
         self.collection_name = self.__class__.__name__.lower()
         self.member_name = self.inflect_p.singular_noun(self.collection_name)
@@ -73,9 +81,11 @@ class Resources(abc.ABC):
 
     @property
     def logged_in_user(self):
-        user_dict = self.request.session['user']
-        return self.request.dbsession.query(
-            old_models.User).get(user_dict['id'])
+        if not self._logged_in_user:
+            user_dict = self.request.session['user']
+            self._logged_in_user = self.request.dbsession.query(
+                old_models.User).get(user_dict['id'])
+        return self._logged_in_user
 
     ###########################################################################
     # Public CRUD(S) Methods
@@ -108,7 +118,7 @@ class Resources(abc.ABC):
         self.request.dbsession.add(resource)
         self.request.dbsession.flush()
         self._post_create(resource)
-        return resource
+        return resource.get_dict()
 
     # @h.authorize(['administrator', 'contributor'])
     def new(self):
@@ -116,18 +126,18 @@ class Resources(abc.ABC):
         :URL: ``GET /<resource_collection_name>/new``.
         :returns: a dict containing the related resources necessary to create a
             new resource of this type.
+        .. note::
+           See :func:`_get_new_edit_data` to understand how the query string
+           parameters can affect the contents of the lists in the returned
+           dictionary.
         """
-        return {}
+        return self._get_new_edit_data(self.request.GET)
 
     def index(self):
         """Get all resources.
         :URL: ``GET /<resource_collection_name>`` with optional query string
             parameters for ordering and pagination.
         :returns: a JSON-serialized array of resources objects.
-        .. note::
-
-           See :func:`utils.add_order_by` and :func:`utils.add_pagination` for
-           the query string parameters that effect ordering and pagination.
         """
         query = self._eagerload_model(
             self.request.dbsession.query(self.model_cls))
@@ -273,18 +283,26 @@ class Resources(abc.ABC):
         query = self._filter_query(query)
         return add_pagination(query, python_search_params.get('paginator'))
 
+    def new_search_(self):
+        """Return the data necessary to search over this type of resource.
+        :URL: ``GET /forms/<resource_collection_name>``
+        :returns: ``{"search_parameters": {
+            "attributes": { ... }, "relations": { ... }}``
+        """
+        return {'search_parameters':
+                self.get_search_parameters(self.query_builder)}
+
     ###########################################################################
     # Private Methods for Override: redefine in views for custom behaviour
     ###########################################################################
 
     def _eagerload_model(self, query_obj):
         """Override this in a subclass with model-specific eager loading."""
-        return query_obj
+        return get_eagerloader(self.model_name)(query_obj)
 
     def _filter_query(self, query_obj, **kwargs):
         """Override this in a subclass with model-specific query filtering.
         E.g., in the forms view::
-
             >>> return h.filter_restricted_models(self.model_name, query_obj)
         """
         return query_obj
@@ -351,6 +369,72 @@ class Resources(abc.ABC):
         """
         pass
 
+    def _get_new_edit_data(self, get_params):
+        """Return a dict containing the data (related models) necessary to
+        create a new (or edit an existing) resource model of the given type.
+        :param get_params: the ``request.GET`` dictionary-like object generated
+            by Pylons which contains the query string parameters of the request.
+        :returns: A dictionary whose values are lists of objects needed to
+            create or update forms.
+        If ``get_params`` has no keys, then return all collections encoded in
+        ``self._get_new_edit_collections()``. If ``get_params`` does have keys,
+        then for each key whose value is a non-empty string (and not a valid
+        ISO 8601 datetime) add the appropriate list of objects to the return
+        dictionary. If the value of a key is a valid ISO 8601 datetime string,
+        add the corresponding list of objects *only* if the datetime does *not*
+        match the most recent ``datetime_modified`` value of the resource.
+        That is, a non-matching datetime indicates that the requester has
+        out-of-date data.
+        """
+        result = {}
+        for collection in self._get_new_edit_collections():
+            result[collection] = []
+            rescol = self.resource_collections[collection]
+            if collection in self._get_mandatory_collections():
+                result[collection] = rescol.getter()
+            # There are GET params, so we are selective in what we return.
+            elif get_params:
+                val = get_params.get(collection)
+                # Proceed so long as val is not an empty string.
+                if val:
+                    val_as_datetime_obj = h.datetime_string2datetime(val)
+                    if val_as_datetime_obj:
+                        # Value of param is an ISO 8601 datetime string that
+                        # does not match the most recent datetime_modified of
+                        # the relevant model in the db: therefore we return a
+                        # list of objects/dicts. If the datetimes do match,
+                        # this indicates that the requester's own stores are
+                        # up-to-date so we return nothing.
+                        if (val_as_datetime_obj !=
+                                self.db.get_most_recent_modification_datetime(
+                                    rescol.model_name)):
+                            result[collection] = rescol.getter()
+                    else:
+                        result[collection] = rescol.getter()
+            # There are no GET params, so we get everything from the db and
+            # return it.
+            else:
+                for collection, rescol in self.resource_collections.items():
+                    result[collection] = rescol.getter()
+        return dict(result)
+
+    def _get_new_edit_collections(self):
+        """Return a sequence of strings representing the names of the
+        collections (typically resource collections) that are required in order
+        to create a new, or edit an existing, resource of the given type. For
+        many resources, an empty typle is fine, but for others an override
+        returning a tuple of collection names from the keys of
+        ``self.resource_collections`` will be required.
+        """
+        return ()
+
+    def _get_mandatory_collections(self):
+        """Return a subset of the return value of
+        ``self._get_new_edit_collections`` indicating those collections that
+        should always be returned in their entirety.
+        """
+        return ()
+
     ###########################################################################
     # Utilities --- should be in other co-super-class; from utils.py
     ###########################################################################
@@ -363,80 +447,34 @@ class Resources(abc.ABC):
             return _filter_restricted_models_from_query(self.model_name, query,
                                                         user)
 
-    ###########################################################################
-    # Abstract Methods --- must be defined in subclasses
-    ###########################################################################
-
-    @abc.abstractmethod
-    def _get_user_data(self, data):
-        """Process the user-provided ``data`` dict, crucially returning a *new*
-        dict created from it which is ready for construction of a resource
-        model.
-        """
-
-    @abc.abstractmethod
-    def _get_create_data(self, data):
-        """Generate a dict representing a resource to be created; add any
-        creation-specific data. The ``data`` dict should be expected to be
-        unprocessed, i.e., a JSON-decoded dict from the request body.
-        """
-
-    @abc.abstractmethod
-    def _get_update_data(self, user_data):
-        """Generate a dict representing the updated state of a specific
-        resource. The ``user_data`` dict should be expected to be the output of
-        ``self._get_user_data(data)``.
-        """
-
-
-    def get_data_for_new_action(self, GET_params, getter_map, model_name_map,
-                                mandatory_attributes=[]):
-        """Return the data needed to create a new model or edit an existing one.
-
-        :param GET_params: the Pylons dict-like object containing the query
-            string parameters of the request.
-        :param dict getter_map: maps attribute names to functions that get the
-            relevant resources.
-        :param dict model_name_map: maps attribute names to the relevant model
-            name.
-        :param list mandatory_attributes: names of attributes whose values are
-            always included in the result
-        :returns: a dictionary from plural resource names to lists of resources.
-
-        If no GET parameters are provided (i.e., GET_params is empty), then
-        retrieve all data (using getter_map) return them.
-
-        If GET parameters are specified, then for each parameter whose value is
-        a non-empty string (and is not a valid ISO 8601 datetime), retrieve and
-        return the appropriate list of objects.
-
-        If the value of a GET parameter is a valid ISO 8601 datetime string,
-        retrieve and return the appropriate list of objects *only* if the
-        datetime param does *not* match the most recent datetime_modified value
-        of the relevant data store (i.e., model object).  This makes sense
-        because a non-match indicates that the requester has out-of-date data.
-        """
-        result = {key: [] for key in getter_map}
-        if GET_params:
-            for key in getter_map:
-                if key in mandatory_attributes:
-                    result[key] = getter_map[key]()
-                else:
-                    val = GET_params.get(key)
-                    if val:
-                        val_as_datetime_obj = h.datetime_string2datetime(val)
-                        if val_as_datetime_obj:
-                            most_recent_mod_time = self.db\
-                                .get_most_recent_modification_datetime(
-                                    model_name_map[key])
-                            if val_as_datetime_obj != most_recent_mod_time:
-                                result[key] = getter_map[key]()
-                        else:
-                            result[key] = getter_map[key]()
-        else:
-            for key in getter_map:
-                result[key] = getter_map[key]()
-        return result
+    # Map resource collection names to ``ResCol`` instances containing the name
+    # of the relevant model and a function that gets all instances of the
+    # relevant resource collection.
+    @property
+    def resource_collections(self):
+        return {
+            'elicitation_methods': ResCol(
+                'ElicitationMethod',
+                self.db.get_mini_dicts_getter('ElicitationMethod')),
+            'grammaticalities': ResCol(
+                'ApplicationSettings',
+                self.db.get_grammaticalities),
+            'sources': ResCol(
+                'Source',
+                self.db.get_mini_dicts_getter('Source')),
+            'speakers': ResCol(
+                'Speaker',
+                self.db.get_mini_dicts_getter('Speaker')),
+            'syntactic_categories': ResCol(
+                'SyntacticCategory',
+                self.db.get_mini_dicts_getter('SyntacticCategory')),
+            'tags': ResCol(
+                'Tag',
+                self.db.get_mini_dicts_getter('Tag')),
+            'users': ResCol(
+                'User',
+                self.db.get_mini_dicts_getter('User'))
+        }
 
     JSONDecodeErrorResponse = {
         'error': 'JSON decode error: the parameters provided were not valid'
@@ -469,8 +507,8 @@ class Resources(abc.ABC):
             return query.order_by(asc(getattr(model_, primary_key)))
 
     def get_search_parameters(self):
-        """Given an SQLAQueryBuilder instance, return (relative to the model being
-        searched) the list of attributes and their aliases and licit relations
+        """Given the view's resource-configured SQLAQueryBuilder instance,
+        return the list of attributes and their aliases and licit relations
         relevant to searching.
         """
         return {
@@ -479,13 +517,38 @@ class Resources(abc.ABC):
             'relations': self.query_builder.relations
         }
 
+    ###########################################################################
+    # Abstract Methods --- must be defined in subclasses
+    ###########################################################################
+
+    @abc.abstractmethod
+    def _get_user_data(self, data):
+        """Process the user-provided ``data`` dict, crucially returning a *new*
+        dict created from it which is ready for construction of a resource
+        model.
+        """
+
+    @abc.abstractmethod
+    def _get_create_data(self, data):
+        """Generate a dict representing a resource to be created; add any
+        creation-specific data. The ``data`` dict should be expected to be
+        unprocessed, i.e., a JSON-decoded dict from the request body.
+        """
+
+    @abc.abstractmethod
+    def _get_update_data(self, user_data):
+        """Generate a dict representing the updated state of a specific
+        resource. The ``user_data`` dict should be expected to be the output of
+        ``self._get_user_data(data)``.
+        """
+
 
 class SchemaState:
     """Empty class used to create a state instance with a 'full_dict' attribute
     that points to a dict of values being validated by a schema. For example,
-    the call to FormSchema().to_python in controllers/forms.py requires this
-    State() instance as its second argument in order to make the inventory-based
-    validators work correctly (see, e.g., ValidOrthographicTranscription).
+    the call to FormSchema().to_python requires this State() instance as its
+    second argument in order to make the inventory-based validators work
+    correctly (see, e.g., ValidOrthographicTranscription).
     """
 
     def __init__(self, full_dict=None, db=None, logged_in_user=None,

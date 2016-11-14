@@ -27,6 +27,9 @@ def search_connect(config, name):
 
 
 def fix_for_tests(request):
+    """Modifies the request if certain environment variables are present;
+    purpose is to simulate different login states for testing.
+    """
     if 'test.authentication.role' in request.environ:
         role = request.environ['test.authentication.role']
         user = request.dbsession.query(User).filter(User.role==role).first()
@@ -37,46 +40,93 @@ def fix_for_tests(request):
             request.environ['test.authentication.id'])
         if user:
             request.session['user'] = user.get_dict()
-    # TODO: app_globals.application_settings ? ...
-    # if request.environ.get('test.application_settings'):
-    #     app_globals.application_settings = h.ApplicationSettings()
     return request
 
 
-def test_fix_tear_down(request):
-    return request
-    # TODO:
-    # if request.environ.get('test.application_settings') and \
-    # not request.environ.get('test.retain_application_settings'):
-    #     del app_globals.application_settings
+UNAUTHORIZED_MSG = {
+    'error': 'You are not authorized to access this resource.'}
+
+UNAUTHENTICATED_MSG = {
+    'error': 'Authentication is required to access this resource.'}
+
+UNAUTHENTICATED_RESP = Response(
+    json=UNAUTHENTICATED_MSG,
+    content_type='application/json',
+    status_code=401
+)
+
+UNAUTHORIZED_RESP = Response(
+    json=UNAUTHORIZED_MSG,
+    content_type='application/json',
+    status_code=403
+)
 
 
-def requires_auth(func):
+def authenticate(func):
     def wrapper(context, request):
         request = fix_for_tests(request)
         if request.session.get('user'):
-            resp = func(context, request)
+            return func(context, request)
         else:
-            resp = Response(
-                json={'error': 'Authentication is required to access this'
-                               ' resource.'},
-                content_type='application/json',
-                status_code=401)
-        request = test_fix_tear_down(request)
-        return resp
+            return UNAUTHENTICATED_RESP
     return wrapper
 
 
-def requires_auth_try_1(func):
-    def wrapper(context, request):
-        if request.user is None:
-            return Response(
-                json={'error': 'Authentication is required to access this'
-                      ' resource.'},
-                content_type='application/json',
-                status_code=401)
-        return func(context, request)
-    return wrapper
+def authorize(roles, users=None, user_id_is_args1=False):
+    """Authorization decorator.  If user tries to request a resource action
+    but has insufficient authorization, this decorator will respond with a
+    header status of '403 Forbidden' and a JSON object explanation. The user is
+    unauthorized if *any* of the following are true:
+
+    - the user does not have one of the roles in ``roles``
+    - the user's id does not match one of the ids in ``users``
+    - the user does not have the same id as the id of the entity the action
+      takes as argument
+
+    Example 1: (user must be an administrator or a contributor)::
+
+        >>> authorize(['administrator', 'contributor'])
+
+    Example 2: (user must be either an administrator or the contributor with Id
+    2)::
+
+        >>> authorize(['administrator', 'contributor'], [2])
+
+    Example 3: (user must have the same ID as the entity she is trying to
+    affect)::
+
+        >>> authorize(['administrator', 'contributor', 'viewer'],
+                      user_id_is_args1=True)
+    """
+    def _authorize(func):
+        def wrapper(context, request):
+            # Check for authorization via role.
+            user = request.session['user']
+            role = user['role']
+            if role in roles:
+                # Check for authorization via user.
+                if (    users and role != 'administrator'
+                        and user['id'] not in users):
+                    return UNAUTHORIZED_RESP
+                # Check whether the user id equals the id argument in the URL
+                # path. This is useful, e.g., when a user can only edit their
+                # own personal page.
+                if (    user_id_is_args1 and
+                        role != 'administrator' and
+                        int(user['id']) != int(request.matchdict['id'])):
+                    return UNAUTHORIZED_RESP
+                return func(context, request)
+            else:
+                return UNAUTHORIZED_RESP
+        return wrapper
+    return _authorize
+
+
+def get_auth_decorators(resource, action):
+    """TODO: there are resource-specific authorization controls."""
+    if action in ('create', 'new', 'update', 'edit', 'delete'):
+        return (authenticate, authorize(['administrator', 'contributor']))
+    return authenticate
 
 
 def add_resource(config, member_name):
@@ -103,24 +153,8 @@ def add_resource(config, member_name):
                         route_name=route_name,
                         request_method=request_method,
                         renderer='json',
-                        decorator=requires_auth)
+                        decorator=get_auth_decorators(member_name, action))
 
-    """
-    config.add_route('create_{}'.format(member_name),
-                     '/{}'.format(collection_name), request_method='POST')
-    config.add_route('index_{}'.format(collection_name),
-                     '/{}'.format(collection_name), request_method='GET')
-    config.add_route('new_{}'.format(member_name),
-                     '/{}/new'.format(collection_name), request_method='GET')
-    config.add_route('edit_{}'.format(member_name),
-                     '/{}/{{id}}/edit'.format(collection_name), request_method='GET')
-    config.add_route('delete_{}'.format(member_name),
-                     '/{}/{{id}}'.format(collection_name), request_method='DELETE')
-    config.add_route('update_{}'.format(member_name),
-                     '/{}/{{id}}'.format(collection_name), request_method='PUT')
-    config.add_route('show_{}'.format(member_name),
-                     '/{}/{{id}}'.format(collection_name), request_method='GET')
-    """
 
 def includeme(config):
     # Pyramid boilerplate

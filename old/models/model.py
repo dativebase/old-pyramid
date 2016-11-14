@@ -65,6 +65,15 @@ class Model(object):
         'mysql_engine': 'MyISAM'  # Possible values: MyISAM, InnoDB
     }
 
+    def __json__(self, request):
+        try:
+            return self.get_dict()
+        except AttributeError:
+            r = self.__dict__.copy()
+            if '_sa_instance_state' in r:
+                del r['_sa_instance_state']
+            return r
+
     @classmethod
     def _url(cls):
         __url = getattr(cls, '__url', None)
@@ -115,7 +124,7 @@ class Model(object):
     def json_loads(self, JSONString):
         try:
             return json.loads(JSONString)
-        except (json.decoder.JSONDecodeError, TypeError):
+        except (ValueError, TypeError):
             return None
 
     def get_mini_dict(self, model=None):

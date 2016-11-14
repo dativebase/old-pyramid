@@ -644,7 +644,7 @@ def ffmpeg_encodes(format_):
 
 
 def get_user_full_name(user):
-    return '%s %s' % (user.first_name, user.last_name)
+    return '%s %s' % (user['first_name'], user['last_name'])
 
 
 def foma_output_file2dict(file_, remove_word_boundaries=True):

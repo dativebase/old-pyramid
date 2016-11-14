@@ -237,6 +237,9 @@ def _filter_restricted_models_from_query(model_name, query, user):
 
 
 class DBUtils:
+    """Mixin for resource (view) classes (and anything with access to the
+    request) that provides access to the database via a ``dbsession`` attribute.
+    """
 
     def __init__(self, dbsession, settings=None):
         self.dbsession = dbsession
@@ -257,34 +260,24 @@ class DBUtils:
                     desc(old_models.ApplicationSettings.id)).first()
         return self._current_app_set
 
-    def get_morpheme_splitter(self):
-        """Return a function that will split words into morphemes."""
-        morpheme_splitter = lambda x: [x] # default, word is morpheme
-        morpheme_delimiters = self.get_morpheme_delimiters()
-        if morpheme_delimiters:
-            morpheme_splitter = re.compile(
-                '([%s])' % ''.join([esc_RE_meta_chars(d) for d in
-                                    morpheme_delimiters])).split
-        return morpheme_splitter
-
     def get_object_language_id(self):
         return getattr(self.current_app_set, 'object_language_id', 'old')
 
     def get_grammaticalities(self):
-        return self.current_app_set.grammaticalities_list
+        return getattr(self.current_app_set, 'grammaticalities_list', [])
 
     def get_morpheme_delimiters(self, type_='list'):
         """Return the morpheme delimiters from app settings as an object of
         type ``type_``."""
         if type_ == 'list':
-            return self.current_app_set.morpheme_delimiters_list
-        return self.current_app_set.morpheme_delimiters
+            return getattr(self.current_app_set, 'morpheme_delimiters_list', [])
+        return getattr(self.current_app_set, 'morpheme_delimiters', '')
 
     def get_unrestricted_users(self):
         """Return the list of unrestricted users in the current application
         settings.
         """
-        return self.current_app_set.unrestricted_users
+        return getattr(self.current_app_set, 'unrestricted_users', [])
 
     def get_restricted_tag(self):
         return self.dbsession.query(old_models.Tag).filter(
@@ -534,3 +527,15 @@ class DBUtils:
             return query
         else:
             return _filter_restricted_models_from_query(model_name, query, user)
+
+    def get_morpheme_splitter(self):
+        """Return a function that will split words into morphemes.
+        TODO: doesn't beling in DB utils ...
+        """
+        morpheme_splitter = lambda x: [x] # default, word is morpheme
+        morpheme_delimiters = self.get_morpheme_delimiters()
+        if morpheme_delimiters:
+            morpheme_splitter = re.compile(
+                '([%s])' % ''.join([esc_RE_meta_chars(d) for d in
+                                    morpheme_delimiters])).split
+        return morpheme_splitter

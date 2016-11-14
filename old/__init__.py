@@ -74,12 +74,18 @@ def old_model_adapter(obj, request):
 def datetime_adapter(obj, request):
     return obj.isoformat()
 
+def debug_adapter(obj, request):
+    print('json-encoding object: %s' % obj)
+    print(type(obj))
+    return obj
 
 def get_json_renderer():
+    # json_renderer = JSON(check_circular=False)
     json_renderer = JSON()
+    json_renderer.add_adapter(object, debug_adapter)
     json_renderer.add_adapter(datetime.datetime, datetime_adapter)
     json_renderer.add_adapter(datetime.date, datetime_adapter)
-    json_renderer.add_adapter(Model, old_model_adapter)
+    # json_renderer.add_adapter(Model, old_model_adapter)
     return json_renderer
 
 
