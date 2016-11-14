@@ -83,18 +83,15 @@ class Forms(Resources):
         return False
 
     def _post_create(self, form_model):
-        """Create the morphological analysis-related attributes on the form
-        model. Then update any morphologically complex forms that may contain
+        """Update any morphologically complex forms that may contain
         this form as a morpheme.
         """
-        (
-            form_model.morpheme_break_ids,
-            form_model.morpheme_gloss_ids,
-            form_model.syntactic_category_string,
-            form_model.break_gloss_category,
-            cache
-        ) = self.compile_morphemic_analysis(form_model)
         self.update_forms_containing_this_form_as_morpheme(form_model)
+
+    def _post_update(self, form, form_dict):
+        if update_has_changed_the_analysis(form, form_dict):
+            self.update_forms_containing_this_form_as_morpheme(
+                form, 'update', form_dict)
 
     def _get_new_edit_collections(self):
         """Returns the names of the collections that are required in order to
@@ -110,7 +107,7 @@ class Forms(Resources):
             'sources'
         )
 
-    def update(self):
+    def update_(self):
         """Update a form and return it.
 
         :URL: ``PUT /forms/id``
@@ -124,11 +121,6 @@ class Forms(Resources):
         if not form:
             self.request.response.status_int = 404
             return {'error': 'There is no form with id %s' % id_}
-        unrestricted_users = self.db.get_unrestricted_users()
-        if not self.logged_in_user.is_authorized_to_access_model(
-                form, unrestricted_users):
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
         schema = FormSchema()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
@@ -151,11 +143,17 @@ class Forms(Resources):
         self.backup_form(form_dict)
         self.request.dbsession.add(form)
         self.request.dbsession.flush()
-        # update_application_settings_if_form_is_foreign_word(form)
-        if update_has_changed_the_analysis(form, form_dict):
-            self.update_forms_containing_this_form_as_morpheme(
-                form, 'update', form_dict)
         return form
+
+    def _model_access_ctl(self, resource_model):
+        """Ensure that only authorized users can access the provided
+        ``resource_model``.
+        """
+        unrestricted_users = self.db.get_unrestricted_users()
+        if not self.logged_in_user.is_authorized_to_access_model(
+                resource_model, unrestricted_users):
+            return True
+        return False
 
     def delete(self):
         """Delete an existing form and return it.
@@ -423,7 +421,7 @@ class Forms(Resources):
             self.request.dbsession.flush()
         return [f['id_'] for f in form_buffer]
 
-    def backup_form(self, form_dict):
+    def _backup_resource(self, form_dict):
         """Backup a form.
 
         :param dict form_dict: a representation of a form model.
@@ -473,7 +471,7 @@ class Forms(Resources):
         """
         changed = super()._update_resource_model(form_model, data)
         if changed:
-            data = changed
+            form_model = changed
         (
             data['morpheme_break_ids'],
             data['morpheme_gloss_ids'],

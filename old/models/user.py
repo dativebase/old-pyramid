@@ -90,7 +90,7 @@ class User(Base):
         administrators, their enterers and unrestricted users.
         NOTE: previously named ``user_is_authorized_to_access_model``
         """
-        if user.role == 'administrator':
+        if self.role == 'administrator':
             return True
         if isinstance(model_object, (Form, File, Collection)):
             tags = model_object.tags
@@ -104,6 +104,6 @@ class User(Base):
         return (
             not tags or
             'restricted' not in tag_names or
-            user in unrestricted_users or
-            user.id == enterer_id
+            self in unrestricted_users or
+            self.id == enterer_id
         )

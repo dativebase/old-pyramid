@@ -33,6 +33,7 @@ from old.models import (
     get_session_factory,
     get_tm_session,
 )
+from old.models.form import FormFile
 from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
 
 LOGGER = logging.getLogger(__name__)
@@ -832,6 +833,124 @@ class TestFormsView(TestView):
             form_count = dbsession.query(old_models.Form).count()
             assert 'errors' not in resp
             assert form_count == 3
+
+    def test_relational_attribute_creation(self):
+        """Tests that POST/PUT create and update many-to-many data correctly."""
+        with transaction.manager:
+            dbsession = self.get_dbsession()
+            db = DBUtils(dbsession, self.settings)
+            form_count = dbsession.query(old_models.Form).count()
+
+            # Add an empty application settings and two syntactic categories.
+            restricted_tag = omb.generate_restricted_tag()
+            restricted_tag_name = restricted_tag.name
+            foreign_word_tag = omb.generate_foreign_word_tag()
+            foreign_word_tag_name = foreign_word_tag.name
+            file1_name = 'test_relational_file'
+            file2_name = 'test_relational_file_2'
+            file1 = omb.generate_default_file()
+            file1.name = file1_name
+            file2 = omb.generate_default_file()
+            file2.name = file2_name
+            dbsession.add_all([restricted_tag, foreign_word_tag,
+                               file1, file2])
+            transaction.commit()
+
+            # Create a form with some files and tags.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test relational transcription',
+                'translations': [{
+                    'transcription': 'test relational translation',
+                    'grammaticality': ''
+                }],
+                'tags': [t.id for t in db.get_tags()],
+                'files': [f.id for f in db.get_files()]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            new_form_count = dbsession.query(old_models.Form).count()
+            resp = response.json_body
+            form_files = dbsession.query(FormFile)
+            created_form_id = resp['id']
+            assert new_form_count == form_count + 1
+            assert len([ff.form_id for ff in form_files
+                        if ff.form_id == resp['id']]) == 2
+            assert file1_name in [f['name'] for f in resp['files']]
+            assert file2_name in [f['name'] for f in resp['files']]
+            assert restricted_tag_name in [t['name'] for t in resp['tags']]
+
+            # Attempt to update the form we just created but don't change the
+            # tags. Expect the update attempt to fail.
+            tags = [t.id for t in db.get_tags()]
+            tags.reverse()
+            files = [f.id for f in db.get_files()]
+            files.reverse()
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test relational transcription',
+                'translations': [{
+                    'transcription': 'test relational translation',
+                    'grammaticality': ''
+                }],
+                'tags': tags,
+                'files': files
+            })
+            params = json.dumps(params)
+            response = self.app.put(url('update', id=created_form_id), params,
+                                    self.json_headers,
+                                    self.extra_environ_admin, status=400)
+            resp = response.json_body
+            assert (resp['error'] == 'The update request failed because the'
+                    ' submitted data were not new.')
+
+            # Now update by removing one of the files and expect success.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test relational transcription',
+                'translations': [{
+                    'transcription': 'test relational translation',
+                    'grammaticality': ''
+                }],
+                'tags': tags,
+                'files': files[0:1]
+            })
+            params = json.dumps(params)
+            response = self.app.put(url('update', id=created_form_id), params,
+                                    self.json_headers, self.extra_environ_admin)
+            resp = response.json_body
+            form_count = new_form_count
+            new_form_count = dbsession.query(old_models.Form).count()
+            assert new_form_count == form_count
+            assert len(resp['files']) == 1
+            assert restricted_tag_name in [t['name'] for t in resp['tags']]
+            assert foreign_word_tag_name in [t['name'] for t in resp['tags']]
+
+            # Attempt to create a form with some *invalid* files and tags and
+            # fail.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test relational transcription invalid',
+                'translations': [{
+                    'transcription': 'test relational translation invalid',
+                    'grammaticality': ''
+                }],
+                'tags': [1000, 9875, 'abcdef'],
+                'files': [44, '1t']
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin, status=400)
+            form_count = new_form_count
+            new_form_count = dbsession.query(old_models.Form).count()
+            resp = response.json_body
+            assert new_form_count == form_count
+            assert 'Please enter an integer value' in resp['errors']['files']
+            assert 'There is no file with id 44.' in resp['errors']['files']
+            assert 'There is no tag with id 1000.' in resp['errors']['tags']
+            assert 'There is no tag with id 9875.' in resp['errors']['tags']
+            assert 'Please enter an integer value' in resp['errors']['tags']
 
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for

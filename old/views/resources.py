@@ -108,7 +108,7 @@ class Resources(abc.ABC):
         state = SchemaState(
             full_dict=values,
             db=self.db,
-            logged_in_user=self.request.session.get('user', {}))
+            logged_in_user=self.logged_in_user)
         try:
             data = schema.to_python(values, state)
         except Invalid as error:
@@ -167,7 +167,6 @@ class Resources(abc.ABC):
                                                             id_)}
         return resource_model
 
-    # @h.authorize(['administrator', 'contributor'])
     def update(self):
         """Update a resource and return it.
         :URL: ``PUT /<resource_collection_name>/<id>``
@@ -176,11 +175,15 @@ class Resources(abc.ABC):
         :param str id_: the ``id`` value of the resource to be updated.
         :returns: the updated resource model.
         """
-        resource_model, id_ = self._model_from_id()
+        resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
             return {'error': 'There is no %s with id %s' % (self.member_name,
                                                             id_)}
+        model_access_ctl = self._model_access_ctl(resource_model)
+        if model_access_ctl is not False:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
         schema = self.schema_cls()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
@@ -190,7 +193,7 @@ class Resources(abc.ABC):
         state = SchemaState(
             full_dict=values,
             db=self.db,
-            logged_in_user=self.request.session.get('user', {}),
+            logged_in_user=self.logged_in_user,
             id=id_
         )
         try:
@@ -198,15 +201,22 @@ class Resources(abc.ABC):
         except Invalid as error:
             self.request.response.status_int = 400
             return {'errors': error.unpack_errors()}
+        resource_dict = resource_model.get_dict()
         resource_model = self._update_resource_model(resource_model, data)
         # resource_model will be False if there are no changes
         if not resource_model:
             self.request.response.status_int = 400
             return {'error': 'The update request failed because the submitted'
                              ' data were not new.'}
+        self._backup_resource(resource_dict)
         self.request.dbsession.add(resource_model)
         self.request.dbsession.flush()
-        return resource_model
+        self._post_update(resource_model, resource_dict)
+        return resource_model.get_dict()
+
+    def _backup_resource(self, resource_dict):
+        """Perform a backup of the provided ``resource_dict``, if applicable."""
+        pass
 
     # @h.authorize(['administrator', 'contributor'])
     def edit(self):
@@ -315,6 +325,14 @@ class Resources(abc.ABC):
         """
         return False
 
+    def _model_access_ctl(self, resource_model):
+        """Implement resource/model-specific access controls based on
+        (un-)restricted(-ness) of the current logged in user and the resource
+        in question. Return something other than false to trigger a 403
+        response.
+        """
+        return False
+
     def _create_new_resource(self, data):
         """Create a new resource.
         :param dict data: the data for the resource to be created.
@@ -355,15 +373,28 @@ class Resources(abc.ABC):
         """
         return False
 
-    def _model_from_id(self):
+    def _model_from_id(self, eager=False):
         """Return a particular model instance (and the id value), given the
         model id supplied in the URL path.
         """
         id_ = self.request.matchdict['id']
-        return self.request.dbsession.query(self.model_cls).get(int(id_)), id_
+        if eager:
+            return (
+                self._eagerload_model(
+                    self.request.dbsession.query(self.model_cls)).get(int(id_)),
+                id_)
+        else:
+            return self.request.dbsession.query(self.model_cls).get(int(id_)), id_
 
     def _post_create(self, resource_model):
         """Perform some action after creating a new resource model in the
+        database. E.g., with forms we have to update all of the forms that
+        contain the newly entered form as a morpheme.
+        """
+        pass
+
+    def _post_update(self, resource_model, previous_resource_dict):
+        """Perform some action after updating an existin resource model in the
         database. E.g., with forms we have to update all of the forms that
         contain the newly entered form as a morpheme.
         """
