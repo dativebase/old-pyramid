@@ -132,38 +132,48 @@ class ApplicationSettings(Base):
             return self.storage_orthography.orthography.split(',')
         return []
 
-    def get_transcription_inventory(self, type_, dbsession):
+    def get_transcription_inventory(self, type_, db):
         """Return an ``Inventory`` instance for one of the transcription-type
         attributes of forms, as indicated by ``type_``, which should be one of
         'orthographic', 'broad_phonetic', 'narrow_phonetic', or
-        'morpheme_break'. The ``dbsession`` must be supplied.
-
-        foreign_word_narrow_phonetic_transcriptions, \
-        foreign_word_broad_phonetic_transcriptions, \
-        foreign_word_orthographic_transcriptions, \
-        foreign_word_morphemic_transcriptions = get_foreign_word_transcriptions()
-
-        self.narrow_phonetic_inventory = Inventory(
-            foreign_word_narrow_phonetic_transcriptions + [' '] +
-            self.application_settings.narrow_phonetic_inventory.split(','))
-        self.broad_phonetic_inventory = Inventory(
-            foreign_word_broad_phonetic_transcriptions + [' '] +
-            self.application_settings.broad_phonetic_inventory.split(','))
-        self.orthographic_inventory = Inventory(
-            foreign_word_orthographic_transcriptions +
-            self.punctuation + [' '] + self.storage_orthography)
-        if self.application_settings.morpheme_break_is_orthographic:
-            self.morpheme_break_inventory = Inventory(
-                foreign_word_morphemic_transcriptions +
-                self.morpheme_delimiters + [' '] + self.storage_orthography)
-        else:
-            self.morpheme_break_inventory = Inventory(
-                foreign_word_morphemic_transcriptions +
-                self.morpheme_delimiters + [' '] +
-                self.application_settings.phonemic_inventory.split(','))
+        'morpheme_break'. The ``db`` var (a ``DBUtils`` instance) must be
+        supplied.
         """
-        pass
-
+        fwt = db.foreign_word_transcriptions
+        attr = '_' + type_ + '_inv'
+        inv = getattr(self, attr, None)
+        if inv:
+            return inv
+        if type_ == 'narrow_phonetic':
+            setattr(self, attr, Inventory(
+                    getattr(fwt, type_) +
+                    [' '] +
+                    self.narrow_phonetic_inventory.split(',')))
+        elif type_ == 'broad_phonetic':
+            setattr(self, attr, Inventory(
+                    getattr(fwt, type_) +
+                    [' '] +
+                    self.broad_phonetic_inventory.split(',')))
+        elif type_ == 'orthographic':
+            setattr(self, attr, Inventory(
+                    getattr(fwt, type_) +
+                    self.punctuation_list +
+                    [' '] +
+                    self.storage_orthography_list))
+        else:
+            if self.morpheme_break_is_orthographic:
+                setattr(self, attr, Inventory(
+                        getattr(fwt, type_) +
+                        self.morpheme_delimiters_list +
+                        [' '] +
+                        self.storage_orthography_list))
+            else:
+                setattr(self, attr, Inventory(
+                        getattr(fwt, type_) +
+                        self.morpheme_delimiters_list +
+                        [' '] +
+                        self.phonemic_inventory.split(',')))
+        return getattr(self, attr)
 
 def _get_regex_validator(input_list):
     """Returns a regex that matches only strings composed of zero or more

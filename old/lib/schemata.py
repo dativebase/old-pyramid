@@ -134,10 +134,10 @@ class ValidOrthographicTranscription(UnicodeString):
         transcription = h.to_single_space(h.normalize(value))
         if (not form_is_foreign_word(state.full_dict, state.db) and
                 not transcription_is_valid(
-                    state.db.current_app_set,
+                    state.db,
                     transcription,
                     'orthographic_validation',
-                    'orthographic_inventory')):
+                    'orthographic')):
             raise Invalid(self.message("invalid_transcription", state),
                           value, state)
 
@@ -159,10 +159,10 @@ class ValidNarrowPhoneticTranscription(UnicodeString):
         transcription = h.to_single_space(h.normalize(value))
         if (not form_is_foreign_word(state.full_dict, state.db) and
                 not transcription_is_valid(
-                    state.db.current_app_set,
+                    state.db,
                     transcription,
                     'narrow_phonetic_validation',
-                    'narrow_phonetic_inventory')):
+                    'narrow_phonetic')):
             raise Invalid(self.message("invalid_transcription", state),
                           value, state)
 
@@ -185,10 +185,10 @@ class ValidBroadPhoneticTranscription(UnicodeString):
         transcription = h.to_single_space(h.normalize(value))
         if (not form_is_foreign_word(state.full_dict, state.db) and
                 not transcription_is_valid(
-                    state.db.current_app_set,
+                    state.db,
                     transcription,
                     'broad_phonetic_validation',
-                    'broad_phonetic_inventory')):
+                    'broad_phonetic')):
             raise Invalid(self.message("invalid_transcription", state),
                           value, state)
 
@@ -217,10 +217,10 @@ class ValidMorphemeBreakTranscription(UnicodeString):
             inventory = 'storage orthography'
         if (not form_is_foreign_word(state.full_dict, state.db) and
                 not transcription_is_valid(
-                    state.db.current_app_set,
+                    state.db,
                     transcription,
                     'morpheme_break_validation',
-                    'morpheme_break_inventory')):
+                    'morpheme_break')):
             raise Invalid(
                 self.message("invalid_transcription", state,
                              inventory=inventory),
@@ -242,8 +242,7 @@ def form_is_foreign_word(form_dict, db):
     return False
 
 
-def transcription_is_valid(current_app_set, transcription, validation_name,
-                           inventory_name):
+def transcription_is_valid(db, transcription, validation_name, inventory_name):
     """Returns a boolean indicating whether the transcription is valid according
     to the appropriate Inventory object in the Application Settings meta object.
     The validation_name parameter is the name of the appropriate validation
@@ -252,9 +251,9 @@ def transcription_is_valid(current_app_set, transcription, validation_name,
     attribute of the Application Settings meta object whose value is the
     appropriate Inventory object for the transcription.
     """
-    if getattr(current_app_set, validation_name, None) == 'Error':
-        return getattr(current_app_set,
-                       inventory_name).string_is_valid(transcription)
+    if getattr(db.current_app_set, validation_name, None) == 'Error':
+        inv = db.current_app_set.get_transcription_inventory(inventory_name, db)
+        return inv.string_is_valid(transcription)
     return True
 
 

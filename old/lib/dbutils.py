@@ -248,6 +248,7 @@ class DBUtils:
         else:
             self.settings = {}
         self._current_app_set = None
+        self._foreign_word_transcriptions = None
 
     @property
     def current_app_set(self):
@@ -314,7 +315,8 @@ class DBUtils:
     def get_foreign_word_tag_id(self):
         return self.get_foreign_word_tag().id
 
-    def get_foreign_word_transcriptions(self):
+    @property
+    def foreign_word_transcriptions(self):
         """Returns a 4-tuple (foreign_word_narrow_phonetic_transcriptions,
         foreign_word_broad_phonetic_transcriptions,
         foreign_word_orthographic_transcriptions,
@@ -322,29 +324,33 @@ class DBUtils:
         transcriptions (narrow phonetic, broad phonetic, orthographic,
         morphemic) of foreign words.
         """
-        foreign_words = self.get_foreign_words()
-        foreign_word_narrow_phonetic_transcriptions = []
-        foreign_word_broad_phonetic_transcriptions = []
-        foreign_word_orthographic_transcriptions = []
-        foreign_word_morphemic_transcriptions = []
-        for fw in foreign_words:
-            if fw.narrow_phonetic_transcription:
-                foreign_word_narrow_phonetic_transcriptions.append(
-                    fw.narrow_phonetic_transcription)
-            if fw.phonetic_transcription:
-                foreign_word_broad_phonetic_transcriptions.append(
-                    fw.phonetic_transcription)
-            if fw.morpheme_break:
-                foreign_word_morphemic_transcriptions.append(fw.morpheme_break)
-            foreign_word_orthographic_transcriptions.append(fw.transcription)
-        FWTrans = namedtuple('FWTrans',
-                             ['narr_phon', 'br_phon', 'orth', 'morph'])
-        return FWTrans(
-            foreign_word_narrow_phonetic_transcriptions,
-            foreign_word_broad_phonetic_transcriptions,
-            foreign_word_orthographic_transcriptions,
-            foreign_word_morphemic_transcriptions
-        )
+        if not self._foreign_word_transcriptions:
+            foreign_words = self.get_foreign_words()
+            foreign_word_narrow_phonetic_transcriptions = []
+            foreign_word_broad_phonetic_transcriptions = []
+            foreign_word_orthographic_transcriptions = []
+            foreign_word_morphemic_transcriptions = []
+            for fw in foreign_words:
+                if fw.narrow_phonetic_transcription:
+                    foreign_word_narrow_phonetic_transcriptions.append(
+                        fw.narrow_phonetic_transcription)
+                if fw.phonetic_transcription:
+                    foreign_word_broad_phonetic_transcriptions.append(
+                        fw.phonetic_transcription)
+                if fw.morpheme_break:
+                    foreign_word_morphemic_transcriptions.append(fw.morpheme_break)
+                foreign_word_orthographic_transcriptions.append(fw.transcription)
+            FWTrans = namedtuple('FWTrans', ['narrow_phonetic',
+                                             'broad_phonetic',
+                                             'orthographic',
+                                             'morpheme_break'])
+            self._foreign_word_transcriptions = FWTrans(
+                foreign_word_narrow_phonetic_transcriptions,
+                foreign_word_broad_phonetic_transcriptions,
+                foreign_word_orthographic_transcriptions,
+                foreign_word_morphemic_transcriptions
+            )
+        return self._foreign_word_transcriptions
 
     ###########################################################################
     # Convenience getters for resource collections

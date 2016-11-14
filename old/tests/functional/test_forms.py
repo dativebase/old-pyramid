@@ -612,6 +612,227 @@ class TestFormsView(TestView):
             assert resp['source']['year'] == source_year    # etc. ...
             assert new_form_count == form_count + 1
 
+    def test_create_with_inventory_validation(self):
+        """Tests that POST /forms correctly applies inventory-based validation
+        on form creation attempts.
+        """
+        with transaction.manager:
+            dbsession = self.get_dbsession()
+            db = DBUtils(dbsession, self.settings)
+
+            # Configure the application settings with some VERY STRICT
+            # inventory-based validation settings.
+            orthography = old_models.Orthography(
+                name='Test Orthography',
+                orthography='o,O',
+                lowercase=True,
+                initial_glottal_stops=True
+            )
+            dbsession.add(orthography)
+            transaction.commit()
+            application_settings = omb.generate_default_application_settings()
+            application_settings.orthographic_validation = 'Error'
+            application_settings.narrow_phonetic_inventory = 'n,p,N,P'
+            application_settings.narrow_phonetic_validation = 'Error'
+            application_settings.broad_phonetic_inventory = 'b,p,B,P'
+            application_settings.broad_phonetic_validation = 'Error'
+            application_settings.morpheme_break_is_orthographic = False
+            application_settings.morpheme_break_validation = 'Error'
+            application_settings.phonemic_inventory = 'p,i,P,I'
+            application_settings.storage_orthography = db.get_orthographies()[0]
+            dbsession.add(application_settings)
+            transaction.commit()
+
+            extra_environ = self.extra_environ_admin.copy()
+
+            # Create a form with all invalid transcriptions.
+            params = self.form_create_params.copy()
+            params.update({
+                'narrow_phonetic_transcription':
+                    'test narrow phonetic transcription validation',
+                'phonetic_transcription':
+                    'test broad phonetic transcription validation',
+                'transcription':
+                    'test orthographic transcription validation',
+                'morpheme_break': 'test morpheme break validation',
+                'translations': [{
+                    'transcription': 'test validation translation',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ, status=400)
+            resp = response.json_body
+            form_count = dbsession.query(old_models.Form).count()
+            assert ('The orthographic transcription you have entered is not'
+                    ' valid' in resp['errors']['transcription'])
+            assert ('The broad phonetic transcription you have entered is not'
+                    ' valid' in resp['errors']['phonetic_transcription'])
+            assert ('The narrow phonetic transcription you have entered is not'
+                    ' valid' in resp['errors']['narrow_phonetic_transcription'])
+            assert ('The morpheme segmentation you have entered is not valid'
+                    in resp['errors']['morpheme_break'])
+            assert 'phonemic inventory' in resp['errors']['morpheme_break']
+            assert form_count == 0
+
+            # Create a form with some invalid and some valid transcriptions.
+            params = self.form_create_params.copy()
+            params.update({
+                # Now it's valid
+                'narrow_phonetic_transcription': 'np NP n P N p',
+                'phonetic_transcription':
+                    'test broad phonetic transcription validation',
+                'transcription': '',
+                'morpheme_break': 'test morpheme break validation',
+                'translations': [{
+                    'transcription': 'test validation translation',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ, status=400)
+            resp = response.json_body
+            form_count = dbsession.query(old_models.Form).count()
+            pprint.pprint(resp)
+            assert ('The broad phonetic transcription you have entered is not'
+                    ' valid' in resp['errors']['phonetic_transcription'])
+            assert 'narrow_phonetic_transcription' not in resp
+            assert ('The morpheme segmentation you have entered is not valid'
+                    in resp['errors']['morpheme_break'])
+            assert form_count == 0
+
+            # Now change the validation settings to make some transcriptions
+            # valid.
+            application_settings = omb.generate_default_application_settings()
+            application_settings.orthographic_validation = 'Warning'
+            application_settings.narrow_phonetic_inventory = 'n,p,N,P'
+            application_settings.narrow_phonetic_validation = 'Error'
+            application_settings.broad_phonetic_inventory = 'b,p,B,P'
+            application_settings.broad_phonetic_validation = 'None'
+            application_settings.morpheme_break_is_orthographic = True
+            application_settings.morpheme_break_validation = 'Error'
+            application_settings.phonemic_inventory = 'p,i,P,I'
+            application_settings.storage_orthography = db.get_orthographies()[0]
+            dbsession.add(application_settings)
+            transaction.commit()
+            params = self.form_create_params.copy()
+            params.update({
+                'narrow_phonetic_transcription':
+                    'test narrow phonetic transcription validation',
+                'phonetic_transcription':
+                    'test broad phonetic transcription validation',
+                'transcription':
+                    'test orthographic transcription validation',
+                'morpheme_break': 'test morpheme break validation',
+                'translations': [{
+                    'transcription': 'test validation translation',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ, status=400)
+            resp = response.json_body
+            form_count = dbsession.query(old_models.Form).count()
+            assert 'transcription' not in resp['errors']
+            assert 'phonetic_transcription' not in resp['errors']
+            assert ('The narrow phonetic transcription you have entered is not'
+                    ' valid' in resp['errors']['narrow_phonetic_transcription'])
+            assert ('The morpheme segmentation you have entered is not valid'
+                    in resp['errors']['morpheme_break'])
+            assert form_count == 0
+
+            # Now perform a successful create by making the narrow phonetic and
+            # morpheme break fields valid according to the relevant inventories.
+            params = self.form_create_params.copy()
+            params.update({
+                'narrow_phonetic_transcription':
+                    'n p NP N P NNNN pPPP pnNpP   ',
+                'phonetic_transcription':
+                    'test broad phonetic transcription validation',
+                'transcription':
+                    'test orthographic transcription validation',
+                'morpheme_break': 'OOO ooo OOO   o',
+                'translations': [{
+                    'transcription': 'test validation translation',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ)
+            resp = response.json_body
+            form_count = dbsession.query(old_models.Form).count()
+            assert 'errors' not in resp
+            assert form_count == 1
+
+            # Create a foreign word form (i.e., one tagged with a foreign word
+            # tag). Such forms should be able to violate the inventory-based
+            # validation restrictions. We need to ensure that
+            # update_application_settings_if_form_is_foreign_word is updating
+            # the application settings' Inventory objects with the foreign word.
+            retain_extra_environ = extra_environ.copy()
+            foreign_word_tag = omb.generate_foreign_word_tag()
+            dbsession.add(foreign_word_tag)
+            transaction.commit()
+            params = self.form_create_params.copy()
+            params.update({
+                'narrow_phonetic_transcription': 'f`ore_n',
+                'phonetic_transcription': 'foren',
+                'transcription': 'foreign',
+                'morpheme_break': 'foreign',
+                'translations': [{
+                    'transcription': 'foreign translation',
+                    'grammaticality': ''
+                }],
+                'tags': [db.get_foreign_word_tag().id]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     retain_extra_environ)
+            resp = response.json_body
+            form_count = dbsession.query(old_models.Form).count()
+            #application_settings = response.g.application_settings
+            application_settings = db.current_app_set
+            assert ('f`ore_n' in
+                    application_settings.get_transcription_inventory(
+                        'narrow_phonetic', db).input_list)
+            assert ('foren' in
+                    application_settings.get_transcription_inventory(
+                        'broad_phonetic', db).input_list)
+            assert ('foreign' in
+                    application_settings.get_transcription_inventory(
+                        'morpheme_break', db).input_list)
+            assert ('foreign' in
+                    application_settings.get_transcription_inventory(
+                        'orthographic', db).input_list)
+            assert 'errors' not in resp
+            assert form_count == 2
+
+            # Now create a form that would violate inventory-based validation
+            # rules but is nevertheless accepted because the violations are
+            # foreign words.
+            params = self.form_create_params.copy()
+            params.update({
+                'narrow_phonetic_transcription': 'n f`ore_np',
+                'phonetic_transcription': 'b p',
+                'transcription': 'o O',
+                'morpheme_break': 'o-foreign-O',
+                'translations': [{
+                    'transcription': 'sentence containing foreign word',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ)
+            resp = response.json_body
+            form_count = dbsession.query(old_models.Form).count()
+            assert 'errors' not in resp
+            assert form_count == 3
+
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for
         creating a new OLD form.
