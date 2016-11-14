@@ -78,9 +78,7 @@ class FormBackup(Base):
         attributes using the to-be-backed-up form as represented in
         ``form_dict``.  The relational attributes of the backup are converted to
         (truncated) JSON objects.
-
         """
-
         self.UUID = form_dict['UUID']
         self.form_id = form_dict['id']
         self.transcription = form_dict['transcription']
@@ -95,23 +93,23 @@ class FormBackup(Base):
         self.datetime_entered = form_dict['datetime_entered']
         self.datetime_modified = form_dict['datetime_modified']
         self.syntactic_category_string = form_dict['syntactic_category_string']
-        self.morpheme_break_ids = unicode(json.dumps(form_dict['morpheme_break_ids']))
-        self.morpheme_gloss_ids = unicode(json.dumps(form_dict['morpheme_gloss_ids']))
+        self.morpheme_break_ids = json.dumps(form_dict['morpheme_break_ids'])
+        self.morpheme_gloss_ids = json.dumps(form_dict['morpheme_gloss_ids'])
         self.break_gloss_category = form_dict['break_gloss_category']
         self.syntax = form_dict['syntax']
         self.semantics = form_dict['semantics']
         self.status = form_dict['status']
-        self.elicitation_method = unicode(json.dumps(form_dict['elicitation_method']))
-        self.syntactic_category = unicode(json.dumps(form_dict['syntactic_category']))
-        self.source = unicode(json.dumps(form_dict['source']))
-        self.speaker = unicode(json.dumps(form_dict['speaker']))
-        self.elicitor = unicode(json.dumps(form_dict['elicitor']))
-        self.enterer = unicode(json.dumps(form_dict['enterer']))
-        self.verifier = unicode(json.dumps(form_dict['verifier']))
-        self.modifier = unicode(json.dumps(form_dict['modifier']))
-        self.translations = unicode(json.dumps(form_dict['translations']))
-        self.tags = unicode(json.dumps(form_dict['tags']))
-        self.files = unicode(json.dumps(form_dict['files']))
+        self.elicitation_method = json.dumps(form_dict['elicitation_method'])
+        self.syntactic_category = json.dumps(form_dict['syntactic_category'])
+        self.source = json.dumps(form_dict['source'])
+        self.speaker = json.dumps(form_dict['speaker'])
+        self.elicitor = json.dumps(form_dict['elicitor'])
+        self.enterer = json.dumps(form_dict['enterer'])
+        self.verifier = json.dumps(form_dict['verifier'])
+        self.modifier = json.dumps(form_dict['modifier'])
+        self.translations = json.dumps(form_dict['translations'])
+        self.tags = json.dumps(form_dict['tags'])
+        self.files = json.dumps(form_dict['files'])
 
     def get_dict(self):
         return {
@@ -152,9 +150,7 @@ class FormBackup(Base):
     def load(self):
         """Convert the JSON objects back into Column objects, thus making the
         FormBackup behave just like a Form object.  Almost.
-
         """
-
         if self.elicitation_method:
             elicitation_method = json.loads(self.elicitation_method)
             self.elicitation_method = self.Column()

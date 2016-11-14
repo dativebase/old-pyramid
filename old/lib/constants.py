@@ -189,3 +189,11 @@ LANGUAGE_MODEL_TOOLKITS = {
 
 LM_START = '<s>'
 LM_END = '</s>'
+
+
+UNAUTHORIZED_MSG = {
+    'error': 'You are not authorized to access this resource.'}
+
+
+UNAUTHENTICATED_MSG = {
+    'error': 'Authentication is required to access this resource.'}

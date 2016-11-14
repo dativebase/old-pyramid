@@ -24,6 +24,7 @@ import pytest
 from old.lib.dbutils import DBUtils
 import old.lib.helpers as h
 import old.models.modelbuilders as omb
+import old.models as old_models
 from old.models import (
     Form,
     Tag,
@@ -199,6 +200,217 @@ class TestFormsView(TestView):
             # languages)
             db.clear_all_models(['User', 'Tag', 'Language'])
 
+    def test_create(self):
+        """Tests that POST /forms correctly creates a new form."""
+        with transaction.manager:
+            dbsession = self.get_dbsession()
+            db = DBUtils(dbsession, self.settings)
+
+            # Pass some mal-formed JSON to test that a 400 error is returned.
+            params = '"a'   # Bad JSON
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin, status=400)
+            resp = response.json_body
+            assert (resp['error'] == 'JSON decode error: the parameters'
+                    ' provided were not valid JSON.')
+
+            # Create a test form.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test_create_transcription',
+                'translations': [{
+                    'transcription': 'test_create_translation',
+                    'grammaticality': ''
+                }],
+                'status': 'tested'
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = response.json_body
+            form_count = dbsession.query(Form).count()
+            assert type(resp) == type({})
+            assert resp['transcription'] == 'test_create_transcription'
+            assert (resp['translations'][0]['transcription'] ==
+                    'test_create_translation')
+            assert resp['morpheme_break_ids'] == None
+            assert resp['enterer']['first_name'] == 'Admin'
+            assert resp['status'] == 'tested'
+            assert form_count == 1
+            assert response.content_type == 'application/json'
+
+            # Add an empty application settings and two syntactic categories.
+            n_syncat = omb.generate_n_syntactic_category()
+            num_syncat = omb.generate_num_syntactic_category()
+            s_syncat = omb.generate_s_syntactic_category()
+            agr_syncat = old_models.SyntacticCategory(name='Agr')
+            application_settings = old_models.ApplicationSettings()
+            dbsession.add_all([s_syncat, n_syncat, num_syncat, agr_syncat,
+                               application_settings])
+            dbsession.flush()
+            n_syncat_id = n_syncat.id
+            num_syncat_id = num_syncat.id
+            agr_syncat_id = agr_syncat.id
+            transaction.commit()
+
+            # Create three lexical forms, two of which are disambiguated only by
+            # their category
+
+            # chien/dog/N
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'chien',
+                'morpheme_break': 'chien',
+                'morpheme_gloss': 'dog',
+                'translations': [{
+                    'transcription': 'dog',
+                    'grammaticality': ''
+                }],
+                'syntactic_category': n_syncat_id
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = response.json_body
+            dog_id = resp['id']
+
+            # s/PL/Num
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 's',
+                'morpheme_break': 's',
+                'morpheme_gloss': 'PL',
+                'translations': [{
+                    'transcription': 'plural',
+                    'grammaticality': ''
+                }],
+                'syntactic_category': num_syncat_id
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = response.json_body
+            plural_num_id = resp['id']
+            form_count = dbsession.query(Form).count()
+            assert form_count == 3
+
+            # s/PL/Agr
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 's',
+                'morpheme_break': 's',
+                'morpheme_gloss': 'PL',
+                'translations': [{
+                    'transcription': 'plural',
+                    'grammaticality': ''
+                }],
+                'syntactic_category': agr_syncat_id
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = response.json_body
+            plural_agr_id = resp['id']
+
+            # Create another form whose morphemic analysis will reference the
+            # lexical items created above. Since the current application
+            # settings lists no morpheme delimiters, each word will be treated
+            # as a morpheme by compile_morphemic_analysis.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'Les chiens aboient.',
+                'morpheme_break': 'les chien-s aboient',
+                'morpheme_gloss': 'the dog-PL bark',
+                'translations': [{
+                    'transcription': 'The dogs are barking.',
+                    'grammaticality': ''
+                }],
+                'syntactic_category': dbsession.query(
+                    old_models.SyntacticCategory).filter(
+                    old_models.SyntacticCategory.name=='S').first().id
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = response.json_body
+            form_count = dbsession.query(Form).count()
+            assert type(resp) == type({})
+            assert resp['transcription'] == 'Les chiens aboient.'
+            assert (resp['translations'][0]['transcription'] == 'The dogs are'
+                    ' barking.')
+            assert resp['syntactic_category']['name'] == 'S'
+            assert resp['morpheme_break_ids'] == [[[]], [[]], [[]]]
+            assert resp['morpheme_gloss_ids'] == [[[]], [[]], [[]]]
+            assert resp['syntactic_category_string'] == '? ? ?'
+            assert (resp['break_gloss_category'] == 'les|the|? chien-s|dog-PL|?'
+                    ' aboient|bark|?')
+            assert resp['syntactic_category']['name'] == 'S'
+            assert form_count == 5
+
+            # Re-create the form from above but this time add a non-empty
+            # application settings.  Now we should expect the
+            # morpheme_break_ids, morpheme_gloss_ids and
+            # syntactic_category_string to have non-vacuous values since '-' is
+            # specified as a morpheme delimiter.
+            application_settings = omb.generate_default_application_settings()
+            dbsession.add(application_settings)
+            transaction.commit()
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = response.json_body
+            form_count = dbsession.query(Form).count()
+            assert resp['morpheme_break_ids'][1][0][0][2] == 'N'
+            assert form_count == 6
+            assert resp['morpheme_break_ids'][0] == [[]]
+            assert resp['morpheme_break_ids'][1][0][0][0] == dog_id
+            assert resp['morpheme_break_ids'][1][0][0][1] == 'dog'
+            assert resp['morpheme_break_ids'][1][0][0][2] == 'N'
+            assert resp['morpheme_break_ids'][1][1][0][0] == plural_num_id
+            assert resp['morpheme_break_ids'][1][1][0][1] == 'PL'
+            assert resp['morpheme_break_ids'][1][1][0][2] == 'Num'
+            assert resp['morpheme_break_ids'][1][1][1][0] == plural_agr_id
+            assert resp['morpheme_break_ids'][1][1][1][1] == 'PL'
+            assert resp['morpheme_break_ids'][1][1][1][2] == 'Agr'
+            assert resp['morpheme_break_ids'][2] == [[]]
+            assert resp['morpheme_gloss_ids'][0] == [[]]
+            assert resp['morpheme_gloss_ids'][1][0][0][0] == dog_id
+            assert resp['morpheme_gloss_ids'][1][0][0][1] == 'chien'
+            assert resp['morpheme_gloss_ids'][1][0][0][2] == 'N'
+            assert resp['morpheme_gloss_ids'][1][1][0][0] == plural_num_id
+            assert resp['morpheme_gloss_ids'][1][1][0][1] == 's'
+            assert resp['morpheme_gloss_ids'][1][1][0][2] == 'Num'
+            assert resp['morpheme_gloss_ids'][1][1][1][0] == plural_agr_id
+            assert resp['morpheme_gloss_ids'][1][1][1][1] == 's'
+            assert resp['morpheme_gloss_ids'][1][1][1][2] == 'Agr'
+            assert resp['morpheme_gloss_ids'][2] == [[]]
+            assert resp['syntactic_category_string'] == '? N-Num ?'
+            assert (resp['break_gloss_category'] == 'les|the|?'
+                    ' chien|dog|N-s|PL|Num aboient|bark|?')
+
+            # Recreate the above form but put morpheme delimiters in unexpected
+            # places.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'Les chiens aboient.',
+                'morpheme_break': 'les chien- -s aboient',
+                'morpheme_gloss': 'the dog- -PL bark',
+                'translations': [{
+                    'transcription': 'The dogs are barking.',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = response.json_body
+            form_count = dbsession.query(Form).count()
+            morpheme_break_ids = resp['morpheme_break_ids']
+            assert len(morpheme_break_ids) == 4   # 3 spaces in the mb field
+            assert len(morpheme_break_ids[1]) == 2  # 'chien-' is split into
+                                                    # 'chien' and ''
+            assert ('N-?' in resp['syntactic_category_string'] and
+                    '?-Num' in resp['syntactic_category_string'])
+
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for
         creating a new OLD form.
@@ -226,13 +438,13 @@ class TestFormsView(TestView):
             elicitation_method = omb.generate_default_elicitation_method()
             foreign_word_tag = omb.generate_foreign_word_tag()
             restricted_tag = omb.generate_restricted_tag()
-            N = omb.generate_n_syntactic_category()
-            Num = omb.generate_num_syntactic_category()
-            S = omb.generate_s_syntactic_category()
+            n_syncat = omb.generate_n_syntactic_category()
+            num_syncat = omb.generate_num_syntactic_category()
+            s_syncat = omb.generate_s_syntactic_category()
             speaker = omb.generate_default_speaker()
             source = omb.generate_default_source()
             dbsession.add_all([application_settings, elicitation_method,
-                               foreign_word_tag, restricted_tag, N, Num, S,
+                               foreign_word_tag, restricted_tag, n_syncat, num_syncat, s_syncat,
                                speaker, source])
             transaction.commit()
 

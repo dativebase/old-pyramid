@@ -30,6 +30,12 @@ from sqlalchemy import bindparam
 from sqlalchemy.sql import asc, or_
 from sqlalchemy.orm import subqueryload
 
+from old.lib.constants import (
+    DEFAULT_DELIMITER,
+    FORM_REFERENCE_PATTERN,
+    UNAUTHORIZED_MSG,
+    UNKNOWN_CATEGORY,
+)
 from old.lib.dbutils import get_last_modified
 import old.lib.helpers as h
 from old.lib.schemata import FormSchema, FormIdsSchema
@@ -104,7 +110,6 @@ class Forms(Resources):
             'sources'
         )
 
-    # @h.authorize(['administrator', 'contributor'])
     def update(self):
         """Update a form and return it.
 
@@ -114,17 +119,16 @@ class Forms(Resources):
         :returns: the updated form model.
         """
         id_ = self.request.matchdict['id']
-        form = h.eagerload_form(
+        form = self.db.eagerload_form(
             self.request.dbsession.query(Form)).get(int(id_))
         if not form:
             self.request.response.status_int = 404
             return {'error': 'There is no form with id %s' % id_}
-        unrestricted_users = h.get_unrestricted_users()
-        user = self.request.session['user']
-        if not h.user_is_authorized_to_access_model(user, form,
-                                                    unrestricted_users):
+        unrestricted_users = self.db.get_unrestricted_users()
+        if not self.logged_in_user.is_authorized_to_access_model(
+                form, unrestricted_users):
             self.request.response.status_int = 403
-            return h.unauthorized_msg
+            return UNAUTHORIZED_MSG
         schema = FormSchema()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
@@ -153,7 +157,6 @@ class Forms(Resources):
                 form, 'update', form_dict)
         return form
 
-    # @h.authorize(['administrator', 'contributor'])
     def delete(self):
         """Delete an existing form and return it.
 
@@ -166,7 +169,7 @@ class Forms(Resources):
            Only administrators and a form's enterer can delete it.
         """
         id_ = self.request.matchdict['id']
-        form = h.eagerload_form(self.request.dbsession.query(Form)).get(id_)
+        form = self.db.eagerload_form(self.request.dbsession.query(Form)).get(id_)
         if not form:
             self.request.response.status_int = 404
             return {'error': 'There is no form with id %s' % id_}
@@ -174,7 +177,7 @@ class Forms(Resources):
                 getattr(form.enterer, 'id', None) ==
                 self.request.session['user'].get('id', False)):
             self.request.response.status_int = 403
-            return h.unauthorized_msg
+            return UNAUTHORIZED_MSG
         form_dict = form.get_dict()
         self.backup_form(form_dict)
         self._update_collections_referencing_this_form(form)
@@ -192,21 +195,19 @@ class Forms(Resources):
         :returns: a form model object.
         """
         id_ = self.request.matchdict['id']
-        form = h.eagerload_form(self.request.dbsession.query(Form)).get(id_)
+        form = self.db.eagerload_form(self.request.dbsession.query(Form)).get(id_)
         if not form:
             self.request.response.status_int = 404
             return {'error': 'There is no form with id %s' % id_}
-        unrestricted_users = h.get_unrestricted_users()
-        user = self.request.session['user']
-        if not h.user_is_authorized_to_access_model(user, form,
-                                                    unrestricted_users):
+        unrestricted_users = self.db.get_unrestricted_users()
+        if not self.logged_in_user.is_authorized_to_access_model(
+                form, unrestricted_users):
             self.request.response.status_int = 403
-            return h.unauthorized_msg
+            return UNAUTHORIZED_MSG
         if dict(self.request.GET).get('minimal'):
-            return h.minimal_model(form)
+            return self.db.minimal_model(form)
         return form
 
-    # @h.authorize(['administrator', 'contributor'])
     def edit(self):
         """Return a form and the data needed to update it.
 
@@ -230,15 +231,15 @@ class Forms(Resources):
            dictionary.
         """
         id_ = self.request.matchdict['id']
-        form = h.eagerload_form(self.request.dbsession.query(Form)).get(id_)
+        form = self.db.eagerload_form(self.request.dbsession.query(Form)).get(id_)
         if not form:
             self.request.response.status_int = 404
             return {'error': 'There is no form with id %s' % id_}
-        unrestricted_users = h.get_unrestricted_users()
-        if not h.user_is_authorized_to_access_model(
-                self.request.session['user'], form, unrestricted_users):
+        unrestricted_users = self.db.get_unrestricted_users()
+        if not self.logged_in_user.is_authorized_to_access_model(
+                form, unrestricted_users):
             self.request.response.status_int = 403
-            return h.unauthorized_msg
+            return UNAUTHORIZED_MSG
         return {'data': self._get_new_edit_data(self.request.GET),
                 'form': form}
 
@@ -257,23 +258,22 @@ class Forms(Resources):
             dictionaries representing previous versions of the form.
         """
         id_ = self.request.matchdict['id']
-        form, previous_versions = h.get_model_and_previous_versions('Form', id_)
+        form, previous_versions = self.db.get_model_and_previous_versions('Form', id_)
         if not (form or previous_versions):
             self.request.response.status_int = 404
             return {'error': 'No forms or form backups match %s' % id_}
-        unrestricted_users = h.get_unrestricted_users()
-        user = self.request.session['user']
-        accessible = h.user_is_authorized_to_access_model
+        unrestricted_users = self.db.get_unrestricted_users()
+        accessible = self.logged_in_user.is_authorized_to_access_model
         unrestricted_previous_versions = [
             fb for fb in previous_versions if
-            accessible(user, fb, unrestricted_users)]
-        form_is_restricted = form and not accessible(user, form,
+            accessible(fb, unrestricted_users)]
+        form_is_restricted = form and not accessible(form,
                                                      unrestricted_users)
         previous_versions_are_restricted = (
             previous_versions and not unrestricted_previous_versions)
         if form_is_restricted or previous_versions_are_restricted:
             self.request.response.status_int = 403
-            return h.unauthorized_msg
+            return UNAUTHORIZED_MSG
         return {'form': form,
                 'previous_versions': unrestricted_previous_versions}
 
@@ -303,14 +303,13 @@ class Forms(Resources):
         if not forms:
             self.request.response.status_int = 404
             return {'error': 'No valid form ids were provided.'}
-        accessible = h.user_is_authorized_to_access_model
-        unrestricted_users = h.get_unrestricted_users()
-        user = self.request.session['user']
+        accessible = self.logged_in_user.is_authorized_to_access_model
+        unrestricted_users = self.db.get_unrestricted_users()
         unrestricted_forms = [f for f in forms
-                              if accessible(user, f, unrestricted_users)]
+                              if accessible(f, unrestricted_users)]
         if not unrestricted_forms:
             self.request.response.status_int = 403
-            return h.unauthorized_msg
+            return UNAUTHORIZED_MSG
         user_dict = self.request.session['user']
         user_model = self.request.dbsession.query(User).get(user_dict['id'])
         user_model.remembered_forms += unrestricted_forms
@@ -340,10 +339,10 @@ class Forms(Resources):
            is, therefore, deprecated (read: use it with caution) and may be
            removed in future versions of the OLD.
         """
-        forms = h.get_forms()
+        forms = self.db.get_forms()
         return self.update_morpheme_references_of_forms(
-            h.get_forms(),
-            h.get_morpheme_delimiters(),
+            self.db.get_forms(),
+            self.db.get_morpheme_delimiters(),
             whole_db=forms,
             make_backups=False
         )
@@ -412,8 +411,7 @@ class Forms(Resources):
                     formbackup.vivify(form.get_dict())
                     formbackup_buffer.append(formbackup)
         if form_buffer:
-            rdbms_name = h.get_RDBMS_name(
-                settings=self.request.registry.settings)
+            rdbms_name = h.get_RDBMS_name(self.request.registry.settings)
             if rdbms_name == 'mysql':
                 self.request.dbsession.execute('set names utf8;')
             update = form_table.update().where(form_table.c.id==bindparam('id_')).\
@@ -610,7 +608,7 @@ class Forms(Resources):
         this because many of these collections will not *directly* reference this
         form -- in short, this will result in redundant updates and backups.
         """
-        pattern = h.form_reference_pattern.pattern.replace(
+        pattern = FORM_REFERENCE_PATTERN.pattern.replace(
             '[0-9]+', str(form.id))
         collections_referencing_this_form = self.request.dbsession\
             .query(Collection).\
@@ -876,7 +874,7 @@ class Forms(Resources):
         database queries.
         """
         # The default delimiter for the break_gloss_category field
-        bgc_delimiter = kwargs.get('bgc_delimiter', h.default_delimiter)
+        bgc_delimiter = kwargs.get('bgc_delimiter', DEFAULT_DELIMITER)
         lexical_items = kwargs.get('lexical_items', [])
         deleted_lexical_items = kwargs.get('deleted_lexical_items', [])
         # temporary store -- eliminates redundant queries & processing -- updated
@@ -886,7 +884,7 @@ class Forms(Resources):
         morpheme_break_ids = []
         morpheme_gloss_ids = []
         syntactic_category_string = []
-        morpheme_delimiters = morpheme_delimiters or h.get_morpheme_delimiters()
+        morpheme_delimiters = morpheme_delimiters or self.db.get_morpheme_delimiters()
         morpheme_splitter = morpheme_delimiters and '[%s]' % ''.join(
             [h.esc_RE_meta_chars(d) for d in morpheme_delimiters]) or ''
         morpheme_break = form.morpheme_break
@@ -931,7 +929,7 @@ class Forms(Resources):
                              for f in perfect_matches])
                         sc_word_analysis[j * 2] = getattr(
                             perfect_matches[0].syntactic_category, 'name',
-                            h.unknown_category)
+                            UNKNOWN_CATEGORY)
                     else:
                         morpheme_matches, matches_found = \
                             self.get_partial_matches(
@@ -1005,7 +1003,7 @@ class Forms(Resources):
         if self.is_lexical(form):
             # Here we construct the query to get all forms that may have been
             # affected by the change to the lexical item (i.e., form).
-            morpheme_delimiters = h.get_morpheme_delimiters()
+            morpheme_delimiters = self.db.get_morpheme_delimiters()
             escaped_morpheme_delimiters = [
                 h.esc_RE_meta_chars(d) for d in morpheme_delimiters]
             start_patt = '(%s)' % '|'.join(
@@ -1150,13 +1148,13 @@ def get_category_from_partial_match(morpheme_matches, gloss_matches):
     :param list gloss_matches: forms matching the morpheme's gloss.
     :returns: the category name of the first morpheme match, else that
         of the first gloss match, else the value of
-        ``h.unknown_category``, i.e,. ``'?'``.
+        ``UNKNOWN_CATEGORY``, i.e,. ``'?'``.
     """
     morpheme_syncats = [getattr(m.syntactic_category, 'name', None) for m in
                         morpheme_matches]
     gloss_syncats = [getattr(g.syntactic_category, 'name', None) for g in
                      gloss_matches]
-    categories = morpheme_syncats + gloss_syncats + [h.unknown_category]
+    categories = morpheme_syncats + gloss_syncats + [UNKNOWN_CATEGORY]
     return list(filter(None, categories))[0]
 
 

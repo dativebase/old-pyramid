@@ -3,6 +3,10 @@ p = inflect.engine()
 p.classical()
 
 from pyramid.response import Response
+from old.lib.constants import (
+    UNAUTHORIZED_MSG,
+    UNAUTHENTICATED_MSG,
+)
 import old.lib.pyramid_routehelper as pyrh
 from old.models import User
 
@@ -42,12 +46,6 @@ def fix_for_tests(request):
             request.session['user'] = user.get_dict()
     return request
 
-
-UNAUTHORIZED_MSG = {
-    'error': 'You are not authorized to access this resource.'}
-
-UNAUTHENTICATED_MSG = {
-    'error': 'Authentication is required to access this resource.'}
 
 UNAUTHENTICATED_RESP = Response(
     json=UNAUTHENTICATED_MSG,
