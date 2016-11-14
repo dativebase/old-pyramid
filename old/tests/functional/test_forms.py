@@ -411,6 +411,207 @@ class TestFormsView(TestView):
             assert ('N-?' in resp['syntactic_category_string'] and
                     '?-Num' in resp['syntactic_category_string'])
 
+    def test_create_invalid(self):
+        """Tests that POST /forms with invalid input returns an appropriate
+        error.
+        """
+        with transaction.manager:
+            dbsession = self.get_dbsession()
+            db = DBUtils(dbsession, self.settings)
+
+            # Empty translations should raise error
+            form_count = dbsession.query(Form).count()
+            params = self.form_create_params.copy()
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin, status=400)
+            resp = response.json_body
+            new_form_count = dbsession.query(Form).count()
+            assert resp['errors']['translations'] == 'Please enter a value'
+            assert new_form_count == form_count
+
+            # If all transcription-type values are empty, an error should be
+            # returned for that special case.
+            form_count = dbsession.query(Form).count()
+            params = self.form_create_params.copy()
+            params.update({
+                'translations': [{
+                    'transcription': 'good',
+                    'grammaticality': ''
+                }],
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin, status=400)
+            resp = response.json_body
+            new_form_count = dbsession.query(Form).count()
+            assert resp['errors'] == ('You must enter a value in at least one of'
+                                      ' the following fields: transcription,'
+                                      ' morpheme break, phonetic transcription,'
+                                      ' or narrow phonetic transcription.')
+            assert new_form_count == form_count
+
+            # Exceeding length restrictions should return errors also.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test create invalid transcription' * 100,
+                'grammaticality': '*',
+                'phonetic_transcription':
+                    'test create invalid phonetic transcription' * 100,
+                'narrow_phonetic_transcription':
+                    'test create invalid narrow phonetic transcription' * 100,
+                'morpheme_break': 'test create invalid morpheme break' * 100,
+                'morpheme_gloss': 'test create invalid morpheme gloss' * 100,
+                'translations': [{
+                    'transcription': 'test create invalid translation',
+                    'grammaticality': ''
+                }],
+                'status': 'invalid status value'
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin, status=400)
+            resp = response.json_body
+            new_form_count = dbsession.query(Form).count()
+            too_long_error = 'Enter a value not more than 510 characters long'
+            assert resp['errors']['transcription'] == too_long_error
+            assert resp['errors']['phonetic_transcription'] == too_long_error
+            assert (resp['errors']['narrow_phonetic_transcription'] ==
+                    too_long_error)
+            assert resp['errors']['morpheme_break'] == too_long_error
+            assert resp['errors']['morpheme_gloss'] == too_long_error
+            assert (resp['errors']['status'] ==
+                "Value must be one of: tested; requires testing (not 'invalid"
+                " status value')")
+            assert new_form_count == form_count
+
+            # Add some default application settings and set
+            # app_globals.application_settings.
+            application_settings = omb.generate_default_application_settings()
+            bad_grammaticality = '***'
+            good_grammaticality = (
+                application_settings.grammaticalities.split(',')[0])
+            dbsession.add(application_settings)
+            transaction.commit()
+            extra_environ = self.extra_environ_admin.copy()
+            extra_environ['test.application_settings'] = True
+
+            # Create a form with an invalid grammaticality
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test create invalid transcription',
+                'grammaticality': bad_grammaticality,
+                'translations': [{
+                    'transcription': 'test create invalid translation',
+                    'grammaticality': bad_grammaticality
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ=extra_environ, status=400)
+            resp = response.json_body
+            new_form_count = dbsession.query(Form).count()
+            assert (resp['errors']['grammaticality'] == 'The grammaticality'
+                    ' submitted does not match any of the available options.')
+            assert (resp['errors']['translations'] == 'At least one submitted'
+                    ' translation grammaticality does not match any of the'
+                    ' available options.')
+            assert new_form_count == form_count
+
+            # Create a form with a valid grammaticality
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test create invalid transcription',
+                'grammaticality': good_grammaticality,
+                'translations': [{
+                    'transcription': 'test create invalid translation',
+                    'grammaticality': good_grammaticality
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ=extra_environ)
+            resp = response.json_body
+            new_form_count = dbsession.query(Form).count()
+            assert resp['grammaticality'] == good_grammaticality
+            assert good_grammaticality in [t['grammaticality'] for t in
+                                           resp['translations']]
+            assert new_form_count == form_count + 1
+
+            # Create a form with some invalid many-to-one data, i.e.,
+            # elicitation method, speaker, enterer, etc.
+            bad_id = 109
+            bad_int = 'abc'
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test create invalid transcription',
+                'translations': [{
+                    'transcription': 'test create invalid translation',
+                    'grammaticality': ''
+                }],
+                'elicitation_method': bad_id,
+                'syntactic_category': bad_int,
+                'speaker': bad_id,
+                'elicitor': bad_int,
+                'verifier': bad_id,
+                'source': bad_int
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ=extra_environ, status=400)
+            resp = response.json_body
+            form_count = new_form_count
+            new_form_count = dbsession.query(Form).count()
+            assert response.content_type == 'application/json'
+            assert (resp['errors']['elicitation_method'] ==
+                    'There is no elicitation method with id %d.' % bad_id)
+            assert (resp['errors']['speaker'] == 'There is no speaker with id'
+                    ' %d.' % bad_id)
+            assert (resp['errors']['verifier'] == 'There is no user with id'
+                    ' %d.' % bad_id)
+            assert (resp['errors']['syntactic_category'] == 'Please enter an'
+                    ' integer value')
+            assert resp['errors']['elicitor'] == 'Please enter an integer value'
+            assert resp['errors']['source'] == 'Please enter an integer value'
+            assert new_form_count == form_count
+
+            # Now create a form with some *valid* many-to-one data, i.e.,
+            # elicitation method, speaker, elicitor, etc.
+            elicitation_method = omb.generate_default_elicitation_method()
+            s_syncat = omb.generate_s_syntactic_category()
+            speaker = omb.generate_default_speaker()
+            source = omb.generate_default_source()
+            dbsession.add_all([elicitation_method, s_syncat, speaker, source])
+            dbsession.flush()
+            source_id = source.id
+            source_year = source.year
+            elicitation_method_name = elicitation_method.name
+            transaction.commit()
+            contributor = dbsession.query(old_models.User).filter(
+                old_models.User.role=='contributor').first()
+            administrator = dbsession.query(old_models.User).filter(
+                old_models.User.role=='administrator').first()
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test create invalid transcription',
+                'translations': [{'transcription': 'test create invalid translation',
+                            'grammaticality': ''}],
+                'elicitation_method': db.get_elicitation_methods()[0].id,
+                'syntactic_category': db.get_syntactic_categories()[0].id,
+                'speaker': db.get_speakers()[0].id,
+                'elicitor': contributor.id,
+                'verifier': administrator.id,
+                'source': source_id
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ=extra_environ)
+            resp = response.json_body
+            new_form_count = dbsession.query(Form).count()
+            assert resp['elicitation_method']['name'] == elicitation_method_name
+            assert resp['source']['year'] == source_year    # etc. ...
+            assert new_form_count == form_count + 1
+
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for
         creating a new OLD form.
