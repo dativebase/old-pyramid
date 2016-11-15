@@ -1474,3 +1474,153 @@ class TestFormsView(TestView):
                                     extra_environ=extra_environ)
             resp = response.json_body
             assert resp['speaker']['first_name'] == speaker.first_name
+
+    def test_delete(self):
+        """Tests that DELETE /forms/id deletes the form with id=id and returns
+        a JSON representation.
+
+        If the id is invalid or unspecified, then JSON null or a 404 status code
+        are returned, respectively.
+        FOX
+        """
+        with transaction.manager:
+            dbsession = self.get_dbsession()
+            db = DBUtils(dbsession, self.settings)
+
+            original_contributor_id = dbsession.query(old_models.User).filter(
+                old_models.User.role=='contributor').first().id
+            # Add some objects to the db: a default application settings, a
+            # speaker, a tag, a file ...
+            application_settings = omb.generate_default_application_settings()
+            speaker = omb.generate_default_speaker()
+            my_contributor = omb.generate_default_user()
+            my_contributor.username = 'uniqueusername'
+            tag = old_models.Tag()
+            tag.name = 'default tag'
+            file = omb.generate_default_file()
+            dbsession.add_all([application_settings, speaker, my_contributor,
+                               tag, file])
+            dbsession.flush()
+            my_contributor_id = my_contributor.id
+            my_contributor_first_name = my_contributor.first_name
+            tag_id = tag.id
+            file_id = file.id
+            speaker_first_name = speaker.first_name
+            speaker_id = speaker.id
+            transaction.commit()
+            my_contributor = dbsession.query(old_models.User).filter(
+                old_models.User.username=='uniqueusername').first()
+
+            # Count the original number of forms and form_backups.
+            form_count = dbsession.query(old_models.Form).count()
+            form_backup_count = dbsession.query(old_models.FormBackup).count()
+
+            # First, as my_contributor, create a form to delete.
+            extra_environ = {'test.authentication.id': my_contributor_id}
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test_delete_transcription',
+                'translations': [{
+                    'transcription': 'test_delete_translation',
+                    'grammaticality': ''
+                }],
+                'speaker': str(speaker_id),
+                'tags': [tag_id],
+                'files': [file_id]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     extra_environ)
+            resp = response.json_body
+            to_delete_id = resp['id']
+            assert resp['transcription'] == 'test_delete_transcription'
+            assert (resp['translations'][0]['transcription'] ==
+                    'test_delete_translation')
+            assert resp['tags'][0]['name'] == 'default tag'
+            assert resp['files'][0]['name'] == 'test_file_name'
+
+            # Query the Translation from the db and expect it to be present.
+            translation = dbsession.query(old_models.Translation).get(
+                resp['translations'][0]['id'])
+            assert translation.transcription == 'test_delete_translation'
+
+            # Now count the forms and form_backups.
+            new_form_count = dbsession.query(old_models.Form).count()
+            new_form_backup_count = dbsession.query(
+                old_models.FormBackup).count()
+            assert new_form_count == form_count + 1
+            assert new_form_backup_count == form_backup_count
+
+            # Now, as the default contributor, attempt to delete the
+            # my_contributor-entered form we just created and expect to fail.
+            extra_environ = {'test.authentication.id': original_contributor_id}
+            response = self.app.delete(url('delete', id=to_delete_id),
+                                       extra_environ=extra_environ, status=403)
+            resp = response.json_body
+            assert (resp['error'] == 'You are not authorized to access this'
+                    ' resource.')
+
+            # As my_contributor, attempt to delete the form we just created and
+            # expect to succeed. Show that translations get deleted when forms
+            # do but many-to-many relations (e.g., tags and files) and
+            # many-to-one relations (e.g., speakers) do not.
+            extra_environ = {'test.authentication.id': my_contributor_id}
+            response = self.app.delete(url('delete', id=to_delete_id),
+                                    extra_environ=extra_environ)
+            resp = response.json_body
+            new_form_count = dbsession.query(old_models.Form).count()
+            new_form_backup_count = dbsession.query(
+                old_models.FormBackup).count()
+            translation_of_deleted_form = dbsession.query(
+                old_models.Translation).get(resp['translations'][0]['id'])
+            tag_of_deleted_form = dbsession.query(old_models.Tag).get(
+                resp['tags'][0]['id'])
+            file_of_deleted_form = dbsession.query(old_models.File).get(
+                resp['files'][0]['id'])
+            speaker_of_deleted_form = dbsession.query(old_models.Speaker).get(
+                resp['speaker']['id'])
+            assert translation_of_deleted_form is None
+            assert isinstance(tag_of_deleted_form, old_models.Tag)
+            assert isinstance(file_of_deleted_form, old_models.File)
+            assert isinstance(speaker_of_deleted_form, old_models.Speaker)
+            assert new_form_count == form_count
+            assert new_form_backup_count == form_backup_count + 1
+            assert response.content_type == 'application/json'
+
+            # The deleted form will be returned to us, so the assertions from
+            # above should still hold true.
+            assert resp['transcription'] == 'test_delete_transcription'
+            assert (resp['translations'][0]['transcription'] ==
+                    'test_delete_translation')
+
+            # Trying to get the deleted form from the db should return None
+            deleted_form = dbsession.query(old_models.Form).get(to_delete_id)
+            assert deleted_form == None
+
+            # The backed up form should have the deleted form's attributes
+            backed_up_form = dbsession.query(old_models.FormBackup).filter(
+                old_models.FormBackup.UUID==resp['UUID']).first()
+            assert backed_up_form.transcription == resp['transcription']
+            modifier = json.loads(backed_up_form.modifier)
+            assert modifier['first_name'] == my_contributor_first_name
+            backed_up_speaker = json.loads(backed_up_form.speaker)
+            assert backed_up_speaker['first_name'] == speaker_first_name
+            assert (backed_up_form.datetime_entered.isoformat() ==
+                    resp['datetime_entered'])
+            assert backed_up_form.UUID == resp['UUID']
+
+            # Delete with an invalid id
+            id = 9999999999999
+            response = self.app.delete(
+                url('delete', id=id), headers=self.json_headers,
+                extra_environ=self.extra_environ_admin, status=404)
+            assert response.content_type == 'application/json'
+            assert ('There is no form with id %s' % id in
+                    response.json_body[ 'error'])
+
+            # Delete without an id
+            response = self.app.delete(
+                url('delete', id=''), status=404, headers=self.json_headers,
+                extra_environ=self.extra_environ_admin)
+            assert (response.json_body['error'] == 'The resource could not be'
+                    ' found.')

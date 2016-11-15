@@ -520,7 +520,7 @@ class Resources(abc.ABC):
         return {
             'allowed_file_types': ResCol(
                 '',
-                lambda x: ALLOWED_FILE_TYPES),
+                lambda: ALLOWED_FILE_TYPES),
             'elicitation_methods': ResCol(
                 'ElicitationMethod',
                 self.db.get_mini_dicts_getter('ElicitationMethod')),
@@ -544,7 +544,7 @@ class Resources(abc.ABC):
                 self.db.get_mini_dicts_getter('User')),
             'utterance_types': ResCol(
                 '',
-                lambda x: UTTERANCE_TYPES)
+                lambda: UTTERANCE_TYPES)
         }
 
     def add_order_by(self, query, order_by_params, primary_key='id'):

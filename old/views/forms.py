@@ -132,8 +132,8 @@ class Forms(Resources):
 
     def _delete_unauth(self, form):
         """Only administrators and a form's enterer can delete it."""
-        if (    self.request.session['user'].role == 'administrator' or
-                form.enterer.id == self.request.session['user']['id']):
+        if (    self.logged_in_user.role == 'administrator' or
+                form.enterer.id == self.logged_in_user.id):
             return False
         return True
 
