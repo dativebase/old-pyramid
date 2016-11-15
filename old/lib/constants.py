@@ -192,8 +192,16 @@ LM_END = '</s>'
 
 
 UNAUTHORIZED_MSG = {
-    'error': 'You are not authorized to access this resource.'}
+    'error': 'You are not authorized to access this resource.'
+}
 
 
 UNAUTHENTICATED_MSG = {
-    'error': 'Authentication is required to access this resource.'}
+    'error': 'Authentication is required to access this resource.'
+}
+
+
+JSONDecodeErrorResponse = {
+    'error': 'JSON decode error: the parameters provided were not valid'
+             ' JSON.'
+}

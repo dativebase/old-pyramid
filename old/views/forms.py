@@ -19,7 +19,6 @@
 
 """
 
-from collections import defaultdict
 import logging
 import re
 import json
@@ -38,27 +37,32 @@ from old.lib.constants import (
 )
 from old.lib.dbutils import get_last_modified
 import old.lib.helpers as h
-from old.lib.schemata import FormSchema, FormIdsSchema
-from old.lib.SQLAQueryBuilder import OLDSearchParseError
-from old.models import Form, FormBackup, Collection, CollectionBackup, User
-from old.views.resources import Resources
+from old.lib.schemata import FormIdsSchema
+from old.models import (
+    Form,
+    FormBackup,
+    Collection,
+    User
+)
 from old.views.collections import (
     update_collection_by_deletion_of_referenced_form
 )
+from old.views.resources import Resources
 
 
 LOGGER = logging.getLogger(__name__)
+MORPH_ATTRS = (
+    'morpheme_break_ids',
+    'morpheme_gloss_ids',
+    'syntactic_category_string',
+    'break_gloss_category'
+)
 
 
 class Forms(Resources):
-    """Generate responses to requests on form resources.
+    """Generate responses to requests on form resources."""
 
-    REST Controller styled on the Atom Publishing Protocol.
-    """
-
-    # Index
-
-    def _filter_query(self, query_obj, **kwargs):
+    def _filter_query(self, query_obj):
         """Depending on the unrestrictedness of the user and the
         unrestrictedness of the forms in the query, filter it, or not.
         """
@@ -68,8 +72,6 @@ class Forms(Resources):
         """Set Last-Modified in response header and return 304 if the requester
         already has an up-to-date cache of the results of this call to index/
         """
-        # HTTP Cache Headers. Browsers can cache GET /forms requests if
-        # they haven't changed on the server.
         last_modified = get_last_modified(result)
         if last_modified:
             self.request.response.last_modified = last_modified
@@ -82,6 +84,14 @@ class Forms(Resources):
             return ''
         return False
 
+    def _backup_resource(self, form_dict):
+        """Backup a form.
+        :param dict form_dict: a representation of a form model.
+        """
+        form_backup = FormBackup()
+        form_backup.vivify(form_dict)
+        self.request.dbsession.add(form_backup)
+
     def _post_create(self, form_model):
         """Update any morphologically complex forms that may contain
         this form as a morpheme.
@@ -89,6 +99,9 @@ class Forms(Resources):
         self.update_forms_containing_this_form_as_morpheme(form_model)
 
     def _post_update(self, form, form_dict):
+        """If the form has changed, then update any morphologically complex
+        forms that may contain this form as a morpheme.
+        """
         if update_has_changed_the_analysis(form, form_dict):
             self.update_forms_containing_this_form_as_morpheme(
                 form, 'update', form_dict)
@@ -107,45 +120,7 @@ class Forms(Resources):
             'sources'
         )
 
-    def update_(self):
-        """Update a form and return it.
-
-        :URL: ``PUT /forms/id``
-        :Request body: JSON object representing the form with updated attribute values.
-        :param str id: the ``id`` value of the form to be updated.
-        :returns: the updated form model.
-        """
-        id_ = self.request.matchdict['id']
-        form = self.db.eagerload_form(
-            self.request.dbsession.query(Form)).get(int(id_))
-        if not form:
-            self.request.response.status_int = 404
-            return {'error': 'There is no form with id %s' % id_}
-        schema = FormSchema()
-        try:
-            values = json.loads(self.request.body.decode(self.request.charset))
-        except ValueError:
-            self.request.response.status_int = 400
-            return self.JSONDecodeErrorResponse
-        state = h.get_state_object(values)
-        try:
-            data = schema.to_python(values, state)
-        except Invalid as error:
-            self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
-        form_dict = form.get_dict()
-        form = self.update_form(form, data)
-        # form will be False if there are no changes (cf. update_form).
-        if not form:
-            self.request.response.status_int = 400
-            return {'error': 'The update request failed because the submitted'
-                             ' data were not new.'}
-        self.backup_form(form_dict)
-        self.request.dbsession.add(form)
-        self.request.dbsession.flush()
-        return form
-
-    def _model_access_ctl(self, resource_model):
+    def _model_access_unauth(self, resource_model):
         """Ensure that only authorized users can access the provided
         ``resource_model``.
         """
@@ -155,291 +130,24 @@ class Forms(Resources):
             return True
         return False
 
-    def delete(self):
-        """Delete an existing form and return it.
+    def _delete_unauth(self, form):
+        """Only administrators and a form's enterer can delete it."""
+        if (    self.request.session['user'].role == 'administrator' or
+                form.enterer.id == self.request.session['user']['id']):
+            return False
+        return True
 
-        :URL: ``DELETE /forms/id``
-        :param str id: the ``id`` value of the form to be deleted.
-        :returns: the deleted form model.
-
-        .. note::
-
-           Only administrators and a form's enterer can delete it.
+    def _pre_delete(self, form):
+        """Fix any collections that may be referencing this form prior to its
+        deletion.
         """
-        id_ = self.request.matchdict['id']
-        form = self.db.eagerload_form(self.request.dbsession.query(Form)).get(id_)
-        if not form:
-            self.request.response.status_int = 404
-            return {'error': 'There is no form with id %s' % id_}
-        if not (self.request.session['user'].role == 'administrator' or
-                getattr(form.enterer, 'id', None) ==
-                self.request.session['user'].get('id', False)):
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        form_dict = form.get_dict()
-        self.backup_form(form_dict)
         self._update_collections_referencing_this_form(form)
-        self.request.dbsession.delete(form)
-        self.request.dbsession.flush()
-        # update_application_settings_if_form_is_foreign_word(form)
+
+    def _post_delete(self, form):
+        """Perform actions after deleting ``resource_model`` from the
+        database.
+        """
         self.update_forms_containing_this_form_as_morpheme(form, 'delete')
-        return form
-
-    def show(self):
-        """Return a form.
-
-        :URL: ``GET /forms/id``
-        :param str id: the ``id`` value of the form to be returned.
-        :returns: a form model object.
-        """
-        id_ = self.request.matchdict['id']
-        form = self.db.eagerload_form(self.request.dbsession.query(Form)).get(id_)
-        if not form:
-            self.request.response.status_int = 404
-            return {'error': 'There is no form with id %s' % id_}
-        unrestricted_users = self.db.get_unrestricted_users()
-        if not self.logged_in_user.is_authorized_to_access_model(
-                form, unrestricted_users):
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        if dict(self.request.GET).get('minimal'):
-            return self.db.minimal_model(form)
-        return form
-
-    def edit(self):
-        """Return a form and the data needed to update it.
-
-        :URL: ``GET /forms/edit`` with optional query string parameters
-        :param str id: the ``id`` value of the form that will be updated.
-        :returns: a dictionary of the form::
-
-                {"form": {...}, "data": {...}}
-
-            where the value of the ``form`` key is a dictionary representation
-            of the form and the value of the ``data`` key is a dictionary
-            containing the objects necessary to update a form, viz. the return
-            value of :func:`FormsController.new`
-
-        .. note::
-
-           This action can be thought of as a combination of
-           :func:`FormsController.show` and :func:`FormsController.new`.  See
-           :func:`_get_new_edit_data` to understand how the query string
-           parameters can affect the contents of the lists in the ``data``
-           dictionary.
-        """
-        id_ = self.request.matchdict['id']
-        form = self.db.eagerload_form(self.request.dbsession.query(Form)).get(id_)
-        if not form:
-            self.request.response.status_int = 404
-            return {'error': 'There is no form with id %s' % id_}
-        unrestricted_users = self.db.get_unrestricted_users()
-        if not self.logged_in_user.is_authorized_to_access_model(
-                form, unrestricted_users):
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        return {'data': self._get_new_edit_data(self.request.GET),
-                'form': form}
-
-    def history(self):
-        """Return the form with ``form.id==id`` and its previous versions.
-
-        :URL: ``GET /forms/history/id``
-        :param str id: a string matching the ``id`` or ``UUID`` value of the
-            form whose history is requested.
-        :returns: A dictionary of the form::
-
-                {"form": { ... }, "previous_versions": [ ... ]}
-
-            where the value of the ``form`` key is the form whose history is
-            requested and the value of the ``previous_versions`` key is a list of
-            dictionaries representing previous versions of the form.
-        """
-        id_ = self.request.matchdict['id']
-        form, previous_versions = self.db.get_model_and_previous_versions('Form', id_)
-        if not (form or previous_versions):
-            self.request.response.status_int = 404
-            return {'error': 'No forms or form backups match %s' % id_}
-        unrestricted_users = self.db.get_unrestricted_users()
-        accessible = self.logged_in_user.is_authorized_to_access_model
-        unrestricted_previous_versions = [
-            fb for fb in previous_versions if
-            accessible(fb, unrestricted_users)]
-        form_is_restricted = form and not accessible(form,
-                                                     unrestricted_users)
-        previous_versions_are_restricted = (
-            previous_versions and not unrestricted_previous_versions)
-        if form_is_restricted or previous_versions_are_restricted:
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        return {'form': form,
-                'previous_versions': unrestricted_previous_versions}
-
-    def remember(self):
-        """Cause the logged in user to remember the forms referenced in the
-        request body.
-
-        :URL: ``POST /forms/remember``
-        :request body: A JSON object of the form ``{"forms": [ ... ]}`` where
-            the value of the ``forms`` attribute is the array of form ``id``
-            values representing the forms that are to be remembered.
-        :returns: A list of form ``id`` values corresponding to the forms that
-            were remembered.
-        """
-        schema = FormIdsSchema
-        try:
-            values = json.loads(self.request.body.decode(self.request.charset))
-        except ValueError:
-            self.request.response.status_int = 400
-            return self.JSONDecodeErrorResponse
-        try:
-            data = schema.to_python(values)
-        except Invalid as error:
-            self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
-        forms = [f for f in data['forms'] if f]
-        if not forms:
-            self.request.response.status_int = 404
-            return {'error': 'No valid form ids were provided.'}
-        accessible = self.logged_in_user.is_authorized_to_access_model
-        unrestricted_users = self.db.get_unrestricted_users()
-        unrestricted_forms = [f for f in forms
-                              if accessible(f, unrestricted_users)]
-        if not unrestricted_forms:
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        user_dict = self.request.session['user']
-        user_model = self.request.dbsession.query(User).get(user_dict['id'])
-        user_model.remembered_forms += unrestricted_forms
-        user_model.datetime_modified = h.now()
-        self.request.session['user'] = user_model.get_dict()
-        return [f.id for f in unrestricted_forms]
-
-    # @h.authorize(['administrator'])
-    def update_morpheme_references(self):
-        """Update the morphological analysis-related attributes of all forms.
-
-        That is, update the values of the ``morpheme_break_ids``,
-        ``morpheme_gloss_ids``, ``syntactic_category_string`` and
-        ``break_gloss_category`` attributes of every form in the database.
-
-        :URL: ``PUT /forms/update_morpheme_references``
-        :returns: a list of ids corresponding to the forms where the update
-            caused a change in the values of the target attributes.
-
-        .. warning::
-
-           It should not be necessary to request the regeneration of morpheme
-           references via this action since this should already be accomplished
-           automatically by the calls to
-           ``update_forms_containing_this_form_as_morpheme`` on all successful
-           update, create and delete requests on form resources.  This action
-           is, therefore, deprecated (read: use it with caution) and may be
-           removed in future versions of the OLD.
-        """
-        forms = self.db.get_forms()
-        return self.update_morpheme_references_of_forms(
-            self.db.get_forms(),
-            self.db.get_morpheme_delimiters(),
-            whole_db=forms,
-            make_backups=False
-        )
-
-    def update_morpheme_references_of_forms(self, forms, valid_delimiters,
-                                            **kwargs):
-        """Update the morphological analysis-related attributes of a list of
-        form models.
-
-        Attempt to update the values of the ``morpheme_break_ids``,
-        ``morpheme_gloss_ids``, ``syntactic_category_string`` and
-        ``break_gloss_category`` attributes of all forms in ``forms``. The
-        ``kwargs`` dict may contain ``lexical_items``,
-        ``deleted_lexical_items`` or ``whole_db`` values which will be passed
-        to compile_morphemic_analysis.
-
-        :param list forms: the form models to be updated.
-        :param list valid_delimiters: morpheme delimiters as strings.
-        :param list kwargs['lexical_items']: a list of form models.
-        :param list kwargs['deleted_lexical_items']: a list of form models.
-        :param list kwargs['whole_db']: a list of all the form models in the
-            database.
-        :returns: a list of form ``id`` values corresponding to the forms that
-            have been updated.
-        """
-        form_buffer = []
-        formbackup_buffer = []
-        make_backups = kwargs.get('make_backups', True)
-        modifier_dict = self.request.session['user']
-        modifier_model = self.request.dbsession.query(User).get(
-            modifier_dict['id'])
-        modifier_id = modifier_model.id
-        modification_datetime = h.now()
-        form_table = Form.__table__
-        for form in forms:
-            (
-                morpheme_break_ids,
-                morpheme_gloss_ids,
-                syntactic_category_string,
-                break_gloss_category,
-                kwargs['cache']
-            ) = self.compile_morphemic_analysis(form, valid_delimiters,
-                                                **kwargs)
-            if ((
-                    morpheme_break_ids,
-                    morpheme_gloss_ids,
-                    syntactic_category_string,
-                    break_gloss_category
-                ) != (
-                    form.morpheme_break_ids,
-                    form.morpheme_gloss_ids,
-                    form.syntactic_category_string,
-                    form.break_gloss_category)):
-                form_buffer.append({
-                    'id_': form.id,
-                    'morpheme_break_ids': morpheme_break_ids,
-                    'morpheme_gloss_ids': morpheme_gloss_ids,
-                    'syntactic_category_string':
-                        syntactic_category_string,
-                    'break_gloss_category': break_gloss_category,
-                    'modifier_id': modifier_id,
-                    'datetime_modified': modification_datetime
-                })
-                if make_backups:
-                    formbackup = FormBackup()
-                    formbackup.vivify(form.get_dict())
-                    formbackup_buffer.append(formbackup)
-        if form_buffer:
-            rdbms_name = h.get_RDBMS_name(self.request.registry.settings)
-            if rdbms_name == 'mysql':
-                self.request.dbsession.execute('set names utf8;')
-            update = form_table.update().where(form_table.c.id==bindparam('id_')).\
-                values(**dict([(k, bindparam(k)) for k in form_buffer[0] if k !=
-                               'id_']))
-            self.request.dbsession.execute(update, form_buffer)
-        if make_backups and formbackup_buffer:
-            self.request.dbsession.add_all(formbackup_buffer)
-            self.request.dbsession.flush()
-        return [f['id_'] for f in form_buffer]
-
-    def _backup_resource(self, form_dict):
-        """Backup a form.
-
-        :param dict form_dict: a representation of a form model.
-        :returns: ``None``
-        """
-        form_backup = FormBackup()
-        form_backup.vivify(form_dict)
-        self.request.dbsession.add(form_backup)
-
-    def backup_collection(self, collection_dict):
-        """Backup a collection.
-
-        :param dict form_dict: a representation of a collection model.
-        :returns: ``None``
-        """
-        collection_backup = CollectionBackup()
-        collection_backup.vivify(collection_dict)
-        self.request.dbsession.add(collection_backup)
 
     def _create_new_resource(self, data):
         """Create a new form resource.
@@ -479,8 +187,6 @@ class Forms(Resources):
             data['break_gloss_category'],
             cache
         ) = self.compile_morphemic_analysis(form_model)
-        MORPH_ATTRS = ('morpheme_break_ids', 'morpheme_gloss_ids',
-                       'syntactic_category_string', 'break_gloss_category')
         if not changed:
             for attr in MORPH_ATTRS:
                 if self._distinct(attr, data[attr], getattr(form_model, attr)):
@@ -586,25 +292,213 @@ class Forms(Resources):
                 user_data['tags'].append(restricted_tag)
         return user_data
 
+    ###########################################################################
+    # Idiosyncratic Actions
+    ###########################################################################
+
+    # TODO: hook up to routes and generalize to other resources, if applicable
+
+    def history(self):
+        """Return the form with ``form.id==id`` and its previous versions.
+        :URL: ``GET /forms/history/id``
+        :param str id: a string matching the ``id`` or ``UUID`` value of the
+            form whose history is requested.
+        :returns: A dictionary of the form::
+
+                {"form": { ... }, "previous_versions": [ ... ]}
+
+            where the value of the ``form`` key is the form whose history is
+            requested and the value of the ``previous_versions`` key is a list of
+            dictionaries representing previous versions of the form.
+        """
+        id_ = self.request.matchdict['id']
+        form, previous_versions = self.db.get_model_and_previous_versions('Form', id_)
+        if not (form or previous_versions):
+            self.request.response.status_int = 404
+            return {'error': 'No forms or form backups match %s' % id_}
+        unrestricted_users = self.db.get_unrestricted_users()
+        accessible = self.logged_in_user.is_authorized_to_access_model
+        unrestricted_previous_versions = [
+            fb for fb in previous_versions if
+            accessible(fb, unrestricted_users)]
+        form_is_restricted = form and not accessible(form,
+                                                     unrestricted_users)
+        previous_versions_are_restricted = (
+            previous_versions and not unrestricted_previous_versions)
+        if form_is_restricted or previous_versions_are_restricted:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
+        return {'form': form,
+                'previous_versions': unrestricted_previous_versions}
+
+    def remember(self):
+        """Cause the logged in user to remember the forms referenced in the
+        request body.
+
+        :URL: ``POST /forms/remember``
+        :request body: A JSON object of the form ``{"forms": [ ... ]}`` where
+            the value of the ``forms`` attribute is the array of form ``id``
+            values representing the forms that are to be remembered.
+        :returns: A list of form ``id`` values corresponding to the forms that
+            were remembered.
+        """
+        schema = FormIdsSchema
+        try:
+            values = json.loads(self.request.body.decode(self.request.charset))
+        except ValueError:
+            self.request.response.status_int = 400
+            return self.JSONDecodeErrorResponse
+        try:
+            data = schema.to_python(values)
+        except Invalid as error:
+            self.request.response.status_int = 400
+            return {'errors': error.unpack_errors()}
+        forms = [f for f in data['forms'] if f]
+        if not forms:
+            self.request.response.status_int = 404
+            return {'error': 'No valid form ids were provided.'}
+        accessible = self.logged_in_user.is_authorized_to_access_model
+        unrestricted_users = self.db.get_unrestricted_users()
+        unrestricted_forms = [f for f in forms
+                              if accessible(f, unrestricted_users)]
+        if not unrestricted_forms:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
+        user_dict = self.request.session['user']
+        user_model = self.request.dbsession.query(User).get(user_dict['id'])
+        user_model.remembered_forms += unrestricted_forms
+        user_model.datetime_modified = h.now()
+        self.request.session['user'] = user_model.get_dict()
+        return [f.id for f in unrestricted_forms]
+
+    # @h.authorize(['administrator'])
+    def update_morpheme_references(self):
+        """Update the morphological analysis-related attributes of all forms.
+
+        That is, update the values of the ``morpheme_break_ids``,
+        ``morpheme_gloss_ids``, ``syntactic_category_string`` and
+        ``break_gloss_category`` attributes of every form in the database.
+
+        :URL: ``PUT /forms/update_morpheme_references``
+        :returns: a list of ids corresponding to the forms where the update
+            caused a change in the values of the target attributes.
+
+        .. warning::
+
+           It should not be necessary to request the regeneration of morpheme
+           references via this action since this should already be accomplished
+           automatically by the calls to
+           ``update_forms_containing_this_form_as_morpheme`` on all successful
+           update, create and delete requests on form resources.  This action
+           is, therefore, deprecated (read: use it with caution) and may be
+           removed in future versions of the OLD.
+        """
+        forms = self.db.get_forms()
+        return self.update_morpheme_references_of_forms(
+            self.db.get_forms(),
+            self.db.get_morpheme_delimiters(),
+            whole_db=forms,
+            make_backups=False
+        )
+
+    ###########################################################################
+    # Form-specific private methods
+    ###########################################################################
+
+    def update_morpheme_references_of_forms(self, forms, valid_delimiters,
+                                            **kwargs):
+        """Update the morphological analysis-related attributes of a list of
+        form models.
+
+        Attempt to update the values of the ``morpheme_break_ids``,
+        ``morpheme_gloss_ids``, ``syntactic_category_string`` and
+        ``break_gloss_category`` attributes of all forms in ``forms``. The
+        ``kwargs`` dict may contain ``lexical_items``,
+        ``deleted_lexical_items`` or ``whole_db`` values which will be passed
+        to compile_morphemic_analysis.
+
+        :param list forms: the form models to be updated.
+        :param list valid_delimiters: morpheme delimiters as strings.
+        :param list kwargs['lexical_items']: a list of form models.
+        :param list kwargs['deleted_lexical_items']: a list of form models.
+        :param list kwargs['whole_db']: a list of all the form models in the
+            database.
+        :returns: a list of form ``id`` values corresponding to the forms that
+            have been updated.
+        """
+        form_buffer = []
+        formbackup_buffer = []
+        make_backups = kwargs.get('make_backups', True)
+        modifier_dict = self.request.session['user']
+        modifier_model = self.request.dbsession.query(User).get(
+            modifier_dict['id'])
+        modifier_id = modifier_model.id
+        modification_datetime = h.now()
+        form_table = Form.__table__
+        for form in forms:
+            (
+                morpheme_break_ids,
+                morpheme_gloss_ids,
+                syntactic_category_string,
+                break_gloss_category,
+                kwargs['cache']
+            ) = self.compile_morphemic_analysis(form, valid_delimiters,
+                                                **kwargs)
+            if ((
+                    morpheme_break_ids,
+                    morpheme_gloss_ids,
+                    syntactic_category_string,
+                    break_gloss_category
+                ) != (
+                    form.morpheme_break_ids,
+                    form.morpheme_gloss_ids,
+                    form.syntactic_category_string,
+                    form.break_gloss_category)):
+                form_buffer.append({
+                    'id_': form.id,
+                    'morpheme_break_ids': morpheme_break_ids,
+                    'morpheme_gloss_ids': morpheme_gloss_ids,
+                    'syntactic_category_string':
+                        syntactic_category_string,
+                    'break_gloss_category': break_gloss_category,
+                    'modifier_id': modifier_id,
+                    'datetime_modified': modification_datetime
+                })
+                if make_backups:
+                    formbackup = FormBackup()
+                    formbackup.vivify(form.get_dict())
+                    formbackup_buffer.append(formbackup)
+        if form_buffer:
+            rdbms_name = h.get_RDBMS_name(self.request.registry.settings)
+            if rdbms_name == 'mysql':
+                self.request.dbsession.execute('set names utf8;')
+            update = form_table.update().where(form_table.c.id==bindparam('id_')).\
+                values(**dict([(k, bindparam(k)) for k in form_buffer[0] if k !=
+                               'id_']))
+            self.request.dbsession.execute(update, form_buffer)
+        if make_backups and formbackup_buffer:
+            self.request.dbsession.add_all(formbackup_buffer)
+            self.request.dbsession.flush()
+        return [f['id_'] for f in form_buffer]
+
     def _update_collections_referencing_this_form(self, form):
         """Update all collections that reference the input form in their
         ``contents`` value.
-
         When a form is deleted, it is necessary to update all collections whose
         ``contents`` value references the deleted form.  The update removes the
         reference, recomputes the ``contents_unpacked``, ``html`` and ``forms``
         attributes of the affected collection and causes all of these changes to
         percolate through the collection-collection reference chain.
-
         :param form: a form model object
         :returns: ``None``
 
         .. note::
 
-        Getting the collections that reference this form by searching for those
-        whose ``forms`` attribute contain it is not quite the correct way to do
-        this because many of these collections will not *directly* reference this
-        form -- in short, this will result in redundant updates and backups.
+            Getting the collections that reference this form by searching for
+            those whose ``forms`` attribute contain it is not quite the correct
+            way to do this because many of these collections will not
+            *directly* reference this form -- in short, this will result in
+            redundant updates and backups.
         """
         pattern = FORM_REFERENCE_PATTERN.pattern.replace(
             '[0-9]+', str(form.id))
@@ -619,7 +513,6 @@ class Forms(Resources):
                             gloss, matches_found, lexical_items,
                             deleted_lexical_items, whole_db):
         """Return the list of forms that perfectly match a given morpheme.
-
         That is, return all forms ``f`` such that ``f.morpheme_break==morpheme``
         *and* ``f.morpheme_gloss==gloss``.
 
@@ -705,7 +598,6 @@ class Forms(Resources):
                 .filter(Form.morpheme_gloss==gloss).order_by(asc(Form.id)).all()
         matches_found[(morpheme, gloss)] = result
         return result, matches_found
-
 
     def get_partial_matches(self, form, word_index, morpheme_index,
                             matches_found, **kwargs):

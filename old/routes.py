@@ -11,6 +11,37 @@ import old.lib.pyramid_routehelper as pyrh
 from old.models import User
 
 
+RESOURCES = {
+    'applicationsetting': {},
+    'collection': {'searchable': True},
+    'collectionbackup': {'searchable': True},
+    'corpus': {},
+    'corpusbackup': {'searchable': True},
+    'elicitationmethod': {},
+    'file': {'searchable': True},
+    'form': {'searchable': True},
+    'formsearch': {'searchable': True},
+    'formbackup': {'searchable': True},
+    'keyboard': {'searchable': True},
+    'language': {'searchable': True},
+    'morphemelanguagemodel': {'searchable': True},
+    'morphemelanguagemodelbackup': {},
+    'morphologicalparser': {'searchable': True},
+    'morphologicalparserbackup': {},
+    'morphology': {'searchable': True},
+    'morphologybackup': {},
+    'orthography': {},
+    'page': {'searchable': True},
+    'phonology': {'searchable': True},
+    'phonologybackup': {},
+    'source': {'searchable': True},
+    'speaker': {},
+    'syntacticcategory': {},
+    'tag': {},
+    'user': {},
+}
+
+
 def search_connect(config, name):
     """Create a SEARCH mapping for the resource collection with (plural) name
     ``name``. Usage: ``config = search_connect(config, 'forms')``.
@@ -127,7 +158,15 @@ def get_auth_decorators(resource, action):
     return authenticate
 
 
-def add_resource(config, member_name):
+def add_resource(config, member_name, rsrc_config=None):
+    """Add route/view configuration to ``config`` that exposes ``member_name``
+    as a RESTful resource. The ``rsrc_config`` dict provides additional
+    configuration of the resource; e.g., setting 'searchable' to ``True`` will
+    set up search-related routes. Configuration should be centralized in the
+    ``RESOURCES`` constant.
+    """
+    if not rsrc_config:
+        rsrc_config = {}
     collection_name = p.plural(member_name)
     class_name = collection_name.capitalize()
     view_callable = 'old.views.{}.{}'.format(collection_name, class_name)
@@ -152,6 +191,32 @@ def add_resource(config, member_name):
                         request_method=request_method,
                         renderer='json',
                         decorator=get_auth_decorators(member_name, action))
+    if rsrc_config.get('searchable', False):
+        for route_name, path, request_method, attr in (
+                (
+                    'search_{}'.format(collection_name),
+                    '/{}'.format(collection_name),
+                    'SEARCH',
+                    'search'
+                ), (
+                    'search_{}_post'.format(collection_name),
+                    '/{}/search'.format(collection_name),
+                    'POST',
+                    'search'
+                ), (
+                    'new_search_{}'.format(collection_name),
+                    '/{}/new_search'.format(collection_name),
+                    'GET',
+                    'new_search'
+                )
+            ):
+            config.add_route(route_name, path, request_method=request_method)
+            config.add_view(view_callable,
+                            attr=attr,
+                            route_name=route_name,
+                            request_method=request_method,
+                            renderer='json',
+                            decorator=get_auth_decorators(member_name, attr))
 
 
 def includeme(config):
@@ -276,6 +341,7 @@ def includeme(config):
                      '/phonologies/{id}/runtests',
                      request_method='GET')
 
+    """
     # SEARCH routes
     search_connect(config, 'collectionbackups')
     search_connect(config, 'collections')
@@ -292,6 +358,7 @@ def includeme(config):
     search_connect(config, 'pages')
     search_connect(config, 'phonologies')
     search_connect(config, 'sources')
+    """
 
     # rememberedforms "resource"
     # Pylons: controller='rememberedforms', action='show'
@@ -306,7 +373,7 @@ def includeme(config):
                      request_method='POST')
 
     # RESTful resource mappings
-
+    """
     add_resource(config, 'applicationsetting')
     add_resource(config, 'collection')
     add_resource(config, 'collectionbackup')
@@ -334,6 +401,10 @@ def includeme(config):
     add_resource(config, 'syntacticcategory')
     add_resource(config, 'tag')
     add_resource(config, 'user')
+    """
+
+    for member_name, rsrc_config in RESOURCES.items():
+        add_resource(config, member_name, rsrc_config)
 
     # Map '/collections' to oldcollections controller (conflict with Python
     # collections module).

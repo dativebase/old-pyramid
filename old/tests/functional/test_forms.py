@@ -12,13 +12,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from base64 import encodestring
 import datetime
 import json
 import logging
+import os
 import pprint
 from time import sleep
 import transaction
 
+from sqlalchemy.sql import desc
 import pytest
 
 from old.lib.dbutils import DBUtils
@@ -42,6 +45,7 @@ LOGGER = logging.getLogger(__name__)
 # Recreate the Pylons ``url`` global function that gives us URL paths for a
 # given (resource) route name plus path variables as **kwargs
 url = Form._url()
+files_url = old_models.File._url()
 
 
 ###############################################################################
@@ -952,6 +956,185 @@ class TestFormsView(TestView):
             assert 'There is no tag with id 9875.' in resp['errors']['tags']
             assert 'Please enter an integer value' in resp['errors']['tags']
 
+    def test_relational_restrictions(self):
+        """Tests that the restricted tag works correctly with respect to
+        relational attributes of forms.
+
+        That is, tests that (a) form.files does not return restricted files to
+        restricted users and (b) a restricted user cannot append a restricted
+        form to file.forms.
+        """
+        with transaction.manager:
+            dbsession = self.get_dbsession()
+            db = DBUtils(dbsession, self.settings)
+
+            admin = self.extra_environ_admin.copy()
+            contrib = self.extra_environ_contrib.copy()
+
+            # Create a test form.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test',
+                'translations': [{
+                    'transcription': 'test_create_translation',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     admin)
+            resp = response.json_body
+            form_count = dbsession.query(old_models.Form).count()
+            assert resp['transcription'] == 'test'
+            assert form_count == 1
+
+            # Now create the restricted tag.
+            restricted_tag = omb.generate_restricted_tag()
+            dbsession.add(restricted_tag)
+            dbsession.flush()
+            restricted_tag_id = restricted_tag.id
+            transaction.commit()
+
+            # Then create two files, one restricted and one not.
+            wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
+            wav_file_base64 = encodestring(open(wav_file_path, 'rb').read())\
+                .decode('utf8')
+
+            params = self.file_create_params.copy()
+            params.update({
+                'filename': 'restricted_file.wav',
+                'base64_encoded_file': wav_file_base64,
+                'tags': [restricted_tag_id]
+            })
+            params = json.dumps(params)
+            response = self.app.post(files_url('create'), params,
+                                     self.json_headers, admin)
+            resp = response.json_body
+            restricted_file_id = resp['id']
+
+            params = self.file_create_params.copy()
+            params.update({
+                'filename': 'unrestricted_file.wav',
+                'base64_encoded_file': wav_file_base64
+            })
+            params = json.dumps(params)
+            response = self.app.post(files_url('create'), params,
+                                     self.json_headers, admin)
+            resp = response.json_body
+            unrestricted_file_id = resp['id']
+
+            # Now, as a (restricted) contributor, attempt to create a form and
+            # associate it to a restricted file -- expect to fail.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test',
+                'translations': [{
+                    'transcription': 'test_create_translation',
+                    'grammaticality': ''
+                }],
+                'files': [restricted_file_id]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     contrib, status=400)
+            resp = response.json_body
+            assert ('You are not authorized to access the file with id %d.' %
+                restricted_file_id in resp['errors']['files'])
+
+            # Now, as a (restricted) contributor, attempt to create a form and
+            # associate it to an unrestricted file -- expect to succeed.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test',
+                'translations': [{
+                    'transcription': 'test_create_translation',
+                    'grammaticality': ''
+                }],
+                'files': [unrestricted_file_id]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     contrib)
+            resp = response.json_body
+            unrestricted_form_id = resp['id']
+            assert resp['transcription'] == 'test'
+            assert resp['files'][0]['name'] == 'unrestricted_file.wav'
+
+            # Now, as a(n unrestricted) administrator, attempt to create a form
+            # and associate it to a restricted file -- expect (a) to succeed
+            # and (b) to find that the form is now restricted.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'test',
+                'translations': [{
+                    'transcription': 'test_create_translation',
+                    'grammaticality': ''
+                }],
+                'files': [restricted_file_id]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     admin)
+            resp = response.json_body
+            indirectly_restricted_form_id = resp['id']
+            assert resp['transcription'] == 'test'
+            assert resp['files'][0]['name'] == 'restricted_file.wav'
+            assert 'restricted' in [t['name'] for t in resp['tags']]
+
+            # Now show that the indirectly restricted forms are inaccessible to
+            # unrestricted users.
+            response = self.app.get(url('index'), headers=self.json_headers,
+                                    extra_environ=contrib)
+            resp = response.json_body
+            assert indirectly_restricted_form_id not in [f['id'] for f in resp]
+
+            # Now, as a(n unrestricted) administrator, create a form.
+            unrestricted_form_params = self.form_create_params.copy()
+            unrestricted_form_params.update({
+                'transcription': 'test',
+                'translations': [{
+                    'transcription': 'test_create_translation',
+                    'grammaticality': ''
+                }]
+            })
+            params = json.dumps(unrestricted_form_params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     admin)
+            resp = response.json_body
+            unrestricted_form_id = resp['id']
+            assert resp['transcription'] == 'test'
+
+            # As a restricted contributor, attempt to update the unrestricted
+            # form just created by associating it to a restricted file --
+            # expect to fail.
+            unrestricted_form_params.update({'files': [restricted_file_id]})
+            params = json.dumps(unrestricted_form_params)
+            response = self.app.put(url('update', id=unrestricted_form_id),
+                                    params, self.json_headers, contrib,
+                                    status=400)
+            resp = response.json_body
+            assert ('You are not authorized to access the file with id %d.' %
+                    restricted_file_id in resp['errors']['files'])
+
+            # As an unrestricted administrator, attempt to update an
+            # unrestricted form by associating it to a restricted file --
+            # expect to succeed.
+            response = self.app.put(url('update', id=unrestricted_form_id),
+                                    params, self.json_headers, admin)
+            resp = response.json_body
+            assert resp['id'] == unrestricted_form_id
+            assert 'restricted' in [t['name'] for t in resp['tags']]
+
+            # Now show that the newly indirectly restricted form is also
+            # inaccessible to an unrestricted user.
+            response = self.app.get(url('show', id=unrestricted_form_id),
+                                    headers=self.json_headers,
+                                    extra_environ=contrib, status=403)
+            resp = response.json_body
+            assert response.content_type == 'application/json'
+            assert (resp['error'] == 'You are not authorized to access this'
+                    ' resource.')
+
     def test_new(self):
         """Tests that GET /form/new returns an appropriate JSON object for
         creating a new OLD form.
@@ -1061,3 +1244,233 @@ class TestFormsView(TestView):
             assert resp['users'] == []
             assert resp['sources'] == []
 
+    def test_update(self):
+        """Tests that PUT /forms/id correctly updates an existing form."""
+        with transaction.manager:
+            dbsession = self.get_dbsession()
+            db = DBUtils(dbsession, self.settings)
+
+            form_count = dbsession.query(old_models.Form).count()
+
+            # Add the default application settings and the restricted tag.
+            restricted_tag = omb.generate_restricted_tag()
+            application_settings = omb.generate_default_application_settings()
+            dbsession.add_all([application_settings, restricted_tag])
+            transaction.commit()
+            restricted_tag = db.get_restricted_tag()
+
+            # Create a form to update.
+            params = self.form_create_params.copy()
+            original_transcription = 'test_update_transcription'
+            original_translation = 'test_update_translation'
+            params.update({
+                'transcription': original_transcription,
+                'translations': [{
+                    'transcription': original_translation,
+                    'grammaticality': ''
+                }],
+                'tags': [restricted_tag.id]
+            })
+            params = json.dumps(params)
+            response = self.app.post(url('create'), params, self.json_headers,
+                                     self.extra_environ_admin)
+            resp = response.json_body
+            id_ = int(resp['id'])
+            new_form_count = dbsession.query(old_models.Form).count()
+            datetime_modified = resp['datetime_modified']
+            assert resp['transcription'] == original_transcription
+            assert (resp['translations'][0]['transcription'] ==
+                    original_translation)
+            assert new_form_count == form_count + 1
+
+            # As a viewer, attempt to update the restricted form we just
+            # created. Expect to fail.
+            extra_environ = {'test.authentication.role': 'viewer'}
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'Updated!',
+                'translations': [{
+                    'transcription': 'test_update_translation',
+                    'grammaticality': ''
+                }],
+            })
+            params = json.dumps(params)
+            response = self.app.put(url('update', id=id_), params,
+                                    self.json_headers, extra_environ,
+                                    status=403)
+            resp = response.json_body
+            assert (resp['error'] == 'You are not authorized to access this'
+                    ' resource.')
+
+            # As an administrator now, update the form just created and expect
+            # to succeed.
+            orig_backup_count = dbsession.query(old_models.FormBackup).count()
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'Updated!',
+                'translations': [{
+                    'transcription': 'test_update_translation',
+                    'grammaticality': ''
+                }],
+                'morpheme_break': 'a-b',
+                'morpheme_gloss': 'c-d',
+                'status': 'requires testing'
+            })
+            params = json.dumps(params)
+            response = self.app.put(url('update', id=id_), params,
+                                    self.json_headers, self.extra_environ_admin)
+            resp = response.json_body
+            new_form_count = dbsession.query(old_models.Form).count()
+            new_backup_count = dbsession.query(old_models.FormBackup).count()
+            morpheme_break_ids_of_word = resp['morpheme_break_ids']
+            assert resp['transcription'] == 'Updated!'
+            assert (resp['translations'][0]['transcription'] ==
+                    'test_update_translation')
+            assert resp['morpheme_break'] == 'a-b'
+            assert resp['morpheme_gloss'] == 'c-d'
+            assert resp['morpheme_break_ids'] == [[[], []]]
+            assert resp['morpheme_gloss_ids'] == [[[], []]]
+            assert resp['status'] == 'requires testing'
+            assert new_form_count == form_count + 1
+            assert orig_backup_count + 1 == new_backup_count
+            backup = dbsession.query(old_models.FormBackup).filter(
+                old_models.FormBackup.UUID==resp['UUID']).order_by(
+                desc(old_models.FormBackup.id)).first()
+            assert datetime_modified.startswith(
+                backup.datetime_modified.isoformat())
+            assert backup.transcription == original_transcription
+            assert response.content_type == 'application/json'
+
+            # Attempt an update with no new data. Expect a 400 error
+            # and response['errors'] = {'no change': The update request failed
+            # because the submitted data were not new.'}.
+            orig_backup_count = dbsession.query(old_models.FormBackup).count()
+            response = self.app.put(url('update', id=id_), params,
+                                    self.json_headers,
+                                    self.extra_environ_admin, status=400)
+            new_backup_count = dbsession.query(old_models.FormBackup).count()
+            resp = response.json_body
+            assert orig_backup_count == new_backup_count
+            assert 'the submitted data were not new' in resp['error']
+
+            # Now create a lexical form matching one of the
+            # morpheme-form/morpheme-gloss pairs in the above form. The call
+            # to update_forms_containing_this_form_as_morpheme in the create
+            # action will cause the morpheme_break_ids and morpheme_gloss_ids
+            # attributes of the phrasal form to change.
+            orig_backup_count = dbsession.query(old_models.FormBackup).count()
+            updated_word = dbsession.query(old_models.Form).get(id_)
+            assert (json.loads(updated_word.morpheme_break_ids) ==
+                    morpheme_break_ids_of_word)
+            new_params = self.form_create_params.copy()
+            new_params.update({
+                'transcription': 'a',
+                'translations': [{
+                    'transcription': 'lexical',
+                    'grammaticality': ''
+                }],
+                'morpheme_break': 'a',
+                'morpheme_gloss': 'c'
+            })
+            new_params = json.dumps(new_params)
+            response = self.app.post(url('create'), new_params,
+                                     self.json_headers,
+                                     self.extra_environ_admin)
+            updated_word = dbsession.query(old_models.Form).get(id_)
+            new_morpheme_break_ids_of_word = json.loads(
+                updated_word.morpheme_break_ids)
+            new_morpheme_gloss_ids_of_word = json.loads(
+                updated_word.morpheme_gloss_ids)
+            new_backup_count = dbsession.query(old_models.FormBackup).count()
+            assert new_morpheme_break_ids_of_word != morpheme_break_ids_of_word
+            assert orig_backup_count + 1 == new_backup_count
+            assert new_morpheme_break_ids_of_word[0][0][0][1] == 'c'
+            assert new_morpheme_break_ids_of_word[0][0][0][2] == None
+            assert new_morpheme_gloss_ids_of_word[0][0][0][1] == 'a'
+            assert new_morpheme_gloss_ids_of_word[0][0][0][2] == None
+
+            # A vacuous update on the word will fail since the updating was
+            # accomplished via the creation of the a/c morpheme.
+            response = self.app.put(url('update', id=id_), params,
+                                    self.json_headers,
+                                    self.extra_environ_admin, status=400)
+            resp = response.json_body
+            assert 'the submitted data were not new' in resp['error']
+
+            # Again update our form, this time making it into a foreign word.
+            # Updating a form into a foreign word should update the Inventory
+            # objects in app_globals.
+            # First we create an application settings with some VERY STRICT
+            # inventory-based validation settings. Also we add a foreign word
+            # tag.
+            orthography = old_models.Orthography(
+                name='Test Orthography',
+                orthography='o,O',
+                lowercase=True,
+                initial_glottal_stops=True
+            )
+            dbsession.add(orthography)
+            transaction.commit()
+            application_settings = omb.generate_default_application_settings()
+            application_settings.orthographic_validation = 'Error'
+            application_settings.narrow_phonetic_inventory = 'n,p,N,P'
+            application_settings.narrow_phonetic_validation = 'Error'
+            application_settings.broad_phonetic_inventory = 'b,p,B,P'
+            application_settings.broad_phonetic_validation = 'Error'
+            application_settings.morpheme_break_is_orthographic = False
+            application_settings.morpheme_break_validation = 'Error'
+            application_settings.phonemic_inventory = 'p,i,P,I'
+            application_settings.storage_orthography = db.get_orthographies()[0]
+            foreign_word_tag = omb.generate_foreign_word_tag()
+            dbsession.add_all([application_settings, foreign_word_tag])
+            transaction.commit()
+
+            extra_environ = self.extra_environ_admin.copy()
+            # Now we update using the same params as before, only this time we
+            # tag as a foreign word.
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'Updated!',
+                'translations': [{
+                    'transcription': 'test_update_translation',
+                    'grammaticality': ''
+                }],
+                'tags': [db.get_foreign_word_tag().id],
+                'morpheme_break': 'a-b',
+                'morpheme_gloss': 'c-d'
+            })
+            params = json.dumps(params)
+            response = self.app.put(url('update', id=id_), params,
+                                    self.json_headers, extra_environ)
+            resp = response.json_body
+            application_settings = db.current_app_set
+            # This is how we know that
+            # update_application_settings_if_form_is_foreign_word is working
+            assert ('a-b' in
+                    application_settings.get_transcription_inventory(
+                        'morpheme_break', db).input_list)
+            assert ('Updated!' in
+                    application_settings.get_transcription_inventory(
+                        'orthographic', db).input_list)
+            assert 'errors' not in resp
+
+            # Now update our form by adding a many-to-one datum, viz. a speaker
+            speaker = omb.generate_default_speaker()
+            dbsession.add(speaker)
+            transaction.commit()
+            speaker = db.get_speakers()[0]
+            params = self.form_create_params.copy()
+            params.update({
+                'transcription': 'oO',
+                'translations': [{
+                    'transcription': 'Updated again translation',
+                    'grammaticality': ''
+                }],
+                'speaker': speaker.id,
+            })
+            params = json.dumps(params)
+            response = self.app.put(url('update', id=id_), params,
+                                    self.json_headers,
+                                    extra_environ=extra_environ)
+            resp = response.json_body
+            assert resp['speaker']['first_name'] == speaker.first_name

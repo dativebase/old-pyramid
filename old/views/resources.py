@@ -1,19 +1,25 @@
 import abc
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 import json
 import logging
 
-from formencode.schema import Schema
 from formencode.validators import Invalid
 import inflect
-from sqlalchemy.sql import or_, not_, desc, asc
+from sqlalchemy.sql import asc
 
+from old.lib.constants import (
+    ALLOWED_FILE_TYPES,
+    JSONDecodeErrorResponse,
+    UNAUTHORIZED_MSG,
+    UTTERANCE_TYPES
+)
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
 from old.lib.dbutils import (
     add_pagination,
     DBUtils,
     _filter_restricted_models_from_query,
-    get_eagerloader
+    get_eagerloader,
+    minimal_model
 )
 import old.lib.helpers as h
 import old.lib.schemata as old_schemata
@@ -44,11 +50,6 @@ class Resources(abc.ABC):
     | Delete specific | DELETE      | /<cllctn_name>/<id>      | delete |
     | Search          | SEARCH      | /<cllctn_name>           | search |
     +-----------------+-------------+--------------------------+--------+
-
-    TODOs:
-
-    - implement authorization control
-    - allow for resource-specific authorization control over actions.
     """
     inflect_p = inflect.engine()
     inflect_p.classical()
@@ -64,7 +65,7 @@ class Resources(abc.ABC):
         self.schema_cls_name = self.model_name + 'Schema'
         # Classes
         self.model_cls = getattr(old_models, self.model_name)
-        self.schema_cls = getattr(old_schemata, self.schema_cls_name)
+        self.schema_cls = getattr(old_schemata, self.schema_cls_name, None)
 
     @property
     def db(self):
@@ -91,7 +92,6 @@ class Resources(abc.ABC):
     # Public CRUD(S) Methods
     ###########################################################################
 
-    # @h.authorize(['administrator', 'contributor'])
     def create(self):
         """Create a new resource and return it.
         :URL: ``POST /<resource_collection_name>``
@@ -103,7 +103,7 @@ class Resources(abc.ABC):
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return self.JSONDecodeErrorResponse
+            return JSONDecodeErrorResponse
         # TODO/NOTE: in corpus validation, the state needs a settings dict attr
         state = SchemaState(
             full_dict=values,
@@ -120,7 +120,6 @@ class Resources(abc.ABC):
         self._post_create(resource)
         return resource.get_dict()
 
-    # @h.authorize(['administrator', 'contributor'])
     def new(self):
         """Return the data necessary to create a new resource.
         :URL: ``GET /<resource_collection_name>/new``.
@@ -160,12 +159,17 @@ class Resources(abc.ABC):
         :param str id: the ``id`` value of the resource to be returned.
         :returns: a resource model object.
         """
-        resource_model, id_ = self._model_from_id()
+        resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
             return {'error': 'There is no %s with id %s' % (self.member_name,
                                                             id_)}
-        return resource_model
+        if self._model_access_unauth(resource_model) is not False:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
+        if dict(self.request.GET).get('minimal'):
+            return minimal_model(resource_model)
+        return resource_model.get_dict()
 
     def update(self):
         """Update a resource and return it.
@@ -180,8 +184,7 @@ class Resources(abc.ABC):
             self.request.response.status_int = 404
             return {'error': 'There is no %s with id %s' % (self.member_name,
                                                             id_)}
-        model_access_ctl = self._model_access_ctl(resource_model)
-        if model_access_ctl is not False:
+        if self._model_access_unauth(resource_model) is not False:
             self.request.response.status_int = 403
             return UNAUTHORIZED_MSG
         schema = self.schema_cls()
@@ -189,7 +192,7 @@ class Resources(abc.ABC):
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return self.JSONDecodeErrorResponse
+            return JSONDecodeErrorResponse
         state = SchemaState(
             full_dict=values,
             db=self.db,
@@ -214,11 +217,6 @@ class Resources(abc.ABC):
         self._post_update(resource_model, resource_dict)
         return resource_model.get_dict()
 
-    def _backup_resource(self, resource_dict):
-        """Perform a backup of the provided ``resource_dict``, if applicable."""
-        pass
-
-    # @h.authorize(['administrator', 'contributor'])
     def edit(self):
         """Return a resource and the data needed to update it.
         :URL: ``GET /<resource_collection_name>/edit``
@@ -232,31 +230,44 @@ class Resources(abc.ABC):
             ``data`` key is a dictionary containing the data needed to edit an
             existing resource of this type.
         """
-        resource_model, id_ = self._model_from_id()
+        resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
             return {'error': 'There is no %s with id %s' % (self.member_name,
                                                             id_)}
-        return {'data': self.new(), self.member_name: resource_model}
+        if self._model_access_unauth(resource_model) is not False:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
+        return {
+            'data': self._get_new_edit_data(self.request.GET),
+            self.member_name: resource_model
+        }
 
-    # @h.authorize(['administrator', 'contributor'])
     def delete(self):
         """Delete an existing resource and return it.
         :URL: ``DELETE /<resource_collection_name>/<id>``
         :param str id: the ``id`` value of the resource to be deleted.
         :returns: the deleted resource model.
         """
-        resource_model, id_ = self._model_from_id()
+        resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
             return {'error': 'There is no %s with id %s' % (self.member_name,
                                                             id_)}
+        if self._delete_unauth(resource_model) is not False:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
         error_msg = self._delete_impossible(resource_model)
         if error_msg:
             self.request.response.status_int = 403
             return {'error': error_msg}
+        resource_dict = resource_model.get_dict()
+        self._backup_resource(resource_dict)
+        self._pre_delete(resource_model)
         self.request.dbsession.delete(resource_model)
-        return resource_model
+        self.request.dbsession.flush()
+        self._post_delete(resource_model)
+        return resource_dict
 
     def search(self):
         """Return the list of resources matching the input JSON query.
@@ -274,7 +285,7 @@ class Resources(abc.ABC):
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
-            return self.JSONDecodeErrorResponse
+            return JSONDecodeErrorResponse
         try:
             sqla_query = self.query_builder.get_SQLA_query(
                 python_search_params.get('query'))
@@ -293,14 +304,14 @@ class Resources(abc.ABC):
         query = self._filter_query(query)
         return add_pagination(query, python_search_params.get('paginator'))
 
-    def new_search_(self):
+    def new_search(self):
         """Return the data necessary to search over this type of resource.
-        :URL: ``GET /forms/<resource_collection_name>``
+        :URL: ``GET /<resource_collection_name>/new_search``
         :returns: ``{"search_parameters": {
             "attributes": { ... }, "relations": { ... }}``
         """
         return {'search_parameters':
-                self.get_search_parameters(self.query_builder)}
+                self._get_search_parameters(self.query_builder)}
 
     ###########################################################################
     # Private Methods for Override: redefine in views for custom behaviour
@@ -310,7 +321,7 @@ class Resources(abc.ABC):
         """Override this in a subclass with model-specific eager loading."""
         return get_eagerloader(self.model_name)(query_obj)
 
-    def _filter_query(self, query_obj, **kwargs):
+    def _filter_query(self, query_obj):
         """Override this in a subclass with model-specific query filtering.
         E.g., in the forms view::
             >>> return h.filter_restricted_models(self.model_name, query_obj)
@@ -325,13 +336,23 @@ class Resources(abc.ABC):
         """
         return False
 
-    def _model_access_ctl(self, resource_model):
+    def _model_access_unauth(self, resource_model):
         """Implement resource/model-specific access controls based on
         (un-)restricted(-ness) of the current logged in user and the resource
-        in question. Return something other than false to trigger a 403
+        in question. Return something other than ``False`` to trigger a 403
         response.
         """
         return False
+
+    def _delete_unauth(self, resource_model):
+        """Implement resource/model-specific controls over delete requests.
+        Return something other than ``False`` to trigger a 403 response.
+        """
+        return False
+
+    def _backup_resource(self, resource_dict):
+        """Perform a backup of the provided ``resource_dict``, if applicable."""
+        pass
 
     def _create_new_resource(self, data):
         """Create a new resource.
@@ -400,6 +421,18 @@ class Resources(abc.ABC):
         """
         pass
 
+    def _pre_delete(self, resource_model):
+        """Perform actions prior to deleting ``resource_model`` from the
+        database.
+        """
+        pass
+
+    def _post_delete(self, resource_model):
+        """Perform actions after deleting ``resource_model`` from the
+        database.
+        """
+        pass
+
     def _get_new_edit_data(self, get_params):
         """Return a dict containing the data (related models) necessary to
         create a new (or edit an existing) resource model of the given type.
@@ -421,7 +454,8 @@ class Resources(abc.ABC):
         for collection in self._get_new_edit_collections():
             result[collection] = []
             rescol = self.resource_collections[collection]
-            if collection in self._get_mandatory_collections():
+            if (    collection in self._get_mandatory_collections() or
+                    not rescol.model_name):
                 result[collection] = rescol.getter()
             # There are GET params, so we are selective in what we return.
             elif get_params:
@@ -484,6 +518,9 @@ class Resources(abc.ABC):
     @property
     def resource_collections(self):
         return {
+            'allowed_file_types': ResCol(
+                '',
+                lambda x: ALLOWED_FILE_TYPES),
             'elicitation_methods': ResCol(
                 'ElicitationMethod',
                 self.db.get_mini_dicts_getter('ElicitationMethod')),
@@ -504,22 +541,18 @@ class Resources(abc.ABC):
                 self.db.get_mini_dicts_getter('Tag')),
             'users': ResCol(
                 'User',
-                self.db.get_mini_dicts_getter('User'))
+                self.db.get_mini_dicts_getter('User')),
+            'utterance_types': ResCol(
+                '',
+                lambda x: UTTERANCE_TYPES)
         }
-
-    JSONDecodeErrorResponse = {
-        'error': 'JSON decode error: the parameters provided were not valid'
-                 ' JSON.'}
-
-    unauthorized_msg = {'error': 'You are not authorized to access this'
-                                 ' resource.'}
 
     def add_order_by(self, query, order_by_params, primary_key='id'):
         """Add an ORDER BY clause to the query using the get_SQLA_order_by
         method of the instance's query_builder (if possible) or using a default
         ORDER BY <primary_key> ASC.
         """
-        if (order_by_params and order_by_params.get('order_by_model') and
+        if (    order_by_params and order_by_params.get('order_by_model') and
                 order_by_params.get('order_by_attribute') and
                 order_by_params.get('order_by_direction')):
             order_by_params = old_schemata.OrderBySchema.to_python(
@@ -537,7 +570,7 @@ class Resources(abc.ABC):
             model_ = getattr(old_models, self.query_builder.model_name)
             return query.order_by(asc(getattr(model_, primary_key)))
 
-    def get_search_parameters(self):
+    def _get_search_parameters(self):
         """Given the view's resource-configured SQLAQueryBuilder instance,
         return the list of attributes and their aliases and licit relations
         relevant to searching.
