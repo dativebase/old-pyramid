@@ -112,7 +112,7 @@ class Collections(Resources):
 
         """
 
-        return {'search_parameters': h.get_search_parameters(self.query_builder)}
+        return {'search_parameters': self.query_builder.get_search_parameters()}
 
     @h.jsonify
     @h.restrict('GET')

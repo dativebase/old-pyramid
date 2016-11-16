@@ -27,6 +27,7 @@ import inflect
 from paste.deploy.converters import asbool
 from paste.deploy import appconfig
 from pyramid import testing
+from pyramid.paster import setup_logging
 from pyramid.threadlocal import get_current_request, get_current_registry
 import pytest
 import transaction
@@ -121,6 +122,7 @@ class TestView(TestCase):
         self.config = {'__file__': self.settings['__file__'],
                        'here': self.settings['here']}
         self.app = webtest.TestApp(main(self.config, **self.settings))
+        setup_logging('test.ini#loggers')
         self._setattrs()
         self._setcreateparams()
         self._dbsession = None

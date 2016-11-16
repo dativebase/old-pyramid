@@ -1,8 +1,8 @@
-import inflect
-p = inflect.engine()
-p.classical()
+import logging
 
+import inflect
 from pyramid.response import Response
+
 from old.lib.constants import (
     UNAUTHORIZED_MSG,
     UNAUTHENTICATED_MSG,
@@ -10,6 +10,12 @@ from old.lib.constants import (
 import old.lib.pyramid_routehelper as pyrh
 from old.models import User
 
+
+LOGGER = logging.getLogger(__name__)
+
+
+p = inflect.engine()
+p.classical()
 
 RESOURCES = {
     'applicationsetting': {},
@@ -42,24 +48,6 @@ RESOURCES = {
 }
 
 
-def search_connect(config, name):
-    """Create a SEARCH mapping for the resource collection with (plural) name
-    ``name``. Usage: ``config = search_connect(config, 'forms')``.
-    """
-    config.add_route(
-        'search_{}'.format(name),
-        '/{}'.format(name),
-        request_method='SEARCH')
-    config.add_route(
-        'search_{}_post'.format(name),
-        '/{}/search'.format(name),
-        request_method='POST')
-    config.add_route(
-        'new_search_{}'.format(name),
-        '/{}/new_search'.format(name),
-        request_method='GET')
-    return config
-
 
 def fix_for_tests(request):
     """Modifies the request if certain environment variables are present;
@@ -70,11 +58,13 @@ def fix_for_tests(request):
         user = request.dbsession.query(User).filter(User.role==role).first()
         if user:
             request.session['user'] = user.get_dict()
-    if 'test.authentication.id' in request.environ:
+    elif 'test.authentication.id' in request.environ:
         user = request.dbsession.query(User).get(
             request.environ['test.authentication.id'])
         if user:
             request.session['user'] = user.get_dict()
+    else:
+        del request.session['user']
     return request
 
 
@@ -93,10 +83,15 @@ UNAUTHORIZED_RESP = Response(
 
 def authenticate(func):
     def wrapper(context, request):
+        LOGGER.info('Authenticate decorator on %s', request.current_route_url())
         request = fix_for_tests(request)
-        if request.session.get('user'):
+        user = request.session.get('user')
+        if user:
+            LOGGER.info('User authenticated: %s %s %s', user['first_name'],
+                        user['last_name'], user['id'])
             return func(context, request)
         else:
+            LOGGER.info('No user; failed to authenticate.')
             return UNAUTHENTICATED_RESP
     return wrapper
 
@@ -129,6 +124,7 @@ def authorize(roles, users=None, user_id_is_args1=False):
     """
     def _authorize(func):
         def wrapper(context, request):
+            LOGGER.info('In Authorize decorator')
             # Check for authorization via role.
             user = request.session['user']
             role = user['role']
@@ -136,6 +132,8 @@ def authorize(roles, users=None, user_id_is_args1=False):
                 # Check for authorization via user.
                 if (    users and role != 'administrator'
                         and user['id'] not in users):
+                    LOGGER.info('Failed authorization check; user id %s not'
+                                ' in %s.', user['id'], users)
                     return UNAUTHORIZED_RESP
                 # Check whether the user id equals the id argument in the URL
                 # path. This is useful, e.g., when a user can only edit their
@@ -143,9 +141,13 @@ def authorize(roles, users=None, user_id_is_args1=False):
                 if (    user_id_is_args1 and
                         role != 'administrator' and
                         int(user['id']) != int(request.matchdict['id'])):
+                    LOGGER.info('Failed authorization check; user id %s not'
+                                ' %s.', user['id'], request.matchdict['id'])
                     return UNAUTHORIZED_RESP
                 return func(context, request)
             else:
+                LOGGER.info('Failed authorization check; user role %s not'
+                            ' in %s.', role, roles)
                 return UNAUTHORIZED_RESP
         return wrapper
     return _authorize
@@ -341,25 +343,6 @@ def includeme(config):
                      '/phonologies/{id}/runtests',
                      request_method='GET')
 
-    """
-    # SEARCH routes
-    search_connect(config, 'collectionbackups')
-    search_connect(config, 'collections')
-    search_connect(config, 'corpusbackups')
-    search_connect(config, 'files')
-    search_connect(config, 'formbackups')
-    search_connect(config, 'forms')
-    search_connect(config, 'formsearches')
-    search_connect(config, 'keyboards')
-    search_connect(config, 'languages')
-    search_connect(config, 'morphemelanguagemodels')
-    search_connect(config, 'morphologicalparsers')
-    search_connect(config, 'morphologies')
-    search_connect(config, 'pages')
-    search_connect(config, 'phonologies')
-    search_connect(config, 'sources')
-    """
-
     # rememberedforms "resource"
     # Pylons: controller='rememberedforms', action='show'
     config.add_route('show_remembered_forms', '/rememberedforms/{id}',
@@ -372,37 +355,8 @@ def includeme(config):
                      '/rememberedforms/{id}/search',
                      request_method='POST')
 
-    # RESTful resource mappings
-    """
-    add_resource(config, 'applicationsetting')
-    add_resource(config, 'collection')
-    add_resource(config, 'collectionbackup')
-    add_resource(config, 'corpus')
-    add_resource(config, 'corpusbackup')
-    add_resource(config, 'elicitationmethod')
-    add_resource(config, 'file')
-    add_resource(config, 'form')
-    add_resource(config, 'formsearch')
-    add_resource(config, 'formbackup')
-    add_resource(config, 'keyboard')
-    add_resource(config, 'language')
-    add_resource(config, 'morphemelanguagemodel')
-    add_resource(config, 'morphemelanguagemodelbackup')
-    add_resource(config, 'morphologicalparser')
-    add_resource(config, 'morphologicalparserbackup')
-    add_resource(config, 'morphology')
-    add_resource(config, 'morphologybackup')
-    add_resource(config, 'orthography')
-    add_resource(config, 'page')
-    add_resource(config, 'phonology')
-    add_resource(config, 'phonologybackup')
-    add_resource(config, 'source')
-    add_resource(config, 'speaker')
-    add_resource(config, 'syntacticcategory')
-    add_resource(config, 'tag')
-    add_resource(config, 'user')
-    """
-
+    # REST resource routes. See ``RESOURCES`` for config and ``add_resource``
+    # for implementation.
     for member_name, rsrc_config in RESOURCES.items():
         add_resource(config, member_name, rsrc_config)
 

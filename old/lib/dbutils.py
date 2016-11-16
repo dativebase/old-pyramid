@@ -256,10 +256,16 @@ class DBUtils:
         current one.
         """
         if not self._current_app_set:
-            self._current_app_set = self.dbsession.query(
-                old_models.ApplicationSettings).order_by(
-                    desc(old_models.ApplicationSettings.id)).first()
+            self._current_app_set = self.get_current_app_set()
         return self._current_app_set
+
+    def get_current_app_set(self):
+        """Use this to get the current application settings, without
+        in-thread/memory caching.
+        """
+        return self.dbsession.query(
+            old_models.ApplicationSettings).order_by(
+                desc(old_models.ApplicationSettings.id)).first()
 
     def get_object_language_id(self):
         return getattr(self.current_app_set, 'object_language_id', 'old')

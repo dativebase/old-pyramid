@@ -1166,3 +1166,13 @@ class SQLAQueryBuilder(object):
             return self._get_filter_expression(relation, value, model_name, attribute_name, relation_name,
                                              attribute, attribute_model_name, attribute_model_attribute_name)
 
+    def get_search_parameters(self):
+        """Given the view's resource-configured SQLAQueryBuilder instance,
+        return the list of attributes and their aliases and licit relations
+        relevant to searching.
+        """
+        return {
+            'attributes':
+                self.schema[self.model_name],
+            'relations': self.relations
+        }

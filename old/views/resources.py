@@ -138,6 +138,7 @@ class Resources(abc.ABC):
             parameters for ordering and pagination.
         :returns: a JSON-serialized array of resources objects.
         """
+        LOGGER.info('Call to index')
         query = self._eagerload_model(
             self.request.dbsession.query(self.model_cls))
         get_params = dict(self.request.GET)
@@ -236,6 +237,7 @@ class Resources(abc.ABC):
             return {'error': 'There is no %s with id %s' % (self.member_name,
                                                             id_)}
         if self._model_access_unauth(resource_model) is not False:
+            LOGGER.info('User not authorized to access edit action on model')
             self.request.response.status_int = 403
             return UNAUTHORIZED_MSG
         return {
@@ -311,7 +313,7 @@ class Resources(abc.ABC):
             "attributes": { ... }, "relations": { ... }}``
         """
         return {'search_parameters':
-                self._get_search_parameters(self.query_builder)}
+                self.query_builder.get_search_parameters()}
 
     ###########################################################################
     # Private Methods for Override: redefine in views for custom behaviour
@@ -569,17 +571,6 @@ class Resources(abc.ABC):
         else:
             model_ = getattr(old_models, self.query_builder.model_name)
             return query.order_by(asc(getattr(model_, primary_key)))
-
-    def _get_search_parameters(self):
-        """Given the view's resource-configured SQLAQueryBuilder instance,
-        return the list of attributes and their aliases and licit relations
-        relevant to searching.
-        """
-        return {
-            'attributes':
-                self.query_builder.schema[self.query_builder.model_name],
-            'relations': self.query_builder.relations
-        }
 
     ###########################################################################
     # Abstract Methods --- must be defined in subclasses
