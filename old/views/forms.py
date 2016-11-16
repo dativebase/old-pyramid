@@ -32,6 +32,7 @@ from sqlalchemy.orm import subqueryload
 from old.lib.constants import (
     DEFAULT_DELIMITER,
     FORM_REFERENCE_PATTERN,
+    JSONDecodeErrorResponse,
     UNAUTHORIZED_MSG,
     UNKNOWN_CATEGORY,
 )
@@ -47,7 +48,10 @@ from old.models import (
 from old.views.collections import (
     update_collection_by_deletion_of_referenced_form
 )
-from old.views.resources import Resources
+from old.views.resources import (
+    Resources,
+    SchemaState
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -293,48 +297,12 @@ class Forms(Resources):
         return user_data
 
     ###########################################################################
-    # Idiosyncratic Actions
+    # Idiosyncratic Form Resource Actions
     ###########################################################################
-
-    # TODO: hook up to routes and generalize to other resources, if applicable
-
-    def history(self):
-        """Return the form with ``form.id==id`` and its previous versions.
-        :URL: ``GET /forms/history/id``
-        :param str id: a string matching the ``id`` or ``UUID`` value of the
-            form whose history is requested.
-        :returns: A dictionary of the form::
-
-                {"form": { ... }, "previous_versions": [ ... ]}
-
-            where the value of the ``form`` key is the form whose history is
-            requested and the value of the ``previous_versions`` key is a list of
-            dictionaries representing previous versions of the form.
-        """
-        id_ = self.request.matchdict['id']
-        form, previous_versions = self.db.get_model_and_previous_versions('Form', id_)
-        if not (form or previous_versions):
-            self.request.response.status_int = 404
-            return {'error': 'No forms or form backups match %s' % id_}
-        unrestricted_users = self.db.get_unrestricted_users()
-        accessible = self.logged_in_user.is_authorized_to_access_model
-        unrestricted_previous_versions = [
-            fb for fb in previous_versions if
-            accessible(fb, unrestricted_users)]
-        form_is_restricted = form and not accessible(form,
-                                                     unrestricted_users)
-        previous_versions_are_restricted = (
-            previous_versions and not unrestricted_previous_versions)
-        if form_is_restricted or previous_versions_are_restricted:
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        return {'form': form,
-                'previous_versions': unrestricted_previous_versions}
 
     def remember(self):
         """Cause the logged in user to remember the forms referenced in the
         request body.
-
         :URL: ``POST /forms/remember``
         :request body: A JSON object of the form ``{"forms": [ ... ]}`` where
             the value of the ``forms`` attribute is the array of form ``id``
@@ -346,26 +314,36 @@ class Forms(Resources):
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
+            LOGGER.debug('Unable to JSON-parse request body %s in request to'
+                         ' /forms/remember', self.request.body)
             self.request.response.status_int = 400
-            return self.JSONDecodeErrorResponse
+            return JSONDecodeErrorResponse
+        user_model = self.logged_in_user
+        state = SchemaState(
+            full_dict=values,
+            db=self.db,
+            logged_in_user=user_model)
         try:
-            data = schema.to_python(values)
+            data = schema.to_python(values, state)
         except Invalid as error:
+            errors = error.unpack_errors()
+            LOGGER.debug('Validating values %s returned error %s', values,
+                         errors)
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            for err in errors['forms']:
+                if err and err.startswith('You are not authorized to access'):
+                    self.request.response.status_int = 403
+                    break
+            return {'errors': errors}
         forms = [f for f in data['forms'] if f]
         if not forms:
             self.request.response.status_int = 404
             return {'error': 'No valid form ids were provided.'}
-        accessible = self.logged_in_user.is_authorized_to_access_model
-        unrestricted_users = self.db.get_unrestricted_users()
         unrestricted_forms = [f for f in forms
-                              if accessible(f, unrestricted_users)]
+                              if not self._model_access_unauth(f)]
         if not unrestricted_forms:
             self.request.response.status_int = 403
             return UNAUTHORIZED_MSG
-        user_dict = self.request.session['user']
-        user_model = self.request.dbsession.query(User).get(user_dict['id'])
         user_model.remembered_forms += unrestricted_forms
         user_model.datetime_modified = h.now()
         self.request.session['user'] = user_model.get_dict()

@@ -37,6 +37,8 @@ class URL:
     RSRC_PATH = '/{collection_name}/{id_}'
     RSRC_EDIT_PATH = '/{collection_name}/{id_}/edit'
     RSRC_NEW_PATH = '/{collection_name}/new'
+    RSRC_NEW_SRCH_PATH = '/{collection_name}/new_search'
+    RSRC_HIST_PATH = '/{collection_name}/{id_}/history'
 
     def __init__(self, collection_name='resources'):
         self.collection_name = collection_name
@@ -49,9 +51,16 @@ class URL:
                                          id_=kwargs.get('id'))
         elif route_name == 'new':
             return self.RSRC_NEW_PATH.format(collection_name=self.collection_name)
-        else:
+        elif route_name == 'edit':
             return self.RSRC_EDIT_PATH.format(
                 collection_name=self.collection_name, id_=kwargs.get('id'))
+        elif route_name == 'history':
+            return self.RSRC_HIST_PATH.format(
+                collection_name=self.collection_name, id_=kwargs.get('id'))
+        elif route_name == 'new_search':
+            return self.RSRC_NEW_SRCH_PATH.format(collection_name=self.collection_name)
+        else:
+            return None
 
 
 class Model(object):

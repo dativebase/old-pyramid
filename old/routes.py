@@ -17,28 +17,51 @@ LOGGER = logging.getLogger(__name__)
 p = inflect.engine()
 p.classical()
 
+# This dict is configuration for the resources that the OLD exposes. All of the
+# keys correspond to resources that will receive the standard REST Atom
+# methods/actions (create, new, index, show, update, edit, and delete). The
+# config dict value signals additional actions on the resource, e.g., search or
+# history. See the ``add_resource`` function for implementation.
 RESOURCES = {
     'applicationsetting': {},
-    'collection': {'searchable': True},
+    'collection': {
+        'searchable': True,
+        'history': True
+    },
     'collectionbackup': {'searchable': True},
-    'corpus': {},
+    'corpus': {'history': True},
     'corpusbackup': {'searchable': True},
     'elicitationmethod': {},
     'file': {'searchable': True},
-    'form': {'searchable': True},
+    'form': {
+        'searchable': True,
+        'history': True
+    },
     'formsearch': {'searchable': True},
     'formbackup': {'searchable': True},
     'keyboard': {'searchable': True},
     'language': {'searchable': True},
-    'morphemelanguagemodel': {'searchable': True},
+    'morphemelanguagemodel': {
+        'searchable': True,
+        'history': True
+    },
     'morphemelanguagemodelbackup': {},
-    'morphologicalparser': {'searchable': True},
+    'morphologicalparser': {
+        'searchable': True,
+        'history': True
+    },
     'morphologicalparserbackup': {},
-    'morphology': {'searchable': True},
+    'morphology': {
+        'searchable': True,
+        'history': True
+    },
     'morphologybackup': {},
     'orthography': {},
     'page': {'searchable': True},
-    'phonology': {'searchable': True},
+    'phonology': {
+        'searchable': True,
+        'history': True
+    },
     'phonologybackup': {},
     'source': {'searchable': True},
     'speaker': {},
@@ -46,7 +69,6 @@ RESOURCES = {
     'tag': {},
     'user': {},
 }
-
 
 
 def fix_for_tests(request):
@@ -166,33 +188,14 @@ def add_resource(config, member_name, rsrc_config=None):
     configuration of the resource; e.g., setting 'searchable' to ``True`` will
     set up search-related routes. Configuration should be centralized in the
     ``RESOURCES`` constant.
+    authentication GET-only
     """
     if not rsrc_config:
         rsrc_config = {}
     collection_name = p.plural(member_name)
     class_name = collection_name.capitalize()
     view_callable = 'old.views.{}.{}'.format(collection_name, class_name)
-    for action in ('create', 'index', 'new', 'edit', 'delete', 'update',
-                   'show'):
-        route_name = '{}_{}'.format(action, member_name)
-        if action == 'index':
-            route_name = '{}_{}'.format(action, collection_name)
-        path = '/{}'.format(collection_name)
-        if action == 'new':
-            path = '{}/new'.format(path)
-        elif action == 'edit':
-            path = '{}/{{id}}/edit'.format(path)
-        elif action in ('delete', 'update', 'show'):
-            path = '{}/{{id}}'.format(path)
-        request_method = {'create': 'POST', 'delete': 'DELETE',
-                          'update': 'PUT'}.get(action, 'GET')
-        config.add_route(route_name, path, request_method=request_method)
-        config.add_view(view_callable,
-                        attr=action,
-                        route_name=route_name,
-                        request_method=request_method,
-                        renderer='json',
-                        decorator=get_auth_decorators(member_name, action))
+
     if rsrc_config.get('searchable', False):
         for route_name, path, request_method, attr in (
                 (
@@ -220,6 +223,42 @@ def add_resource(config, member_name, rsrc_config=None):
                             renderer='json',
                             decorator=get_auth_decorators(member_name, attr))
 
+    if rsrc_config.get('history', False):
+        route_name, path, request_method, attr = (
+            '{}_history'.format(member_name),
+            '/{}/{{id}}/history'.format(collection_name),
+            'GET',
+            'history'
+        )
+        config.add_route(route_name, path, request_method=request_method)
+        config.add_view(view_callable,
+                        attr=attr,
+                        route_name=route_name,
+                        request_method=request_method,
+                        renderer='json',
+                        decorator=get_auth_decorators(member_name, attr))
+
+    for action in ('create', 'index', 'new', 'edit', 'delete', 'update',
+                   'show'):
+        route_name = '{}_{}'.format(action, member_name)
+        if action == 'index':
+            route_name = '{}_{}'.format(action, collection_name)
+        path = '/{}'.format(collection_name)
+        if action == 'new':
+            path = '{}/new'.format(path)
+        elif action == 'edit':
+            path = '{}/{{id}}/edit'.format(path)
+        elif action in ('delete', 'update', 'show'):
+            path = '{}/{{id}}'.format(path)
+        request_method = {'create': 'POST', 'delete': 'DELETE',
+                          'update': 'PUT'}.get(action, 'GET')
+        config.add_route(route_name, path, request_method=request_method)
+        config.add_view(view_callable,
+                        attr=action,
+                        route_name=route_name,
+                        request_method=request_method,
+                        renderer='json',
+                        decorator=get_auth_decorators(member_name, action))
 
 def includeme(config):
     # Pyramid boilerplate
@@ -235,9 +274,6 @@ def includeme(config):
 
     # CORS preflight OPTIONS requests---don't interfere with them
     config.add_route('cors_proceed', '/*garbage', request_method='OPTIONS')
-
-    config.add_route('collections_history', '/collections/{id}/history')
-    # Pylons: controller='oldcollections', action='history'
 
     # To search across corpora, you need to issue a SEARCH/POST
     # /corpora/searchcorpora request. Corpora.search_corpora should handle
@@ -256,7 +292,6 @@ def includeme(config):
     config.add_route('search_corpus', '/corpora/{id}', request_method='SEARCH')
     config.add_route('search_corpus_post', '/corpora/{id}/search',
                      request_method='POST')
-    config.add_route('corpus_history', '/corpora/{id}/history')
     config.add_route('corpus_serve_file', '/corpora/{id}/servefile/{file_id}',
                      request_method='GET')
     config.add_route('corpus_tgrep2', '/corpora/{id}/tgrep2',
@@ -268,8 +303,14 @@ def includeme(config):
     config.add_route('serve_file', '/files/{id}/serve')
     config.add_route('serve_reduced_file', '/files/{id}/serve_reduced')
 
-    config.add_route('form_history', '/forms/{id}/history')
-    config.add_route('remember_forms', '/forms/remember')
+    config.add_route('remember_forms', '/forms/remember', request_method='POST')
+    config.add_view('old.views.forms.Forms',
+                    attr='remember',
+                    route_name='remember_forms',
+                    request_method='POST',
+                    renderer='json',
+                    decorator=authenticate)
+
     config.add_route('update_morpheme_references',
                      '/forms/update_morpheme_references',
                      request_method='PUT')
@@ -286,8 +327,6 @@ def includeme(config):
     config.add_route('generate_morpheme_lm',
                      '/morphemelanguagemodels/{id}/generate',
                      request_method='PUT')
-    config.add_route('morpheme_lm_history',
-                     '/morphemelanguagemodels/{id}/history')
     config.add_route('morpheme_lm_get_probabilities',
                      '/morphemelanguagemodels/{id}/get_probabilities',
                      request_method='PUT')
@@ -308,7 +347,6 @@ def includeme(config):
     config.add_route('mparser_generate_and_compile',
                      '/morphologicalparsers/{id}/generate_and_compile',
                      request_method='PUT')
-    config.add_route('mparser_history', '/morphologicalparsers/{id}/history')
     config.add_route('mparser_parse', '/morphologicalparsers/{id}/parse',
                      request_method='PUT')
     config.add_route('mparser_servecompiled',
@@ -324,7 +362,6 @@ def includeme(config):
     config.add_route('morphology_generate_and_compile',
                      '/morphologies/{id}/generate_and_compile',
                      request_method='PUT')
-    config.add_route('morphology_history', '/morphologies/{id}/history')
     config.add_route('morphology_servecompiled',
                      '/morphologies/{id}/servecompiled',
                      request_method='GET')
@@ -335,7 +372,6 @@ def includeme(config):
                      request_method='PUT')
     config.add_route('phonology_compile', '/phonologies/{id}/compile',
                      request_method='PUT')
-    config.add_route('phonology_history', '/phonologies/{id}/history')
     config.add_route('phonology_servecompiled',
                      '/phonologies/{id}/servecompiled',
                      request_method='GET')

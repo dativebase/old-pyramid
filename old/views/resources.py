@@ -316,6 +316,49 @@ class Resources(abc.ABC):
                 self.query_builder.get_search_parameters()}
 
     ###########################################################################
+    # Additional Resource Actions --- Common to a subset of resources
+    ###########################################################################
+
+    def history(self):
+        """Return the resource with the id in the path along with its previous
+        versions.
+
+        :URL: ``GET /<resource_collection_name>/history/<id>``
+        :param str id: a string matching the ``id`` or ``UUID`` value of the
+            resource whose history is requested.
+        :returns: A dictionary of the form::
+
+                {"<resource_member_name>": { ... },
+                 "previous_versions": [ ... ]}
+
+            where the value of the ``<resource_member_name>`` key is the
+            resource whose history is requested and the value of the
+            ``previous_versions`` key is a list of dictionaries representing
+            previous versions of the resource.
+        """
+        id_ = self.request.matchdict['id']
+        resource_model, previous_versions = self.db\
+            .get_model_and_previous_versions(self.model_name, id_)
+        if resource_model or previous_versions:
+            unrestricted_previous_versions = [
+                pv for pv in previous_versions
+                if not self._model_access_unauth(pv)]
+            resource_restricted = (resource_model and
+                                      self._model_access_unauth(resource_model))
+            prev_vers_restricted = (
+                previous_versions and not unrestricted_previous_versions)
+            if resource_restricted or prev_vers_restricted :
+                self.request.response.status_int = 403
+                return UNAUTHORIZED_MSG
+            else :
+                return {self.member_name: resource_model,
+                        'previous_versions': unrestricted_previous_versions}
+        else:
+            self.request.response.status_int = 404
+            return {'error': 'No %s or %s backups match %s' % (
+                    self.collection_name, self.member_name, id_)}
+
+    ###########################################################################
     # Private Methods for Override: redefine in views for custom behaviour
     ###########################################################################
 
