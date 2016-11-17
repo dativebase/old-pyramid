@@ -300,8 +300,23 @@ def includeme(config):
                      request_method='PUT')
     config.add_route('corpora_new_search', '/corpora/new_search')
 
-    config.add_route('serve_file', '/files/{id}/serve')
-    config.add_route('serve_reduced_file', '/files/{id}/serve_reduced')
+    config.add_route('serve_file', '/files/{id}/serve', request_method='GET')
+    config.add_view('old.views.files.Files',
+                    attr='serve',
+                    route_name='serve_file',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('serve_reduced_file', '/files/{id}/serve_reduced',
+                     request_method='GET')
+    config.add_view('old.views.files.Files',
+                    attr='serve_reduced',
+                    route_name='serve_reduced_file',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
+
 
     config.add_route('remember_forms', '/forms/remember', request_method='POST')
     config.add_view('old.views.forms.Forms',

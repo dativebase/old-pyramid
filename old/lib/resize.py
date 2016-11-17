@@ -51,17 +51,22 @@ def save_reduced_copy(file_, settings):
     filename, depending on whether the reduction failed or succeeded,
     repectively.
     """
+    LOGGER.debug('in save_reduced_copy')
     if (    getattr(file_, 'filename') and
             asbool(settings.get('create_reduced_size_file_copies', 1))):
         files_path = get_old_directory_path('files', settings)
         reduced_files_path = os.path.join(files_path, 'reduced_files')
         if 'image' in file_.MIME_type:
-            return save_reduced_size_image(file_, files_path, reduced_files_path)
+            return save_reduced_size_image(file_, files_path,
+                                           reduced_files_path)
         elif file_.MIME_type == 'audio/x-wav':
             format_ = settings.get('preferred_lossy_audio_format', 'ogg')
             return save_wav_as(file_, format_, files_path, reduced_files_path)
         else:
+            LOGGER.debug('Not an image or a WAV file: not reducing')
             return None
+    LOGGER.debug('File has no filename or create_reduced_size_file_copies is'
+                 ' falsey: not reducing')
     return None
 
 
@@ -101,18 +106,21 @@ def save_wav_as(file_, format_, files_path, reduced_files_path):
     """Attempts to use ffmpeg to create a lossy copy of the contents of file in
     files/reduced_files according to the format (i.e., 'ogg' or 'mp3').
     """
+    LOGGER.debug('in save_wav_as')
     try:
         if not ffmpeg_encodes(format_):
             format_ = 'ogg'     # .ogg is the default
         if not ffmpeg_encodes(format_):
             return None
         else:
+            LOGGER.debug('Converting file %s to format %s', file_.filename,
+                         format_)
             in_path = os.path.join(files_path, file_.filename)
             out_name = '%s.%s' % (os.path.splitext(file_.filename)[0], format_)
             out_path = os.path.join(reduced_files_path, out_name)
             with open(os.devnull, "w") as fnull:
                 call(['ffmpeg', '-i', in_path, out_path], stdout=fnull,
-                     stderr=fnull)
+                      stderr=fnull)
             if os.path.isfile(out_path):
                 return out_name
             return None

@@ -639,7 +639,10 @@ def ffmpeg_encodes(format_):
     if ffmpeg_installed():
         process = Popen(['ffmpeg', '-formats'], stderr=PIPE, stdout=PIPE)
         stdout, _ = process.communicate()
-        return 'E %s' % format_ in stdout
+        stdout = stdout.decode('utf8')
+        key = 'E %s' % format_
+        return key in stdout
+    LOGGER.debug('ffmpeg is NOT installed')
     return False
 
 

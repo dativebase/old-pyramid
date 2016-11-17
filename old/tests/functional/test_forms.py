@@ -2642,9 +2642,11 @@ class TestFormsView(TestView):
         with transaction.manager:
             dbsession = self.get_dbsession()
             db = DBUtils(dbsession, self.settings)
-            query_builder = SQLAQueryBuilder(dbsession, 'Form', settings=self.settings)
-            response = self.app.get(url('new_search'), headers=self.json_headers,
-                                    extra_environ=self.extra_environ_view)
+            query_builder = SQLAQueryBuilder(
+                dbsession, 'Form', settings=self.settings)
+            response = self.app.get(
+                url('new_search'), headers=self.json_headers,
+                extra_environ=self.extra_environ_view)
             resp = response.json_body
             assert (resp['search_parameters'] ==
                     query_builder.get_search_parameters())

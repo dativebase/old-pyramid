@@ -25,6 +25,7 @@ import re
 from formencode.foreach import ForEach
 from formencode.schema import Schema
 from formencode.validators import (
+    ByteString,
     DateConverter,
     Email,
     FancyValidator,
@@ -462,7 +463,7 @@ class AddMIMETypeToValues(FancyValidator):
         if 'base64_encoded_file' in values:
             contents = values['base64_encoded_file'][:1024]
         else:
-            contents = values['filedata_first_KB']
+            contents = state.filedata_first_KB
         try:
             MIME_type_from_contents = get_MIME_type_from_contents(contents)
             if MIME_type_from_contents != MIME_type_from_filename:
@@ -508,7 +509,7 @@ class FileCreateWithFiledataSchema(Schema):
     pre_validators = [NestedVariables()]
     chained_validators = [AddMIMETypeToValues()]
     filename = ValidFileName(not_empty=True, max=255)
-    filedata_first_KB = String()
+    #filedata_first_KB = String()
     description = UnicodeString()
     utterance_type = OneOf(oldc.UTTERANCE_TYPES)
     speaker = ValidOLDModelObject(model_name='Speaker')

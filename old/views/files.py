@@ -22,12 +22,14 @@
 import datetime
 import json
 import logging
+from mimetypes import guess_type
 from random import sample
 import os
 import shutil
 from string import digits, ascii_letters
 
 from formencode.validators import Invalid
+from pyramid.response import FileResponse
 
 from old.lib.constants import (
     JSONDecodeErrorResponse,
@@ -323,9 +325,12 @@ class Files(Resources):
                 'POST filedata has no "file" attribute')
         if not values.get('filename'):
             values['filename'] = os.path.split(filedata.filename)[-1]
-        values['filedata_first_KB'] = filedata.value[:1024]
+        state = SchemaState(
+            full_dict={},
+            db=self.db,
+            filedata_first_KB=filedata.value[:1024])
         schema = FileCreateWithFiledataSchema()
-        data = schema.to_python(values)
+        data = schema.to_python(values, state)
         file_ = File(
             filename=h.normalize(data['filename']),
             MIME_type=data['MIME_type']
@@ -450,6 +455,67 @@ class Files(Resources):
             'users',
             'utterance_types'  # constant in lib/constants.py
         )
+
+    def _pre_delete(self, file_model):
+        """Delete the digital file prior to deleting the database file data."""
+        if getattr(file_model, 'filename', None):
+            file_path = os.path.join(
+                h.get_old_directory_path(
+                    'files', self.request.registry.settings),
+                file_model.filename)
+            os.remove(file_path)
+        if getattr(file_model, 'lossy_filename', None):
+            file_path = os.path.join(
+                h.get_old_directory_path(
+                    'reduced_files', self.request.registry.settings),
+                file_model.lossy_filename)
+            os.remove(file_path)
+
+    def serve(self):
+        """Return the file data (binary stream) of the file."""
+        return self._serve()
+
+    def serve_reduced(self):
+        """Return the reduced-size file data (binary stream) of the file."""
+        return self._serve(reduced=True)
+
+    def _serve(self, reduced=False):
+        """Serve the content (binary data) of a file.
+        :param bool reduced: toggles serving of file data or reduced-size file
+            data.
+        """
+        file_, id_ = self._model_from_id(eager=True)
+        if not file_:
+            self.request.response.status_int = 404
+            return {'error': 'There is no file with id %s' % id_}
+        if self._model_access_unauth(file_) is not False:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
+        if getattr(file_, 'parent_file', None):
+            file_ = file_.parent_file
+        elif getattr(file_, 'url', None):
+            self.request.response.status_int = 400
+            return {
+                'error': 'The content of file %s is stored elsewhere at %s' % (
+                         id_, file_.url)}
+        files_dir = h.get_old_directory_path('files',
+                                             self.request.registry.settings)
+        if reduced:
+            filename = getattr(file_, 'lossy_filename', None)
+            if not filename:
+                self.request.response.status_int = 404
+                return {
+                    'error': 'There is no size-reduced copy of file %s' %
+                             id_}
+            file_path = os.path.join(files_dir, 'reduced_files', filename)
+            content_type = guess_type(filename)[0]
+        else:
+            file_path = os.path.join(files_dir, file_.filename)
+            content_type = file_.MIME_type
+        return FileResponse(
+            file_path,
+            request=self.request,
+            content_type=content_type)
 
 
 def _get_unique_file_path(file_path):
