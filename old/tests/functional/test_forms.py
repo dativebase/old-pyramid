@@ -19,14 +19,12 @@ import logging
 import os
 import pprint
 from time import sleep
-import transaction
 from uuid import uuid4
 
 from sqlalchemy.sql import desc
-import pytest
+import transaction
 
 from old.lib.dbutils import DBUtils
-import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 import old.models.modelbuilders as omb
 import old.models as old_models
@@ -34,9 +32,6 @@ from old.models import (
     Form,
     Tag,
     User,
-    get_engine,
-    get_session_factory,
-    get_tm_session,
 )
 from old.models.form import FormFile
 from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
@@ -145,11 +140,11 @@ class TestFormsView(TestView):
             resp = response.json_body
             assert len(resp) == 2
             assert resp[0]['transcription'] == 'test restricted tag transcription'
-            assert resp[0]['morpheme_break_ids'] == None
-            assert resp[0]['morpheme_break_ids'] == None
+            assert resp[0]['morpheme_break_ids'] is None
+            assert resp[0]['morpheme_break_ids'] is None
             assert resp[0]['translations'][0]['transcription'] == 'test restricted tag translation'
-            assert type(resp[0]['translations'][0]['id']) == type(1)
-            assert type(resp[0]['id']) == type(1)
+            assert isinstance(resp[0]['translations'][0]['id'], int)
+            assert isinstance(resp[0]['id'], int)
             assert response.content_type == 'application/json'
 
             # The default contributor (qua enterer) should also be able to view
@@ -236,11 +231,11 @@ class TestFormsView(TestView):
                                      self.extra_environ_admin)
             resp = response.json_body
             form_count = dbsession.query(Form).count()
-            assert type(resp) == type({})
+            assert isinstance(resp, dict)
             assert resp['transcription'] == 'test_create_transcription'
             assert (resp['translations'][0]['transcription'] ==
                     'test_create_translation')
-            assert resp['morpheme_break_ids'] == None
+            assert resp['morpheme_break_ids'] is None
             assert resp['enterer']['first_name'] == 'Admin'
             assert resp['status'] == 'tested'
             assert form_count == 1
@@ -341,7 +336,7 @@ class TestFormsView(TestView):
                                      self.extra_environ_admin)
             resp = response.json_body
             form_count = dbsession.query(Form).count()
-            assert type(resp) == type({})
+            assert isinstance(resp, dict)
             assert resp['transcription'] == 'Les chiens aboient.'
             assert (resp['translations'][0]['transcription'] == 'The dogs are'
                     ' barking.')
@@ -1387,9 +1382,9 @@ class TestFormsView(TestView):
             assert new_morpheme_break_ids_of_word != morpheme_break_ids_of_word
             assert orig_backup_count + 1 == new_backup_count
             assert new_morpheme_break_ids_of_word[0][0][0][1] == 'c'
-            assert new_morpheme_break_ids_of_word[0][0][0][2] == None
+            assert new_morpheme_break_ids_of_word[0][0][0][2] is None
             assert new_morpheme_gloss_ids_of_word[0][0][0][1] == 'a'
-            assert new_morpheme_gloss_ids_of_word[0][0][0][2] == None
+            assert new_morpheme_gloss_ids_of_word[0][0][0][2] is None
 
             # A vacuous update on the word will fail since the updating was
             # accomplished via the creation of the a/c morpheme.
@@ -1596,7 +1591,7 @@ class TestFormsView(TestView):
 
             # Trying to get the deleted form from the db should return None
             deleted_form = dbsession.query(old_models.Form).get(to_delete_id)
-            assert deleted_form == None
+            assert deleted_form is None
 
             # The backed up form should have the deleted form's attributes
             backed_up_form = dbsession.query(old_models.FormBackup).filter(
@@ -1611,12 +1606,12 @@ class TestFormsView(TestView):
             assert backed_up_form.UUID == resp['UUID']
 
             # Delete with an invalid id
-            id = 9999999999999
+            id_ = 9999999999999
             response = self.app.delete(
-                url('delete', id=id), headers=self.json_headers,
+                url('delete', id=id_), headers=self.json_headers,
                 extra_environ=self.extra_environ_admin, status=404)
             assert response.content_type == 'application/json'
-            assert ('There is no form with id %s' % id in
+            assert ('There is no form with id %s' % id_ in
                     response.json_body[ 'error'])
 
             # Delete without an id
@@ -1717,13 +1712,13 @@ class TestFormsView(TestView):
             form_id = db.get_forms()[0].id
 
             # Invalid id
-            id = 100000000000
-            response = self.app.get(url('show', id=id),
+            id_ = 100000000000
+            response = self.app.get(url('show', id=id_),
                 headers=self.json_headers, extra_environ=self.extra_environ_admin,
                 status=404)
             resp = response.json_body
             assert response.content_type == 'application/json'
-            assert 'There is no form with id %s' % id in response.json_body[
+            assert 'There is no form with id %s' % id_ in response.json_body[
                 'error']
 
             # No id
@@ -1867,11 +1862,11 @@ class TestFormsView(TestView):
             assert resp['error'] == 'Authentication is required to access this resource.'
 
             # Invalid id
-            id = 9876544
-            response = self.app.get(url('edit', id=id),
+            id_ = 9876544
+            response = self.app.get(url('edit', id=id_),
                 headers=self.json_headers, extra_environ=self.extra_environ_admin,
                 status=404)
-            assert 'There is no form with id %s' % id in response.json_body[
+            assert 'There is no form with id %s' % id_ in response.json_body[
                 'error']
 
             # No id
@@ -1957,9 +1952,9 @@ class TestFormsView(TestView):
                 # also.
                 'speakers': 'True',
             }
-            response = self.app.get(url('edit', id=id), params,
+            response = self.app.get(url('edit', id=id_), params,
                                 extra_environ=self.extra_environ_admin, status=404)
-            assert 'There is no form with id %s' % id in response.json_body[
+            assert 'There is no form with id %s' % id_ in response.json_body[
                 'error']
 
     def test_history(self):
@@ -2090,17 +2085,17 @@ class TestFormsView(TestView):
             # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
             # so the test will fail/be inconsistent with <
             assert first_version['datetime_modified'] <= second_version['datetime_modified']
-            assert first_version['speaker'] == None
-            assert first_version['elicitation_method'] == None
-            assert first_version['syntactic_category'] == None
-            assert first_version['verifier'] == None
+            assert first_version['speaker'] is None
+            assert first_version['elicitation_method'] is None
+            assert first_version['syntactic_category'] is None
+            assert first_version['verifier'] is None
             assert [t['id'] for t in first_version['tags']] == [restricted_tag_id]
             assert first_version['files'] == []
-            assert first_version['morpheme_break_ids'] == None
+            assert first_version['morpheme_break_ids'] is None
 
             assert second_version['transcription'] == 'updated by the administrator'
             assert second_version['morpheme_break'] == 'up-dat-ed by the ad-ministr-ator'
-            assert second_version['elicitor'] == None
+            assert second_version['elicitor'] is None
             assert second_version['enterer']['id'] == contributor_id
             assert second_version['modifier']['id'] == administrator_id
             assert second_version['datetime_modified'] <= current_version['datetime_modified']
@@ -2114,13 +2109,13 @@ class TestFormsView(TestView):
 
             assert current_version['transcription'] == 'updated by the contributor'
             assert current_version['morpheme_break'] == 'up-dat-ed by the ad-ministr-ator'
-            assert current_version['elicitor'] == None
+            assert current_version['elicitor'] is None
             assert current_version['enterer']['id'] == contributor_id
             assert current_version['modifier']['id'] == contributor_id
             assert current_version['speaker']['id'] == speaker_id
             assert current_version['elicitation_method']['id'] == elicitation_method_id
             assert current_version['syntactic_category']['id'] == last_syntactic_category_id
-            assert current_version['verifier'] == None
+            assert current_version['verifier'] is None
             assert sorted([t['id'] for t in current_version['tags']]) == sorted(tag_ids)
             assert sorted([f['id'] for f in current_version['files']]) == sorted(file_ids)
             assert len(current_version['morpheme_break_ids']) == 4
@@ -2163,7 +2158,7 @@ class TestFormsView(TestView):
                 url('history', id=form_UUID),
                 headers=self.json_headers, extra_environ=extra_environ)
             by_UUID_resp = response.json_body
-            assert by_UUID_resp['form'] == None
+            assert by_UUID_resp['form'] is None
             assert len(by_UUID_resp['previous_versions']) == 3
             first_version = by_UUID_resp['previous_versions'][2]
             second_version = by_UUID_resp['previous_versions'][1]
@@ -2176,17 +2171,17 @@ class TestFormsView(TestView):
             # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
             # so the test will fail/be inconsistent with <
             assert first_version['datetime_modified'] <= second_version['datetime_modified']
-            assert first_version['speaker'] == None
-            assert first_version['elicitation_method'] == None
-            assert first_version['syntactic_category'] == None
-            assert first_version['verifier'] == None
+            assert first_version['speaker'] is None
+            assert first_version['elicitation_method'] is None
+            assert first_version['syntactic_category'] is None
+            assert first_version['verifier'] is None
             assert [t['id'] for t in first_version['tags']] == [restricted_tag_id]
             assert first_version['files'] == []
-            assert first_version['morpheme_break_ids'] == None
+            assert first_version['morpheme_break_ids'] is None
 
             assert second_version['transcription'] == 'updated by the administrator'
             assert second_version['morpheme_break'] == 'up-dat-ed by the ad-ministr-ator'
-            assert second_version['elicitor'] == None
+            assert second_version['elicitor'] is None
             assert second_version['enterer']['id'] == contributor_id
             assert second_version['modifier']['id'] == administrator_id
             # Should be <; however, MySQL<5.6.4 does not support microseconds in datetimes 
@@ -2202,13 +2197,13 @@ class TestFormsView(TestView):
 
             assert third_version['transcription'] == 'updated by the contributor'
             assert third_version['morpheme_break'] == 'up-dat-ed by the ad-ministr-ator'
-            assert third_version['elicitor'] == None
+            assert third_version['elicitor'] is None
             assert third_version['enterer']['id'] == contributor_id
             assert third_version['modifier']['id'] == contributor_id
             assert third_version['speaker']['id'] == speaker_id
             assert third_version['elicitation_method']['id'] == elicitation_method_id
             assert third_version['syntactic_category']['id'] == last_syntactic_category_id
-            assert third_version['verifier'] == None
+            assert third_version['verifier'] is None
             assert sorted([t['id'] for t in third_version['tags']]) == sorted(tag_ids)
             assert sorted([f['id'] for f in third_version['files']]) == sorted(file_ids)
             assert len(third_version['morpheme_break_ids']) == 4
@@ -3175,7 +3170,7 @@ class TestFormsView(TestView):
             params = self.form_create_params.copy()
             params.update({
                 'transcription': 'Le chien a courru.',
-                'morpheme_break': 'le chien a courr',
+                'morpheme_break': 'le chien a courru',
                 'morpheme_gloss': 'the dog has run.PP',
                 'translations': [{'transcription': 'The dog ran.', 'grammaticality': ''}],
                 'syntactic_category': SId
@@ -3184,10 +3179,12 @@ class TestFormsView(TestView):
             response = self.app.post(url('create'), params, self.json_headers, extra_environ)
             resp = response.json_body
             sent_id = resp['id']
-            # This is failing because morpheme_break_ids is ``None``...
             assert resp['morpheme_break_ids'] == [[[]], [[]], [[]], [[]]]
             assert resp['syntactic_category_string'] == '? ? ? ?'
-            assert resp['break_gloss_category'] == 'le|the|? chien|dog|? a|has|? courru|run.PP|?'
+            actual = resp['break_gloss_category']
+            expect = 'le|the|? chien|dog|? a|has|? courru|run.PP|?'
+            assert actual == expect, ('{}\nis not equal to\n{}'.format(actual,
+                                                                       expect))
 
             # Now add the words/morphemes for the sentence above.
             params = self.form_create_params.copy()
@@ -3233,8 +3230,8 @@ class TestFormsView(TestView):
 
             params = self.form_create_params.copy()
             params.update({
-                'transcription': 'courr',
-                'morpheme_break': 'courr',
+                'transcription': 'courru',
+                'morpheme_break': 'courru',
                 'morpheme_gloss': 'run.PP',
                 'translations': [{'transcription': 'run', 'grammaticality': ''}],
                 'syntactic_category': VId
@@ -3252,6 +3249,8 @@ class TestFormsView(TestView):
             assert morpheme_break_ids[1][0][0][2] == 'N'
             assert morpheme_break_ids[2][0][0][1] == 'has'
             assert morpheme_break_ids[2][0][0][2] == 'T'
+            print('morpheme_break_ids[3][0][0][1]')
+            pprint.pprint(morpheme_break_ids)
             assert morpheme_break_ids[3][0][0][1] == 'run.PP'
             assert morpheme_break_ids[3][0][0][2] == 'V'
 
@@ -3261,7 +3260,7 @@ class TestFormsView(TestView):
             assert morpheme_gloss_ids[1][0][0][2] == 'N'
             assert morpheme_gloss_ids[2][0][0][1] == 'a'
             assert morpheme_gloss_ids[2][0][0][2] == 'T'
-            assert morpheme_gloss_ids[3][0][0][1] == 'courr'
+            assert morpheme_gloss_ids[3][0][0][1] == 'courru'
             assert morpheme_gloss_ids[3][0][0][2] == 'V'
 
             assert sentence.syntactic_category_string == 'D N T V'
@@ -3277,7 +3276,7 @@ class TestFormsView(TestView):
             params = self.form_create_params.copy()
             params.update({
                 'transcription': 'Les chiens ont courru.',
-                'morpheme_break': 'le^s chien.s o?nt courr+',
+                'morpheme_break': 'le^s chien.s o?nt courr+u',
                 'morpheme_gloss': 'the^PL dog.PL have?3PL run+PP',
                 'translations': [{'transcription': 'The dogs ran.', 'grammaticality': ''}],
                 'syntactic_category': SId
@@ -3299,7 +3298,9 @@ class TestFormsView(TestView):
 
             assert resp['syntactic_category_string'] == 'D^? N.? ??? ?+?'
             # The break_gloss_category is ugly ... but it's what we should expect.
-            assert resp['break_gloss_category'] == 'le|the|D^s|PL|? chien|dog|N.s|PL|? o|have|??nt|3PL|? courr|run|?+u|PP|?'
+            expected = ('le|the|D^s|PL|? chien|dog|N.s|PL|? o|have|??nt|3PL|?'
+                        ' courr|run|?+u|PP|?')
+            assert resp['break_gloss_category'] == expected
 
             # s/PL/Num
             params = self.form_create_params.copy()
@@ -3357,7 +3358,7 @@ class TestFormsView(TestView):
             params = self.form_create_params.copy()
             params.update({
                 'transcription': '',
-                'morpheme_break': '',
+                'morpheme_break': 'u',
                 'morpheme_gloss': 'PP',
                 'translations': [{'transcription': 'past participle', 'grammaticality': ''}],
                 'syntactic_category': TId
@@ -3407,7 +3408,7 @@ class TestFormsView(TestView):
 
             assert morpheme_gloss_ids[3][0][0][1] == 'courr'
             assert morpheme_gloss_ids[3][0][0][2] == 'V'
-            assert morpheme_gloss_ids[3][1][0][1] == ''
+            assert morpheme_gloss_ids[3][1][0][1] == 'u'
             assert morpheme_gloss_ids[3][1][0][2] == 'T'
 
             assert sentence2.syntactic_category_string == 'D^Num N.Num T?Agr V+T'

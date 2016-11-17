@@ -686,6 +686,7 @@ class Forms(Resources):
             LOGGER.debug('compile_morphemic_analysis raised an error (%s) on'
                          ' "%s"/"%s".', error, form.morpheme_break,
                          form.morpheme_gloss)
+            raise
             return None, None, None, None, {}
 
     def _compile_morphemic_analysis(self, form, morpheme_delimiters=None,
@@ -753,8 +754,15 @@ class Forms(Resources):
         morpheme_gloss_ids = []
         syntactic_category_string = []
         morpheme_delimiters = morpheme_delimiters or self.db.get_morpheme_delimiters()
-        morpheme_splitter = morpheme_delimiters and '[%s]' % ''.join(
-            [h.esc_RE_meta_chars(d) for d in morpheme_delimiters]) or ''
+
+        LOGGER.debug('morpheme_delimiters: %s', morpheme_delimiters)
+        if len([md for md in morpheme_delimiters if md]) > 0:
+            morpheme_splitter = '[%s]' % ''.join(
+                [h.esc_RE_meta_chars(d) for d in morpheme_delimiters])
+        else:
+            morpheme_splitter = ''
+        LOGGER.debug('morpheme_splitter: %s', morpheme_splitter)
+
         morpheme_break = form.morpheme_break
         morpheme_gloss = form.morpheme_gloss
         mb_words = morpheme_break.split()     # e.g., 'le-s chien-s'
@@ -772,6 +780,10 @@ class Forms(Resources):
                 sc_word = sc_words[i]     # e.g., 'chien-s'
                 # splits on delimiters while retaining them
                 morpheme_and_delimiter_splitter = '(%s)' % morpheme_splitter
+
+                LOGGER.debug('morpheme_and_delimiter_splitter')
+                LOGGER.debug(morpheme_and_delimiter_splitter)
+
                 # e.g., ['chien', 's']
                 mb_word_morphemes_list = re.split(
                     morpheme_and_delimiter_splitter, mb_word)[::2]
@@ -998,13 +1010,20 @@ def morphemic_analysis_is_consistent(**kwargs):
     morpheme break word has the same number of morphemes as its
     morpheme gloss counterpart.
     """
-    return (kwargs['morpheme_break'] != '' and
-            kwargs['morpheme_gloss'] != '' and
-            len(kwargs['mb_words']) == len(kwargs['mg_words']) and
-            [len(re.split(kwargs['morpheme_splitter'], mbw)) for mbw in
-             kwargs['mb_words']] ==
-            [len(re.split(kwargs['morpheme_splitter'], mgw)) for mgw in
-             kwargs['mg_words']])
+    try:
+        return (kwargs['morpheme_break'] != '' and
+                kwargs['morpheme_gloss'] != '' and
+                len(kwargs['mb_words']) == len(kwargs['mg_words']) and
+                [len(re.split(kwargs['morpheme_splitter'], mbw)) for mbw in
+                kwargs['mb_words']] ==
+                [len(re.split(kwargs['morpheme_splitter'], mgw)) for mgw in
+                kwargs['mg_words']])
+    except Exception as error:
+        LOGGER.debug('error in morphemic_analysis_is_consistent')
+        LOGGER.debug(error)
+        LOGGER.debug("kwargs['morpheme_splitter'] " + kwargs['morpheme_splitter'])
+        raise
+
 
 
 def get_category_from_partial_match(morpheme_matches, gloss_matches):
