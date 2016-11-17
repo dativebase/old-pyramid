@@ -19,10 +19,12 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
+import json
+
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from .meta import Base, now
-import json
+
 
 class CollectionBackup(Base):
 
@@ -58,9 +60,7 @@ class CollectionBackup(Base):
         attributes using the to-be-backed-up collection as represented in
         ``collection_dict``.  The relational attributes of the backup are
         converted to (truncated) JSON objects.
-
         """
-
         self.collection_id = collection_dict['id']
         self.UUID = collection_dict['UUID']
         self.title = collection_dict['title']
@@ -73,14 +73,14 @@ class CollectionBackup(Base):
         self.date_elicited = collection_dict['date_elicited']
         self.datetime_entered = collection_dict['datetime_entered']
         self.datetime_modified = collection_dict['datetime_modified']
-        self.source = unicode(json.dumps(collection_dict['source']))
-        self.speaker = unicode(json.dumps(collection_dict['speaker']))
-        self.elicitor = unicode(json.dumps(collection_dict['elicitor']))
-        self.enterer = unicode(json.dumps(collection_dict['enterer']))
-        self.modifier = unicode(json.dumps(collection_dict['modifier']))
-        self.tags = unicode(json.dumps(collection_dict['tags']))
-        self.files = unicode(json.dumps(collection_dict['files']))
-        self.forms = unicode(json.dumps([f['id'] for f in collection_dict['forms']]))
+        self.source = json.dumps(collection_dict['source'])
+        self.speaker = json.dumps(collection_dict['speaker'])
+        self.elicitor = json.dumps(collection_dict['elicitor'])
+        self.enterer = json.dumps(collection_dict['enterer'])
+        self.modifier = json.dumps(collection_dict['modifier'])
+        self.tags = json.dumps(collection_dict['tags'])
+        self.files = json.dumps(collection_dict['files'])
+        self.forms = json.dumps([f['id'] for f in collection_dict['forms']])
 
     def get_dict(self):
         return {

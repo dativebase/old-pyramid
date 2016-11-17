@@ -178,7 +178,7 @@ class Files(Resources):
             self.request.response.status_int = 400
             return {'errors': error.unpack_errors()}
 
-    # Because form creation is special, the following three abtract methods are
+    # Because file creation is special, the following three abtract methods are
     # not useful and need to be declared vacuously.
 
     def _get_user_data(self, data):

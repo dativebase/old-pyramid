@@ -45,9 +45,6 @@ from old.models import (
     Collection,
     User
 )
-from old.views.collections import (
-    update_collection_by_deletion_of_referenced_form
-)
 from old.views.resources import (
     Resources,
     SchemaState
@@ -231,8 +228,9 @@ class Forms(Resources):
     def _get_create_data(self, data):
         user_data = self._get_user_data(data)
         now = h.now()
-        user_dict = self.request.session['user']
-        user_model = self.request.dbsession.query(User).get(user_dict['id'])
+        # user_dict = self.request.session['user']
+        # user_model = self.request.dbsession.query(User).get(user_dict['id'])
+        user_model = self.logged_in_user
         user_data.update({
             'datetime_modified': now,
             'datetime_entered': now,
@@ -483,9 +481,13 @@ class Forms(Resources):
         collections_referencing_this_form = self.request.dbsession\
             .query(Collection).\
             filter(Collection.contents.op('regexp')(pattern)).all()
-        for collection in collections_referencing_this_form:
-            update_collection_by_deletion_of_referenced_form(
-                collection, form)
+        if collections_referencing_this_form:
+            from old.views.collections import Collections
+            collection_view = Collections(self.request)
+            for collection in collections_referencing_this_form:
+                collection_view.\
+                    _update_collection_by_deletion_of_referenced_form(
+                        collection, form)
 
     def get_perfect_matches(self, form, word_index, morpheme_index, morpheme,
                             gloss, matches_found, lexical_items,

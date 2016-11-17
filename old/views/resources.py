@@ -9,7 +9,9 @@ from sqlalchemy.sql import asc
 
 from old.lib.constants import (
     ALLOWED_FILE_TYPES,
+    COLLECTION_TYPES,
     JSONDecodeErrorResponse,
+    MARKUP_LANGUAGES,
     UNAUTHORIZED_MSG,
     UTTERANCE_TYPES
 )
@@ -104,11 +106,7 @@ class Resources(abc.ABC):
         except ValueError:
             self.request.response.status_int = 400
             return JSONDecodeErrorResponse
-        # TODO/NOTE: in corpus validation, the state needs a settings dict attr
-        state = SchemaState(
-            full_dict=values,
-            db=self.db,
-            logged_in_user=self.logged_in_user)
+        state = self._get_create_state(values)
         try:
             data = schema.to_python(values, state)
         except Invalid as error:
@@ -170,7 +168,7 @@ class Resources(abc.ABC):
             return UNAUTHORIZED_MSG
         if dict(self.request.GET).get('minimal'):
             return minimal_model(resource_model)
-        return resource_model.get_dict()
+        return self._get_show_dict(resource_model)
 
     def update(self):
         """Update a resource and return it.
@@ -242,7 +240,7 @@ class Resources(abc.ABC):
             return UNAUTHORIZED_MSG
         return {
             'data': self._get_new_edit_data(self.request.GET),
-            self.member_name: resource_model
+            self.member_name: self._get_show_dict(resource_model)
         }
 
     def delete(self):
@@ -263,7 +261,8 @@ class Resources(abc.ABC):
         if error_msg:
             self.request.response.status_int = 403
             return {'error': error_msg}
-        resource_dict = resource_model.get_dict()
+        resource_model.modifier = self.logged_in_user  # Not all Pylons controllers were doing this ...
+        resource_dict = self._get_delete_dict(resource_model)
         self._backup_resource(resource_dict)
         self._pre_delete(resource_model)
         self.request.dbsession.delete(resource_model)
@@ -361,6 +360,17 @@ class Resources(abc.ABC):
     ###########################################################################
     # Private Methods for Override: redefine in views for custom behaviour
     ###########################################################################
+
+    def _get_delete_dict(self, resource_model):
+        """Override this in sub-classes for special resource dict creation."""
+        return resource_model.get_dict()
+
+    def _get_show_dict(self, resource_model):
+        """Return the model as a dict for the return value of a successful show
+        request. This is indirected so that resources like collections can
+        override and do special things.
+        """
+        return resource_model.get_dict()
 
     def _eagerload_model(self, query_obj):
         """Override this in a subclass with model-specific eager loading."""
@@ -545,6 +555,15 @@ class Resources(abc.ABC):
         """
         return ()
 
+    def _get_create_state(self, values):
+        """Return a SchemaState instance for validation of the resource during
+        a create request.
+        """
+        return SchemaState(
+            full_dict=values,
+            db=self.db,
+            logged_in_user=self.logged_in_user)
+
     ###########################################################################
     # Utilities --- should be in other co-super-class; from utils.py
     ###########################################################################
@@ -566,12 +585,18 @@ class Resources(abc.ABC):
             'allowed_file_types': ResCol(
                 '',
                 lambda: ALLOWED_FILE_TYPES),
+            'collection_types': ResCol(
+                '',
+                lambda: COLLECTION_TYPES),
             'elicitation_methods': ResCol(
                 'ElicitationMethod',
                 self.db.get_mini_dicts_getter('ElicitationMethod')),
             'grammaticalities': ResCol(
                 'ApplicationSettings',
                 self.db.get_grammaticalities),
+            'markup_languages': ResCol(
+                '',
+                lambda: MARKUP_LANGUAGES),
             'sources': ResCol(
                 'Source',
                 self.db.get_mini_dicts_getter('Source')),
