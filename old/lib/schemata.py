@@ -937,12 +937,15 @@ class ElicitationMethodSchema(Schema):
 
 
 class ValidFormQuery(FancyValidator):
-    """Validates a form search query using a SQLAQueryBuilder instance.  Returns
-    the query as JSON."""
+    """Validates a form search query using a SQLAQueryBuilder instance. Returns
+    the query as JSON.
+    """
+    accept_iterator = True
     messages = {'query_error': 'The submitted query was invalid'}
     def _to_python(self, value, state):
         try:
             query_builder = SQLAQueryBuilder(state.db.dbsession,
+                                             'Form',
                                              settings=state.settings)
             query_builder.get_SQLA_query(value)
         except:
@@ -1235,7 +1238,9 @@ class ValidFormReferences(FancyValidator):
     def _to_python(self, values, state):
         if values.get('form_search'):
             values['forms'] = SQLAQueryBuilder(
-                state.db.dbsession).get_SQLA_query(
+                state.db.dbsession,
+                'Form',
+                settings=state.settings).get_SQLA_query(
                     json.loads(values['form_search'].search)).all()
             return values
         form_references = list(set(

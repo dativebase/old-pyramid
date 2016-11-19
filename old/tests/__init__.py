@@ -188,7 +188,7 @@ class TestView(TestCase):
             h.clear_directory_of_files(getattr(self, dir_path))
         for dir_name in dirs_to_destroy:
             h.destroy_all_directories(self.inflect_p.plural(dir_name),
-                                      'test.ini')
+                                      self.settings)
         testing.tearDown()
 
     def _setattrs(self):

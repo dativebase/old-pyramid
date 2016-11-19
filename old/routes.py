@@ -181,6 +181,49 @@ def get_auth_decorators(resource, action):
         return (authenticate, authorize(['administrator', 'contributor']))
     return authenticate
 
+def get_search_config(collection_name):
+    """Return the route name, path, request method, and class attribute for
+    configuring search across the resource with collection name
+    ``collection_name``.
+    """
+    if collection_name == 'corpora':
+        return (
+            (
+                'search_corpus_forms',
+                '/corpora/{{id}}',
+                'SEARCH',
+                'search'
+            ), (
+                'search_corpus_forms_post',
+                '/corpora/{{id}}/search',
+                'POST',
+                'search'
+            ), (
+                'new_search_corpus_forms'
+                '/corpora/new_search',
+                'GET',
+                'new_search'
+            )
+        )
+    return (
+        (
+            'search_{}'.format(collection_name),
+            '/{}'.format(collection_name),
+            'SEARCH',
+            'search'
+        ), (
+            'search_{}_post'.format(collection_name),
+            '/{}/search'.format(collection_name),
+            'POST',
+            'search'
+        ), (
+            'new_search_{}'.format(collection_name),
+            '/{}/new_search'.format(collection_name),
+            'GET',
+            'new_search'
+        )
+    )
+
 
 def add_resource(config, member_name, rsrc_config=None):
     """Add route/view configuration to ``config`` that exposes ``member_name``
@@ -197,24 +240,8 @@ def add_resource(config, member_name, rsrc_config=None):
     view_callable = 'old.views.{}.{}'.format(collection_name, class_name)
 
     if rsrc_config.get('searchable', False):
-        for route_name, path, request_method, attr in (
-                (
-                    'search_{}'.format(collection_name),
-                    '/{}'.format(collection_name),
-                    'SEARCH',
-                    'search'
-                ), (
-                    'search_{}_post'.format(collection_name),
-                    '/{}/search'.format(collection_name),
-                    'POST',
-                    'search'
-                ), (
-                    'new_search_{}'.format(collection_name),
-                    '/{}/new_search'.format(collection_name),
-                    'GET',
-                    'new_search'
-                )
-            ):
+        for route_name, path, request_method, attr in get_search_config(
+                collection_name):
             config.add_route(route_name, path, request_method=request_method)
             config.add_view(view_callable,
                             attr=attr,
@@ -252,6 +279,8 @@ def add_resource(config, member_name, rsrc_config=None):
             path = '{}/{{id}}'.format(path)
         request_method = {'create': 'POST', 'delete': 'DELETE',
                           'update': 'PUT'}.get(action, 'GET')
+        if member_name=='formsearch':
+            LOGGER.info('{} {} should call {}', request_method, path, attr)
         config.add_route(route_name, path, request_method=request_method)
         config.add_view(view_callable,
                         attr=action,
@@ -280,24 +309,68 @@ def includeme(config):
     # this.
     config.add_route('search_corpora', '/corpora/searchcorpora',
                      request_method=('POST', 'SEARCH'))
+    config.add_view('old.views.corpora.Corpora',
+                    attr='search_corpora',
+                    route_name='search_corpora',
+                    request_method=('POST', 'SEARCH'),
+                    renderer='json',
+                    decorator=authenticate)
     config.add_route('new_search_corpora', '/corpora/new_search_corpora',
                      request_method='GET')
+    config.add_view('old.views.corpora.Corpora',
+                    attr='new_search_corpora',
+                    route_name='new_search_corpora',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
 
-    # Pylons: controller='corpora', action='get_word_category_sequences'
     config.add_route('corpora_word_category_sequences',
                      '/corpora/{id}/get_word_category_sequences',
                      request_method='GET')
+    config.add_view('old.views.corpora.Corpora',
+                    attr='get_word_category_sequences',
+                    route_name='corpora_word_category_sequences',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
+
     # To search within the forms of a corpus, use one of the following two:
     # Pylons: controller='corpora', action='search',
     config.add_route('search_corpus', '/corpora/{id}', request_method='SEARCH')
     config.add_route('search_corpus_post', '/corpora/{id}/search',
                      request_method='POST')
-    config.add_route('corpus_serve_file', '/corpora/{id}/servefile/{file_id}',
+
+    config.add_route('corpus_serve_file',
+                     '/corpora/{id}/servefile/{file_id}',
                      request_method='GET')
-    config.add_route('corpus_tgrep2', '/corpora/{id}/tgrep2',
+    config.add_view('old.views.corpora.Corpora',
+                    attr='servefile',
+                    route_name='corpus_serve_file',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('corpus_tgrep2',
+                     '/corpora/{id}/tgrep2',
                      request_method=('POST', 'SEARCH'))
-    config.add_route('corpus_writetofile', '/corpora/{id}/writetofile',
+    config.add_view('old.views.corpora.Corpora',
+                    attr='tgrep2',
+                    route_name='corpus_tgrep2',
+                    request_method=('POST', 'SEARCH'),
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('corpus_writetofile',
+                     '/corpora/{id}/writetofile',
                      request_method='PUT')
+    config.add_view('old.views.corpora.Corpora',
+                    attr='writetofile',
+                    route_name='corpus_writetofile',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
     config.add_route('corpora_new_search', '/corpora/new_search')
 
     config.add_route('serve_file', '/files/{id}/serve', request_method='GET')

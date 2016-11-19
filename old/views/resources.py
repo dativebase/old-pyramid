@@ -10,6 +10,7 @@ from sqlalchemy.sql import asc
 from old.lib.constants import (
     ALLOWED_FILE_TYPES,
     COLLECTION_TYPES,
+    CORPUS_FORMATS,
     JSONDecodeErrorResponse,
     MARKUP_LANGUAGES,
     UNAUTHORIZED_MSG,
@@ -60,10 +61,12 @@ class Resources(abc.ABC):
         self.request = request
         self._db = None
         self._logged_in_user = None
+        self._query_builder = None
         # Names
         self.collection_name = self.__class__.__name__.lower()
         self.member_name = self.inflect_p.singular_noun(self.collection_name)
-        self.model_name = self.member_name.capitalize()
+        if not getattr(self, 'model_name', None):
+            self.model_name = self.member_name.capitalize()
         self.schema_cls_name = self.model_name + 'Schema'
         # Classes
         self.model_cls = getattr(old_models, self.model_name)
@@ -78,9 +81,12 @@ class Resources(abc.ABC):
 
     @property
     def query_builder(self):
-        return SQLAQueryBuilder(
-            self.request.dbsession, self.model_name,
-            settings=self.request.registry.settings)
+        if not self._query_builder:
+            self._query_builder = SQLAQueryBuilder(
+                self.request.dbsession,
+                self.model_name,
+                settings=self.request.registry.settings)
+        return self._query_builder
 
     @property
     def logged_in_user(self):
@@ -136,7 +142,6 @@ class Resources(abc.ABC):
             parameters for ordering and pagination.
         :returns: a JSON-serialized array of resources objects.
         """
-        LOGGER.info('Call to index')
         query = self._eagerload_model(
             self.request.dbsession.query(self.model_cls))
         get_params = dict(self.request.GET)
@@ -192,12 +197,7 @@ class Resources(abc.ABC):
         except ValueError:
             self.request.response.status_int = 400
             return JSONDecodeErrorResponse
-        state = SchemaState(
-            full_dict=values,
-            db=self.db,
-            logged_in_user=self.logged_in_user,
-            id=id_
-        )
+        state = self._get_update_state(values, id_)
         try:
             data = schema.to_python(values, state)
         except Invalid as error:
@@ -281,12 +281,14 @@ class Resources(abc.ABC):
 
             where the ``order_by`` and ``paginator`` attributes are optional.
         """
+        LOGGER.info('in search of Resources with python search params:')
         try:
             python_search_params = json.loads(
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
             return JSONDecodeErrorResponse
+        LOGGER.info(python_search_params)
         try:
             sqla_query = self.query_builder.get_SQLA_query(
                 python_search_params.get('query'))
@@ -534,8 +536,9 @@ class Resources(abc.ABC):
             # There are no GET params, so we get everything from the db and
             # return it.
             else:
-                for collection, rescol in self.resource_collections.items():
-                    result[collection] = rescol.getter()
+                #for collection, rescol in self.resource_collections.items():
+                #    result[collection] = rescol.getter()
+                result[collection] = rescol.getter()
         return dict(result)
 
     def _get_new_edit_collections(self):
@@ -564,6 +567,11 @@ class Resources(abc.ABC):
             db=self.db,
             logged_in_user=self.logged_in_user)
 
+    def _get_update_state(self, values, id_):
+        update_state = self._get_create_state(values)
+        update_state.id = id_
+        return update_state
+
     ###########################################################################
     # Utilities --- should be in other co-super-class; from utils.py
     ###########################################################################
@@ -588,9 +596,15 @@ class Resources(abc.ABC):
             'collection_types': ResCol(
                 '',
                 lambda: COLLECTION_TYPES),
+            'corpus_formats': ResCol(
+                '',
+                lambda: list(CORPUS_FORMATS.keys())),
             'elicitation_methods': ResCol(
                 'ElicitationMethod',
                 self.db.get_mini_dicts_getter('ElicitationMethod')),
+            'form_searches': ResCol(
+                'FormSearch',
+                self.db.get_mini_dicts_getter('FormSearch')),
             'grammaticalities': ResCol(
                 'ApplicationSettings',
                 self.db.get_grammaticalities),
@@ -617,11 +631,14 @@ class Resources(abc.ABC):
                 lambda: UTTERANCE_TYPES)
         }
 
-    def add_order_by(self, query, order_by_params, primary_key='id'):
+    def add_order_by(self, query, order_by_params, primary_key='id',
+                     query_builder=None):
         """Add an ORDER BY clause to the query using the get_SQLA_order_by
         method of the instance's query_builder (if possible) or using a default
         ORDER BY <primary_key> ASC.
         """
+        if not query_builder:
+            query_builder = self.query_builder
         if (    order_by_params and order_by_params.get('order_by_model') and
                 order_by_params.get('order_by_attribute') and
                 order_by_params.get('order_by_direction')):
@@ -632,12 +649,12 @@ class Resources(abc.ABC):
                 order_by_params['order_by_attribute'],
                 order_by_params['order_by_direction']
             ]
-            order_by_expression = self.query_builder.get_SQLA_order_by(
+            order_by_expression = query_builder.get_SQLA_order_by(
                 order_by_params, primary_key)
-            self.query_builder.clear_errors()
+            query_builder.clear_errors()
             return query.order_by(order_by_expression)
         else:
-            model_ = getattr(old_models, self.query_builder.model_name)
+            model_ = getattr(old_models, query_builder.model_name)
             return query.order_by(asc(getattr(model_, primary_key)))
 
     ###########################################################################

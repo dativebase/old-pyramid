@@ -45,15 +45,17 @@ class CorpusTag(Base):
 
 # Keeper is a unicode filter factory -- taken from The Python Cookbook
 class Keeper(object):
-    """Filters everything from a unicode string except the characters in ``keep``."""
+    """Filters everything from a unicode string except the characters in
+    ``keep``.
+    """
     def __init__(self, keep):
         self.keep = set(map(ord, keep))
     def __getitem__(self, n):
         if n not in self.keep:
             return None
-        return unichr(n)
+        return chr(n)
     def __call__(self, s):
-        return unicode(s).translate(self)
+        return str(s).translate(self)
 
 
 class Corpus(Base):

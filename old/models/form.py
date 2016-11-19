@@ -142,13 +142,17 @@ class Form(Base):
 
     def extract_word_pos_sequences(self, unknown_category, morpheme_splitter,
                                    extract_morphemes=False):
-        """Return the unique word-based pos sequences, as well as (possibly) the morphemes, implicit in the form.
+        """Return the unique word-based pos sequences, as well as (possibly)
+        the morphemes, implicit in the form.
 
-        :param str unknown_category: the string used in syntactic category strings when a morpheme-gloss pair is unknown
-        :param morpheme_splitter: callable that splits a strings into its morphemes and delimiters
-        :param bool extract_morphemes: determines whether we return a list of morphemes implicit in the form.
-        :returns: 2-tuple: (set of pos/delimiter sequences, list of morphemes as (pos, (mb, mg)) tuples).
-
+        :param str unknown_category: the string used in syntactic category
+            strings when a morpheme-gloss pair is unknown
+        :param morpheme_splitter: callable that splits a strings into its
+            morphemes and delimiters
+        :param bool extract_morphemes: determines whether we return a list of
+            morphemes implicit in the form.
+        :returns: 2-tuple: (set of pos/delimiter sequences, list of morphemes
+            as (pos, (mb, mg)) tuples).
         """
         if not self.syntactic_category_string:
             return None, None

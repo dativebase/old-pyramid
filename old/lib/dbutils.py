@@ -541,10 +541,8 @@ class DBUtils:
             return _filter_restricted_models_from_query(model_name, query, user)
 
     def get_morpheme_splitter(self):
-        """Return a function that will split words into morphemes.
-        TODO: doesn't beling in DB utils ...
-        """
-        morpheme_splitter = lambda x: [x] # default, word is morpheme
+        """Return a function that will split words into morphemes."""
+        morpheme_splitter = lambda x: [x]  # default, word is morpheme
         morpheme_delimiters = self.get_morpheme_delimiters()
         if morpheme_delimiters:
             morpheme_splitter = re.compile(

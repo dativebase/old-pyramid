@@ -62,12 +62,12 @@ class CorpusBackup(Base):
         self.name = corpus_dict['name']
         self.description = corpus_dict['description']
         self.content = corpus_dict['content']
-        self.enterer = unicode(json.dumps(corpus_dict['enterer']))
-        self.modifier = unicode(json.dumps(corpus_dict['modifier']))
-        self.form_search = unicode(json.dumps(corpus_dict['form_search']))
+        self.enterer = json.dumps(corpus_dict['enterer'])
+        self.modifier = json.dumps(corpus_dict['modifier'])
+        self.form_search = json.dumps(corpus_dict['form_search'])
         self.datetime_entered = corpus_dict['datetime_entered']
         self.datetime_modified = corpus_dict['datetime_modified']
-        self.tags = unicode(json.dumps(corpus_dict['tags']))
+        self.tags = json.dumps(corpus_dict['tags'])
 
     def get_dict(self):
         """Return a Python dictionary representation of the Corpus.  This
