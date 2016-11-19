@@ -66,6 +66,12 @@ Done
 
 ├── controllers
 │   ├── __init__.py
+│   ├── collectionbackups.py
+│   ├── corpora.py
+│   ├── files.py
+│   ├── forms.py
+│   ├── formsearches.py
+│   ├── oldcollections.py
 
 ├── lib
 │   ├── __init__.py
@@ -95,23 +101,17 @@ Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ├── controllers
-│   ├── collectionbackups.py
 
 
 TODO
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ├── controllers
-│   ├── collectionbackups.py
-│   ├── corpora.py
 │   ├── corpusbackups.py
 │   ├── cors.py
 │   ├── elicitationmethods.py
 │   ├── error.py
-│   ├── files.py
 │   ├── formbackups.py
-│   ├── forms.py
-│   ├── formsearches.py
 │   ├── info.py
 │   ├── keyboards.py
 │   ├── languages.py
@@ -122,7 +122,6 @@ TODO
 │   ├── morphologicalparsers.py
 │   ├── morphologies.py
 │   ├── morphologybackups.py
-│   ├── oldcollections.py
 │   ├── orthographies.py
 │   ├── pages.py
 │   ├── phonologies.py

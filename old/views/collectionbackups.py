@@ -1,7 +1,9 @@
-from pyramid.response import Response
-from pyramid.view import view_config
+import logging
+
 from old.views.resources import ReadonlyResources
-from sqlalchemy.exc import DBAPIError
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Collectionbackups(ReadonlyResources):
