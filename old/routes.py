@@ -1,4 +1,5 @@
 import logging
+import os
 
 import inflect
 from pyramid.response import Response
@@ -75,18 +76,20 @@ def fix_for_tests(request):
     """Modifies the request if certain environment variables are present;
     purpose is to simulate different login states for testing.
     """
-    if 'test.authentication.role' in request.environ:
-        role = request.environ['test.authentication.role']
-        user = request.dbsession.query(User).filter(User.role==role).first()
-        if user:
-            request.session['user'] = user.get_dict()
-    elif 'test.authentication.id' in request.environ:
-        user = request.dbsession.query(User).get(
-            request.environ['test.authentication.id'])
-        if user:
-            request.session['user'] = user.get_dict()
-    else:
-        del request.session['user']
+    if os.path.basename(request.registry.settings['__file__']) == 'test.ini':
+        if 'test.authentication.role' in request.environ:
+            role = request.environ['test.authentication.role']
+            user = request.dbsession.query(User).filter(User.role==role).first()
+            if user:
+                request.session['user'] = user.get_dict()
+        elif 'test.authentication.id' in request.environ:
+            user = request.dbsession.query(User).get(
+                request.environ['test.authentication.id'])
+            if user:
+                request.session['user'] = user.get_dict()
+        else:
+            if 'user' in request.session:
+                del request.session['user']
     return request
 
 
@@ -106,6 +109,8 @@ UNAUTHORIZED_RESP = Response(
 def authenticate(func):
     def wrapper(context, request):
         LOGGER.info('Authenticate decorator on %s', request.current_route_url())
+        LOGGER.info('FOX')
+        LOGGER.info(request.registry.settings)
         request = fix_for_tests(request)
         user = request.session.get('user')
         if user:
@@ -279,8 +284,6 @@ def add_resource(config, member_name, rsrc_config=None):
             path = '{}/{{id}}'.format(path)
         request_method = {'create': 'POST', 'delete': 'DELETE',
                           'update': 'PUT'}.get(action, 'GET')
-        if member_name=='formsearch':
-            LOGGER.info('{} {} should call {}', request_method, path, attr)
         config.add_route(route_name, path, request_method=request_method)
         config.add_view(view_callable,
                         attr=action,
@@ -291,7 +294,7 @@ def add_resource(config, member_name, rsrc_config=None):
 
 def includeme(config):
     # Pyramid boilerplate
-    config.add_static_view('static', 'static', cache_max_age=3600)
+    # config.add_static_view('static', 'static', cache_max_age=3600)
     # config.add_route('home', '/')
 
     # The ErrorController route (handles 404/500 error pages); it should
@@ -299,10 +302,22 @@ def includeme(config):
     config.add_route('error_action', '/error/{action}')
     config.add_route('error_id_action', '/error/{id}/{action}')
 
-    config.add_route('info', '/')
+    config.add_route('info', '/', request_method='GET')
+    config.add_view('old.views.info.Info',
+                    attr='index',
+                    route_name='info',
+                    request_method='GET',
+                    renderer='json')
 
     # CORS preflight OPTIONS requests---don't interfere with them
+    # TODO: test if this works.
+    def cors(request):
+        request.response.status_int = 204
+        return request.response
     config.add_route('cors_proceed', '/*garbage', request_method='OPTIONS')
+    config.add_view(cors,
+                    route_name='cors_proceed',
+                    request_method='OPTIONS')
 
     # To search across corpora, you need to issue a SEARCH/POST
     # /corpora/searchcorpora request. Corpora.search_corpora should handle
@@ -315,6 +330,7 @@ def includeme(config):
                     request_method=('POST', 'SEARCH'),
                     renderer='json',
                     decorator=authenticate)
+
     config.add_route('new_search_corpora', '/corpora/new_search_corpora',
                      request_method='GET')
     config.add_view('old.views.corpora.Corpora',

@@ -1,8 +1,14 @@
-from pyramid.response import Response
-from pyramid.view import view_config
-from old.views.resources import Resources
+"""Languages View"""
+import logging
 
-from sqlalchemy.exc import DBAPIError
+from old.views.resources import ReadonlyResources
 
-class Languages(Resources):
-    pass
+
+LOGGER = logging.getLogger(__name__)
+
+
+class Languages(ReadonlyResources):
+
+    def __init__(self, request):
+        super().__init__(request)
+        self.primary_key = 'Id'

@@ -38,18 +38,36 @@ READONLY_RSLT = {'error': 'This resource is read-only.'}
 ResCol = namedtuple('ResCol', ['model_name', 'getter'])
 
 
-
 class ReadonlyResources:
+    """Super-class of ABC ``Resources`` and all read-only OLD resource views.
+    RESTful CRUD(S) interface based on the Atom protocol:
+
+    +-----------------+-------------+--------------------------+--------+
+    | Purpose         | HTTP Method | Path                     | Method |
+    +-----------------+-------------+--------------------------+--------+
+    | Create new      | POST        | /<cllctn_name>           | create |
+    | Create data     | GET         | /<cllctn_name>/new       | new    |
+    | Read all        | GET         | /<cllctn_name>           | index  |
+    | Read specific   | GET         | /<cllctn_name>/<id>      | show   |
+    | Update specific | PUT         | /<cllctn_name>/<id>      | update |
+    | Update data     | GET         | /<cllctn_name>/<id>/edit | edit   |
+    | Delete specific | DELETE      | /<cllctn_name>/<id>      | delete |
+    | Search          | SEARCH      | /<cllctn_name>           | search |
+    +-----------------+-------------+--------------------------+--------+
+
+    Note: the create, new, update, edit, and delete actions are all exposed via
+    the REST API; however, they invariably return 404 responses.
+    """
 
     inflect_p = inflect.engine()
     inflect_p.classical()
-    read_only = True
 
     def __init__(self, request):
         self.request = request
         self._db = None
         self._logged_in_user = None
         self._query_builder = None
+        self.primary_key = 'id'
         # Names
         self.collection_name = self.__class__.__name__.lower()
         self.member_name = self.inflect_p.singular_noun(self.collection_name)
@@ -91,46 +109,12 @@ class ReadonlyResources:
     ###########################################################################
 
     def create(self):
-        """Create a new resource and return it.
-        :URL: ``POST /<resource_collection_name>``
-        :request body: JSON object representing the resource to create.
-        :returns: the newly created resource.
-        """
-        if self.read_only:
-            self.request.response.status_int = 404
-            return READONLY_RSLT
-        schema = self.schema_cls()
-        try:
-            values = json.loads(self.request.body.decode(self.request.charset))
-        except ValueError:
-            self.request.response.status_int = 400
-            return JSONDecodeErrorResponse
-        state = self._get_create_state(values)
-        try:
-            data = schema.to_python(values, state)
-        except Invalid as error:
-            self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
-        resource = self._create_new_resource(data)
-        self.request.dbsession.add(resource)
-        self.request.dbsession.flush()
-        self._post_create(resource)
-        return resource.get_dict()
+        self.request.response.status_int = 404
+        return READONLY_RSLT
 
     def new(self):
-        """Return the data necessary to create a new resource.
-        :URL: ``GET /<resource_collection_name>/new``.
-        :returns: a dict containing the related resources necessary to create a
-            new resource of this type.
-        .. note::
-           See :func:`_get_new_edit_data` to understand how the query string
-           parameters can affect the contents of the lists in the returned
-           dictionary.
-        """
-        if self.read_only:
-            self.request.response.status_int = 404
-            return READONLY_RSLT
-        return self._get_new_edit_data(self.request.GET)
+        self.request.response.status_int = 404
+        return READONLY_RSLT
 
     def index(self):
         """Get all resources.
@@ -171,105 +155,16 @@ class ReadonlyResources:
         return self._get_show_dict(resource_model)
 
     def update(self):
-        """Update a resource and return it.
-        :URL: ``PUT /<resource_collection_name>/<id>``
-        :Request body: JSON object representing the resource with updated
-            attribute values.
-        :param str id_: the ``id`` value of the resource to be updated.
-        :returns: the updated resource model.
-        """
-        if self.read_only:
-            self.request.response.status_int = 404
-            return READONLY_RSLT
-        resource_model, id_ = self._model_from_id(eager=True)
-        if not resource_model:
-            self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
-        if self._model_access_unauth(resource_model) is not False:
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        schema = self.schema_cls()
-        try:
-            values = json.loads(self.request.body.decode(self.request.charset))
-        except ValueError:
-            self.request.response.status_int = 400
-            return JSONDecodeErrorResponse
-        state = self._get_update_state(values, id_)
-        try:
-            data = schema.to_python(values, state)
-        except Invalid as error:
-            self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
-        resource_dict = resource_model.get_dict()
-        resource_model = self._update_resource_model(resource_model, data)
-        # resource_model will be False if there are no changes
-        if not resource_model:
-            self.request.response.status_int = 400
-            return {'error': 'The update request failed because the submitted'
-                             ' data were not new.'}
-        self._backup_resource(resource_dict)
-        self.request.dbsession.add(resource_model)
-        self.request.dbsession.flush()
-        self._post_update(resource_model, resource_dict)
-        return resource_model.get_dict()
+        self.request.response.status_int = 404
+        return READONLY_RSLT
 
     def edit(self):
-        """Return a resource and the data needed to update it.
-        :URL: ``GET /<resource_collection_name>/edit``
-        :param str id: the ``id`` value of the resource that will be updated.
-        :returns: a dictionary of the form::
-
-                {"<resource_member_name>": {...}, "data": {...}}
-
-            where the value of the ``<resource_member_name>`` key is a
-            dictionary representation of the resource and the value of the
-            ``data`` key is a dictionary containing the data needed to edit an
-            existing resource of this type.
-        """
-        if self.read_only:
-            self.request.response.status_int = 404
-            return READONLY_RSLT
-        resource_model, id_ = self._model_from_id(eager=True)
-        if not resource_model:
-            self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
-        if self._model_access_unauth(resource_model) is not False:
-            LOGGER.info('User not authorized to access edit action on model')
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        return {
-            'data': self._get_new_edit_data(self.request.GET),
-            self.member_name: self._get_show_dict(resource_model)
-        }
+        self.request.response.status_int = 404
+        return READONLY_RSLT
 
     def delete(self):
-        """Delete an existing resource and return it.
-        :URL: ``DELETE /<resource_collection_name>/<id>``
-        :param str id: the ``id`` value of the resource to be deleted.
-        :returns: the deleted resource model.
-        """
-        if self.read_only:
-            self.request.response.status_int = 404
-            return READONLY_RSLT
-        resource_model, id_ = self._model_from_id(eager=True)
-        if not resource_model:
-            self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
-        if self._delete_unauth(resource_model) is not False:
-            self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
-        error_msg = self._delete_impossible(resource_model)
-        if error_msg:
-            self.request.response.status_int = 403
-            return {'error': error_msg}
-        resource_model.modifier = self.logged_in_user  # Not all Pylons controllers were doing this ...
-        resource_dict = self._get_delete_dict(resource_model)
-        self._backup_resource(resource_dict)
-        self._pre_delete(resource_model)
-        self.request.dbsession.delete(resource_model)
-        self.request.dbsession.flush()
-        self._post_delete(resource_model)
-        return resource_dict
+        self.request.response.status_int = 404
+        return READONLY_RSLT
 
     def search(self):
         """Return the list of resources matching the input JSON query.
@@ -318,55 +213,8 @@ class ReadonlyResources:
                 self.query_builder.get_search_parameters()}
 
     ###########################################################################
-    # Additional Resource Actions --- Common to a subset of resources
-    ###########################################################################
-
-    def history(self):
-        """Return the resource with the id in the path along with its previous
-        versions.
-
-        :URL: ``GET /<resource_collection_name>/history/<id>``
-        :param str id: a string matching the ``id`` or ``UUID`` value of the
-            resource whose history is requested.
-        :returns: A dictionary of the form::
-
-                {"<resource_member_name>": { ... },
-                 "previous_versions": [ ... ]}
-
-            where the value of the ``<resource_member_name>`` key is the
-            resource whose history is requested and the value of the
-            ``previous_versions`` key is a list of dictionaries representing
-            previous versions of the resource.
-        """
-        id_ = self.request.matchdict['id']
-        resource_model, previous_versions = self.db\
-            .get_model_and_previous_versions(self.model_name, id_)
-        if resource_model or previous_versions:
-            unrestricted_previous_versions = [
-                pv for pv in previous_versions
-                if not self._model_access_unauth(pv)]
-            resource_restricted = (resource_model and
-                                      self._model_access_unauth(resource_model))
-            prev_vers_restricted = (
-                previous_versions and not unrestricted_previous_versions)
-            if resource_restricted or prev_vers_restricted :
-                self.request.response.status_int = 403
-                return UNAUTHORIZED_MSG
-            else :
-                return {self.member_name: resource_model,
-                        'previous_versions': unrestricted_previous_versions}
-        else:
-            self.request.response.status_int = 404
-            return {'error': 'No %s or %s backups match %s' % (
-                    self.collection_name, self.member_name, id_)}
-
-    ###########################################################################
     # Private Methods for Override: redefine in views for custom behaviour
     ###########################################################################
-
-    def _get_delete_dict(self, resource_model):
-        """Override this in sub-classes for special resource dict creation."""
-        return resource_model.get_dict()
 
     def _get_show_dict(self, resource_model):
         """Return the model as a dict for the return value of a successful show
@@ -402,9 +250,308 @@ class ReadonlyResources:
         """
         return False
 
+    def _model_from_id(self, eager=False):
+        """Return a particular model instance (and the id value), given the
+        model id supplied in the URL path.
+        """
+        id_ = self.request.matchdict['id']
+        if eager:
+            return (
+                self._eagerload_model(
+                    self.request.dbsession.query(self.model_cls)).get(int(id_)),
+                id_)
+        else:
+            return self.request.dbsession.query(self.model_cls).get(int(id_)), id_
+
+    ###########################################################################
+    # Utilities
+    ###########################################################################
+
+    def _filter_restricted_models(self, query):
+        user = self.logged_in_user
+        if self.db.user_is_unrestricted(user):
+            return query
+        else:
+            return _filter_restricted_models_from_query(self.model_name, query,
+                                                        user)
+
+    def _rsrc_not_exist(self, id_):
+        return 'There is no %s with id %s' % (self.hmn_member_name, id_)
+
+    def add_order_by(self, query, order_by_params, query_builder=None):
+        """Add an ORDER BY clause to the query using the get_SQLA_order_by
+        method of the instance's query_builder (if possible) or using a default
+        ORDER BY <self.primary_key> ASC.
+        """
+        if not query_builder:
+            query_builder = self.query_builder
+        if (    order_by_params and order_by_params.get('order_by_model') and
+                order_by_params.get('order_by_attribute') and
+                order_by_params.get('order_by_direction')):
+            order_by_params = old_schemata.OrderBySchema.to_python(
+                order_by_params)
+            order_by_params = [
+                order_by_params['order_by_model'],
+                order_by_params['order_by_attribute'],
+                order_by_params['order_by_direction']
+            ]
+            order_by_expression = query_builder.get_SQLA_order_by(
+                order_by_params, self.primary_key)
+            query_builder.clear_errors()
+            return query.order_by(order_by_expression)
+        else:
+            model_ = getattr(old_models, query_builder.model_name)
+            return query.order_by(asc(getattr(model_, self.primary_key)))
+
+
+class Resources(abc.ABC, ReadonlyResources):
+    """Abstract base class for all (modifiable) OLD resource views. RESTful
+    CRUD(S) interface based on the Atom protocol:
+
+    +-----------------+-------------+--------------------------+--------+
+    | Purpose         | HTTP Method | Path                     | Method |
+    +-----------------+-------------+--------------------------+--------+
+    | Create new      | POST        | /<cllctn_name>           | create |
+    | Create data     | GET         | /<cllctn_name>/new       | new    |
+    | Read all        | GET         | /<cllctn_name>           | index  |
+    | Read specific   | GET         | /<cllctn_name>/<id>      | show   |
+    | Update specific | PUT         | /<cllctn_name>/<id>      | update |
+    | Update data     | GET         | /<cllctn_name>/<id>/edit | edit   |
+    | Delete specific | DELETE      | /<cllctn_name>/<id>      | delete |
+    | Search          | SEARCH      | /<cllctn_name>           | search |
+    +-----------------+-------------+--------------------------+--------+
+    """
+
+    ###########################################################################
+    # Abstract Methods --- must be defined in subclasses
+    ###########################################################################
+
+    @abc.abstractmethod
+    def _get_user_data(self, data):
+        """Process the user-provided ``data`` dict, crucially returning a *new*
+        dict created from it which is ready for construction of a resource
+        model.
+        """
+
+    @abc.abstractmethod
+    def _get_create_data(self, data):
+        """Generate a dict representing a resource to be created; add any
+        creation-specific data. The ``data`` dict should be expected to be
+        unprocessed, i.e., a JSON-decoded dict from the request body.
+        """
+
+    @abc.abstractmethod
+    def _get_update_data(self, user_data):
+        """Generate a dict representing the updated state of a specific
+        resource. The ``user_data`` dict should be expected to be the output of
+        ``self._get_user_data(data)``.
+        """
+
+    ###########################################################################
+    # Public CRUD(S) Methods
+    ###########################################################################
+
+    def create(self):
+        """Create a new resource and return it.
+        :URL: ``POST /<resource_collection_name>``
+        :request body: JSON object representing the resource to create.
+        :returns: the newly created resource.
+        """
+        schema = self.schema_cls()
+        try:
+            values = json.loads(self.request.body.decode(self.request.charset))
+        except ValueError:
+            self.request.response.status_int = 400
+            return JSONDecodeErrorResponse
+        state = self._get_create_state(values)
+        try:
+            data = schema.to_python(values, state)
+        except Invalid as error:
+            self.request.response.status_int = 400
+            return {'errors': error.unpack_errors()}
+        resource = self._create_new_resource(data)
+        self.request.dbsession.add(resource)
+        self.request.dbsession.flush()
+        self._post_create(resource)
+        return resource.get_dict()
+
+    def new(self):
+        """Return the data necessary to create a new resource.
+        :URL: ``GET /<resource_collection_name>/new``.
+        :returns: a dict containing the related resources necessary to create a
+            new resource of this type.
+        .. note::
+           See :func:`_get_new_edit_data` to understand how the query string
+           parameters can affect the contents of the lists in the returned
+           dictionary.
+        """
+        return self._get_new_edit_data(self.request.GET)
+
+    def update(self):
+        """Update a resource and return it.
+        :URL: ``PUT /<resource_collection_name>/<id>``
+        :Request body: JSON object representing the resource with updated
+            attribute values.
+        :param str id_: the ``id`` value of the resource to be updated.
+        :returns: the updated resource model.
+        """
+        resource_model, id_ = self._model_from_id(eager=True)
+        if not resource_model:
+            self.request.response.status_int = 404
+            return {'error': self._rsrc_not_exist(id_)}
+        if self._model_access_unauth(resource_model) is not False:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
+        schema = self.schema_cls()
+        try:
+            values = json.loads(self.request.body.decode(self.request.charset))
+        except ValueError:
+            self.request.response.status_int = 400
+            return JSONDecodeErrorResponse
+        state = self._get_update_state(values, id_)
+        try:
+            data = schema.to_python(values, state)
+        except Invalid as error:
+            self.request.response.status_int = 400
+            return {'errors': error.unpack_errors()}
+        resource_dict = resource_model.get_dict()
+        resource_model = self._update_resource_model(resource_model, data)
+        # resource_model will be False if there are no changes
+        if not resource_model:
+            self.request.response.status_int = 400
+            return {'error': 'The update request failed because the submitted'
+                             ' data were not new.'}
+        self._backup_resource(resource_dict)
+        self.request.dbsession.add(resource_model)
+        self.request.dbsession.flush()
+        self._post_update(resource_model, resource_dict)
+        return resource_model.get_dict()
+
+    def edit(self):
+        """Return a resource and the data needed to update it.
+        :URL: ``GET /<resource_collection_name>/edit``
+        :param str id: the ``id`` value of the resource that will be updated.
+        :returns: a dictionary of the form::
+
+                {"<resource_member_name>": {...}, "data": {...}}
+
+            where the value of the ``<resource_member_name>`` key is a
+            dictionary representation of the resource and the value of the
+            ``data`` key is a dictionary containing the data needed to edit an
+            existing resource of this type.
+        """
+        resource_model, id_ = self._model_from_id(eager=True)
+        if not resource_model:
+            self.request.response.status_int = 404
+            return {'error': self._rsrc_not_exist(id_)}
+        if self._model_access_unauth(resource_model) is not False:
+            LOGGER.info('User not authorized to access edit action on model')
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
+        return {
+            'data': self._get_new_edit_data(self.request.GET),
+            self.member_name: self._get_show_dict(resource_model)
+        }
+
+    def delete(self):
+        """Delete an existing resource and return it.
+        :URL: ``DELETE /<resource_collection_name>/<id>``
+        :param str id: the ``id`` value of the resource to be deleted.
+        :returns: the deleted resource model.
+        """
+        resource_model, id_ = self._model_from_id(eager=True)
+        if not resource_model:
+            self.request.response.status_int = 404
+            return {'error': self._rsrc_not_exist(id_)}
+        if self._delete_unauth(resource_model) is not False:
+            self.request.response.status_int = 403
+            return UNAUTHORIZED_MSG
+        error_msg = self._delete_impossible(resource_model)
+        if error_msg:
+            self.request.response.status_int = 403
+            return {'error': error_msg}
+        # Not all Pylons controllers were doing this:
+        resource_model.modifier = self.logged_in_user
+        resource_dict = self._get_delete_dict(resource_model)
+        self._backup_resource(resource_dict)
+        self._pre_delete(resource_model)
+        self.request.dbsession.delete(resource_model)
+        self.request.dbsession.flush()
+        self._post_delete(resource_model)
+        return resource_dict
+
+    ###########################################################################
+    # Additional Resource Actions --- Common to a subset of resources
+    ###########################################################################
+
+    def history(self):
+        """Return the resource with the id in the path along with its previous
+        versions.
+
+        :URL: ``GET /<resource_collection_name>/history/<id>``
+        :param str id: a string matching the ``id`` or ``UUID`` value of the
+            resource whose history is requested.
+        :returns: A dictionary of the form::
+
+                {"<resource_member_name>": { ... },
+                 "previous_versions": [ ... ]}
+
+            where the value of the ``<resource_member_name>`` key is the
+            resource whose history is requested and the value of the
+            ``previous_versions`` key is a list of dictionaries representing
+            previous versions of the resource.
+        """
+        id_ = self.request.matchdict['id']
+        resource_model, previous_versions = self.db\
+            .get_model_and_previous_versions(self.model_name, id_)
+        if resource_model or previous_versions:
+            unrestricted_previous_versions = [
+                pv for pv in previous_versions
+                if not self._model_access_unauth(pv)]
+            resource_restricted = (resource_model and
+                                   self._model_access_unauth(resource_model))
+            prev_vers_restricted = (
+                previous_versions and not unrestricted_previous_versions)
+            if resource_restricted or prev_vers_restricted :
+                self.request.response.status_int = 403
+                return UNAUTHORIZED_MSG
+            else :
+                return {self.member_name: resource_model,
+                        'previous_versions': unrestricted_previous_versions}
+        else:
+            self.request.response.status_int = 404
+            return {'error': 'No %s or %s backups match %s' % (
+                self.collection_name, self.member_name, id_)}
+
+    ###########################################################################
+    # Private methods for write-able resources
+    ###########################################################################
+
     def _delete_unauth(self, resource_model):
         """Implement resource/model-specific controls over delete requests.
         Return something other than ``False`` to trigger a 403 response.
+        """
+        return False
+
+    def _get_delete_dict(self, resource_model):
+        """Override this in sub-classes for special resource dict creation."""
+        return resource_model.get_dict()
+
+    def _pre_delete(self, resource_model):
+        """Perform actions prior to deleting ``resource_model`` from the
+        database.
+        """
+        pass
+
+    def _post_delete(self, resource_model):
+        """Perform actions after deleting ``resource_model`` from the
+        database.
+        """
+        pass
+
+    def _delete_impossible(self, resource_model):
+        """Return something other than false in a sub-class if this particular
+        resource model cannot be deleted.
         """
         return False
 
@@ -418,6 +565,27 @@ class ReadonlyResources:
         :returns: an SQLAlchemy model object representing the resource.
         """
         return self.model_cls(**self._get_create_data(data))
+
+    def _post_create(self, resource_model):
+        """Perform some action after creating a new resource model in the
+        database. E.g., with forms we have to update all of the forms that
+        contain the newly entered form as a morpheme.
+        """
+        pass
+
+    def _get_create_state(self, values):
+        """Return a SchemaState instance for validation of the resource during
+        a create request.
+        """
+        return SchemaState(
+            full_dict=values,
+            db=self.db,
+            logged_in_user=self.logged_in_user)
+
+    def _get_update_state(self, values, id_):
+        update_state = self._get_create_state(values)
+        update_state.id = id_
+        return update_state
 
     def _update_resource_model(self, resource_model, data):
         """Update ``resource_model`` with ``data`` and return something other
@@ -446,48 +614,10 @@ class ReadonlyResources:
         """
         return new_val != existing_val
 
-    def _delete_impossible(self, resource_model):
-        """Return something other than false in a sub-class if this particular
-        resource model cannot be deleted.
-        """
-        return False
-
-    def _model_from_id(self, eager=False):
-        """Return a particular model instance (and the id value), given the
-        model id supplied in the URL path.
-        """
-        id_ = self.request.matchdict['id']
-        if eager:
-            return (
-                self._eagerload_model(
-                    self.request.dbsession.query(self.model_cls)).get(int(id_)),
-                id_)
-        else:
-            return self.request.dbsession.query(self.model_cls).get(int(id_)), id_
-
-    def _post_create(self, resource_model):
-        """Perform some action after creating a new resource model in the
-        database. E.g., with forms we have to update all of the forms that
-        contain the newly entered form as a morpheme.
-        """
-        pass
-
     def _post_update(self, resource_model, previous_resource_dict):
         """Perform some action after updating an existin resource model in the
         database. E.g., with forms we have to update all of the forms that
         contain the newly entered form as a morpheme.
-        """
-        pass
-
-    def _pre_delete(self, resource_model):
-        """Perform actions prior to deleting ``resource_model`` from the
-        database.
-        """
-        pass
-
-    def _post_delete(self, resource_model):
-        """Perform actions after deleting ``resource_model`` from the
-        database.
         """
         pass
 
@@ -542,52 +672,6 @@ class ReadonlyResources:
                 result[collection] = rescol.getter()
         return dict(result)
 
-    def _get_new_edit_collections(self):
-        """Return a sequence of strings representing the names of the
-        collections (typically resource collections) that are required in order
-        to create a new, or edit an existing, resource of the given type. For
-        many resources, an empty typle is fine, but for others an override
-        returning a tuple of collection names from the keys of
-        ``self.resource_collections`` will be required.
-        """
-        return ()
-
-    def _get_mandatory_collections(self):
-        """Return a subset of the return value of
-        ``self._get_new_edit_collections`` indicating those collections that
-        should always be returned in their entirety.
-        """
-        return ()
-
-    def _get_create_state(self, values):
-        """Return a SchemaState instance for validation of the resource during
-        a create request.
-        """
-        return SchemaState(
-            full_dict=values,
-            db=self.db,
-            logged_in_user=self.logged_in_user)
-
-    def _get_update_state(self, values, id_):
-        update_state = self._get_create_state(values)
-        update_state.id = id_
-        return update_state
-
-    ###########################################################################
-    # Utilities
-    ###########################################################################
-
-    def _filter_restricted_models(self, query):
-        user = self.logged_in_user
-        if self.db.user_is_unrestricted(user):
-            return query
-        else:
-            return _filter_restricted_models_from_query(self.model_name, query,
-                                                        user)
-
-    def _rsrc_not_exist(self, id_):
-        return 'There is no %s with id %s' % (self.hmn_member_name, id_)
-
     # Map resource collection names to ``ResCol`` instances containing the name
     # of the relevant model and a function that gets all instances of the
     # relevant resource collection.
@@ -635,77 +719,22 @@ class ReadonlyResources:
                 lambda: UTTERANCE_TYPES)
         }
 
-    def add_order_by(self, query, order_by_params, primary_key='id',
-                     query_builder=None):
-        """Add an ORDER BY clause to the query using the get_SQLA_order_by
-        method of the instance's query_builder (if possible) or using a default
-        ORDER BY <primary_key> ASC.
+    def _get_new_edit_collections(self):
+        """Return a sequence of strings representing the names of the
+        collections (typically resource collections) that are required in order
+        to create a new, or edit an existing, resource of the given type. For
+        many resources, an empty typle is fine, but for others an override
+        returning a tuple of collection names from the keys of
+        ``self.resource_collections`` will be required.
         """
-        if not query_builder:
-            query_builder = self.query_builder
-        if (    order_by_params and order_by_params.get('order_by_model') and
-                order_by_params.get('order_by_attribute') and
-                order_by_params.get('order_by_direction')):
-            order_by_params = old_schemata.OrderBySchema.to_python(
-                order_by_params)
-            order_by_params = [
-                order_by_params['order_by_model'],
-                order_by_params['order_by_attribute'],
-                order_by_params['order_by_direction']
-            ]
-            order_by_expression = query_builder.get_SQLA_order_by(
-                order_by_params, primary_key)
-            query_builder.clear_errors()
-            return query.order_by(order_by_expression)
-        else:
-            model_ = getattr(old_models, query_builder.model_name)
-            return query.order_by(asc(getattr(model_, primary_key)))
+        return ()
 
-
-class Resources(abc.ABC, ReadonlyResources):
-    """Abstract base class for all (modifiable) OLD resource views. RESTful
-    CRUD(S) interface based on the Atom protocol:
-
-    +-----------------+-------------+--------------------------+--------+
-    | Purpose         | HTTP Method | Path                     | Method |
-    +-----------------+-------------+--------------------------+--------+
-    | Create new      | POST        | /<cllctn_name>           | create |
-    | Create data     | GET         | /<cllctn_name>/new       | new    |
-    | Read all        | GET         | /<cllctn_name>           | index  |
-    | Read specific   | GET         | /<cllctn_name>/<id>      | show   |
-    | Update specific | PUT         | /<cllctn_name>/<id>      | update |
-    | Update data     | GET         | /<cllctn_name>/<id>/edit | edit   |
-    | Delete specific | DELETE      | /<cllctn_name>/<id>      | delete |
-    | Search          | SEARCH      | /<cllctn_name>           | search |
-    +-----------------+-------------+--------------------------+--------+
-    """
-
-    read_only = False
-
-    ###########################################################################
-    # Abstract Methods --- must be defined in subclasses
-    ###########################################################################
-
-    @abc.abstractmethod
-    def _get_user_data(self, data):
-        """Process the user-provided ``data`` dict, crucially returning a *new*
-        dict created from it which is ready for construction of a resource
-        model.
+    def _get_mandatory_collections(self):
+        """Return a subset of the return value of
+        ``self._get_new_edit_collections`` indicating those collections that
+        should always be returned in their entirety.
         """
-
-    @abc.abstractmethod
-    def _get_create_data(self, data):
-        """Generate a dict representing a resource to be created; add any
-        creation-specific data. The ``data`` dict should be expected to be
-        unprocessed, i.e., a JSON-decoded dict from the request body.
-        """
-
-    @abc.abstractmethod
-    def _get_update_data(self, user_data):
-        """Generate a dict representing the updated state of a specific
-        resource. The ``user_data`` dict should be expected to be the output of
-        ``self._get_user_data(data)``.
-        """
+        return ()
 
 
 class SchemaState:
