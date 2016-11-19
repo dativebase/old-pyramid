@@ -66,6 +66,7 @@ class TestFormsView(TestView):
         with transaction.manager:
             dbsession = self.get_dbsession()
             db = DBUtils(dbsession, self.settings)
+
             # Test that the restricted tag is working correctly.
             # First get the users.
             users = dbsession.query(User).all()

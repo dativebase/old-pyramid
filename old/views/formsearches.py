@@ -40,6 +40,7 @@ class Formsearches(Resources):
 
     def __init__(self, request):
         self.model_name = 'FormSearch'
+        self.hmn_member_name = 'form search'
         super().__init__(request)
 
     def new(self):

@@ -30,6 +30,7 @@ import old.models as old_models
 
 
 LOGGER = logging.getLogger(__name__)
+READONLY_RSLT = {'error': 'This resource is read-only.'}
 
 
 # ResCol is a resource collection object factory. Holds the relevant model name
@@ -37,25 +38,12 @@ LOGGER = logging.getLogger(__name__)
 ResCol = namedtuple('ResCol', ['model_name', 'getter'])
 
 
-class Resources(abc.ABC):
-    """Abstract base class for all OLD resource views. RESTful CRUD(S)
-    interface based on the Atom protocol:
 
-    +-----------------+-------------+--------------------------+--------+
-    | Purpose         | HTTP Method | Path                     | Method |
-    +-----------------+-------------+--------------------------+--------+
-    | Create new      | POST        | /<cllctn_name>           | create |
-    | Create data     | GET         | /<cllctn_name>/new       | new    |
-    | Read all        | GET         | /<cllctn_name>           | index  |
-    | Read specific   | GET         | /<cllctn_name>/<id>      | show   |
-    | Update specific | PUT         | /<cllctn_name>/<id>      | update |
-    | Update data     | GET         | /<cllctn_name>/<id>/edit | edit   |
-    | Delete specific | DELETE      | /<cllctn_name>/<id>      | delete |
-    | Search          | SEARCH      | /<cllctn_name>           | search |
-    +-----------------+-------------+--------------------------+--------+
-    """
+class ReadonlyResources:
+
     inflect_p = inflect.engine()
     inflect_p.classical()
+    read_only = True
 
     def __init__(self, request):
         self.request = request
@@ -65,6 +53,8 @@ class Resources(abc.ABC):
         # Names
         self.collection_name = self.__class__.__name__.lower()
         self.member_name = self.inflect_p.singular_noun(self.collection_name)
+        if not getattr(self, 'hmn_member_name', None):
+            self.hmn_member_name = self.member_name
         if not getattr(self, 'model_name', None):
             self.model_name = self.member_name.capitalize()
         self.schema_cls_name = self.model_name + 'Schema'
@@ -106,6 +96,9 @@ class Resources(abc.ABC):
         :request body: JSON object representing the resource to create.
         :returns: the newly created resource.
         """
+        if self.read_only:
+            self.request.response.status_int = 404
+            return READONLY_RSLT
         schema = self.schema_cls()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
@@ -134,6 +127,9 @@ class Resources(abc.ABC):
            parameters can affect the contents of the lists in the returned
            dictionary.
         """
+        if self.read_only:
+            self.request.response.status_int = 404
+            return READONLY_RSLT
         return self._get_new_edit_data(self.request.GET)
 
     def index(self):
@@ -166,8 +162,7 @@ class Resources(abc.ABC):
         resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': 'There is no %s with id %s' % (self.member_name,
-                                                            id_)}
+            return {'error': self._rsrc_not_exist(id_)}
         if self._model_access_unauth(resource_model) is not False:
             self.request.response.status_int = 403
             return UNAUTHORIZED_MSG
@@ -183,11 +178,13 @@ class Resources(abc.ABC):
         :param str id_: the ``id`` value of the resource to be updated.
         :returns: the updated resource model.
         """
+        if self.read_only:
+            self.request.response.status_int = 404
+            return READONLY_RSLT
         resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': 'There is no %s with id %s' % (self.member_name,
-                                                            id_)}
+            return {'error': self._rsrc_not_exist(id_)}
         if self._model_access_unauth(resource_model) is not False:
             self.request.response.status_int = 403
             return UNAUTHORIZED_MSG
@@ -229,11 +226,13 @@ class Resources(abc.ABC):
             ``data`` key is a dictionary containing the data needed to edit an
             existing resource of this type.
         """
+        if self.read_only:
+            self.request.response.status_int = 404
+            return READONLY_RSLT
         resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': 'There is no %s with id %s' % (self.member_name,
-                                                            id_)}
+            return {'error': self._rsrc_not_exist(id_)}
         if self._model_access_unauth(resource_model) is not False:
             LOGGER.info('User not authorized to access edit action on model')
             self.request.response.status_int = 403
@@ -249,11 +248,13 @@ class Resources(abc.ABC):
         :param str id: the ``id`` value of the resource to be deleted.
         :returns: the deleted resource model.
         """
+        if self.read_only:
+            self.request.response.status_int = 404
+            return READONLY_RSLT
         resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': 'There is no %s with id %s' % (self.member_name,
-                                                            id_)}
+            return {'error': self._rsrc_not_exist(id_)}
         if self._delete_unauth(resource_model) is not False:
             self.request.response.status_int = 403
             return UNAUTHORIZED_MSG
@@ -281,20 +282,20 @@ class Resources(abc.ABC):
 
             where the ``order_by`` and ``paginator`` attributes are optional.
         """
-        LOGGER.info('in search of Resources with python search params:')
         try:
             python_search_params = json.loads(
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
             return JSONDecodeErrorResponse
-        LOGGER.info(python_search_params)
         try:
             sqla_query = self.query_builder.get_SQLA_query(
                 python_search_params.get('query'))
         except (OLDSearchParseError, Invalid) as error:
             self.request.response.status_int = 400
             return {'errors': error.unpack_errors()}
+        # Might be better to catch (OperationalError, AttributeError,
+        # InvalidRequestError, RuntimeError):
         except Exception as error:  # FIX: too general exception
             LOGGER.warning('%s\'s filter expression (%s) raised an unexpected'
                            ' exception: %s.',
@@ -573,7 +574,7 @@ class Resources(abc.ABC):
         return update_state
 
     ###########################################################################
-    # Utilities --- should be in other co-super-class; from utils.py
+    # Utilities
     ###########################################################################
 
     def _filter_restricted_models(self, query):
@@ -583,6 +584,9 @@ class Resources(abc.ABC):
         else:
             return _filter_restricted_models_from_query(self.model_name, query,
                                                         user)
+
+    def _rsrc_not_exist(self, id_):
+        return 'There is no %s with id %s' % (self.hmn_member_name, id_)
 
     # Map resource collection names to ``ResCol`` instances containing the name
     # of the relevant model and a function that gets all instances of the
@@ -656,6 +660,27 @@ class Resources(abc.ABC):
         else:
             model_ = getattr(old_models, query_builder.model_name)
             return query.order_by(asc(getattr(model_, primary_key)))
+
+
+class Resources(abc.ABC, ReadonlyResources):
+    """Abstract base class for all (modifiable) OLD resource views. RESTful
+    CRUD(S) interface based on the Atom protocol:
+
+    +-----------------+-------------+--------------------------+--------+
+    | Purpose         | HTTP Method | Path                     | Method |
+    +-----------------+-------------+--------------------------+--------+
+    | Create new      | POST        | /<cllctn_name>           | create |
+    | Create data     | GET         | /<cllctn_name>/new       | new    |
+    | Read all        | GET         | /<cllctn_name>           | index  |
+    | Read specific   | GET         | /<cllctn_name>/<id>      | show   |
+    | Update specific | PUT         | /<cllctn_name>/<id>      | update |
+    | Update data     | GET         | /<cllctn_name>/<id>/edit | edit   |
+    | Delete specific | DELETE      | /<cllctn_name>/<id>      | delete |
+    | Search          | SEARCH      | /<cllctn_name>           | search |
+    +-----------------+-------------+--------------------------+--------+
+    """
+
+    read_only = False
 
     ###########################################################################
     # Abstract Methods --- must be defined in subclasses
