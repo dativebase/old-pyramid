@@ -347,7 +347,6 @@ class Forms(Resources):
         self.request.session['user'] = user_model.get_dict()
         return [f.id for f in unrestricted_forms]
 
-    # @h.authorize(['administrator'])
     def update_morpheme_references(self):
         """Update the morphological analysis-related attributes of all forms.
 

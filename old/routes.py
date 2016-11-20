@@ -181,8 +181,16 @@ def authorize(roles, users=None, user_id_is_args1=False):
 def get_auth_decorators(resource, action):
     """TODO: there are resource-specific authorization controls."""
     if action in ('create', 'new', 'update', 'edit', 'delete'):
+        if resource == 'user':
+            if action in ('update', 'edit'):
+                return (authenticate,
+                        authorize(['administrator', 'contributor', 'viewer'],
+                                  user_id_is_args1=True))
+            else:
+                return (authenticate, authorize(['administrator']))
         return (authenticate, authorize(['administrator', 'contributor']))
     return authenticate
+
 
 def get_search_config(collection_name):
     """Return the route name, path, request method, and class attribute for
@@ -416,6 +424,12 @@ def includeme(config):
     config.add_route('update_morpheme_references',
                      '/forms/update_morpheme_references',
                      request_method='PUT')
+    config.add_view('old.views.forms.Forms',
+                    attr='update_morpheme_references',
+                    route_name='update_morpheme_references',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate, authorize(['administrator'])))
 
     config.add_route('authenticate', '/login/authenticate')
     config.add_route('logout', '/login/logout')

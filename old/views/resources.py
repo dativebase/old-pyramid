@@ -13,7 +13,9 @@ from old.lib.constants import (
     CORPUS_FORMATS,
     JSONDecodeErrorResponse,
     MARKUP_LANGUAGES,
+    SYNTACTIC_CATEGORY_TYPES,
     UNAUTHORIZED_MSG,
+    USER_ROLES,
     UTTERANCE_TYPES
 )
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
@@ -223,6 +225,15 @@ class ReadonlyResources:
         """
         return resource_model.get_dict()
 
+    def _get_create_dict(self, resource_model):
+        return self._get_show_dict(resource_model)
+
+    def _get_edit_dict(self, resource_model):
+        return self._get_show_dict(resource_model)
+
+    def _get_update_dict(self, resource_model):
+        return self._get_create_dict(resource_model)
+
     def _eagerload_model(self, query_obj):
         """Override this in a subclass with model-specific eager loading."""
         return get_eagerloader(self.model_name)(query_obj)
@@ -241,6 +252,16 @@ class ReadonlyResources:
         method of Forms view.
         """
         return False
+
+    def _update_unauth(self, resource_model):
+        """Return ``True`` if update of the resource model cannot proceed."""
+        return self._model_access_unauth(resource_model)
+
+    def _update_unauth_msg_obj(self):
+        """Return the dict that will be returned when ``self._update_unauth()``
+        returns ``True``.
+        """
+        return UNAUTHORIZED_MSG
 
     def _model_access_unauth(self, resource_model):
         """Implement resource/model-specific access controls based on
@@ -373,7 +394,7 @@ class Resources(abc.ABC, ReadonlyResources):
         self.request.dbsession.add(resource)
         self.request.dbsession.flush()
         self._post_create(resource)
-        return resource.get_dict()
+        return self._get_create_dict(resource)
 
     def new(self):
         """Return the data necessary to create a new resource.
@@ -399,9 +420,9 @@ class Resources(abc.ABC, ReadonlyResources):
         if not resource_model:
             self.request.response.status_int = 404
             return {'error': self._rsrc_not_exist(id_)}
-        if self._model_access_unauth(resource_model) is not False:
+        if self._update_unauth(resource_model) is not False:
             self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
+            return self._update_unauth_msg_obj()
         schema = self.schema_cls()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
@@ -425,7 +446,7 @@ class Resources(abc.ABC, ReadonlyResources):
         self.request.dbsession.add(resource_model)
         self.request.dbsession.flush()
         self._post_update(resource_model, resource_dict)
-        return resource_model.get_dict()
+        return self._get_update_dict(resource_model)
 
     def edit(self):
         """Return a resource and the data needed to update it.
@@ -450,7 +471,7 @@ class Resources(abc.ABC, ReadonlyResources):
             return UNAUTHORIZED_MSG
         return {
             'data': self._get_new_edit_data(self.request.GET),
-            self.member_name: self._get_show_dict(resource_model)
+            self.member_name: self._get_edit_dict(resource_model)
         }
 
     def delete(self):
@@ -465,7 +486,7 @@ class Resources(abc.ABC, ReadonlyResources):
             return {'error': self._rsrc_not_exist(id_)}
         if self._delete_unauth(resource_model) is not False:
             self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
+            return self._delete_unauth_msg_obj()
         error_msg = self._delete_impossible(resource_model)
         if error_msg:
             self.request.response.status_int = 403
@@ -532,6 +553,12 @@ class Resources(abc.ABC, ReadonlyResources):
         Return something other than ``False`` to trigger a 403 response.
         """
         return False
+
+    def _delete_unauth_msg_obj(self):
+        """Return the dict that will be returned when ``self._delete_unauth()``
+        returns ``True``.
+        """
+        return UNAUTHORIZED_MSG
 
     def _get_delete_dict(self, resource_model):
         """Override this in sub-classes for special resource dict creation."""
@@ -615,7 +642,7 @@ class Resources(abc.ABC, ReadonlyResources):
         return new_val != existing_val
 
     def _post_update(self, resource_model, previous_resource_dict):
-        """Perform some action after updating an existin resource model in the
+        """Perform some action after updating an existing resource model in the
         database. E.g., with forms we have to update all of the forms that
         contain the newly entered form as a morpheme.
         """
@@ -699,6 +726,12 @@ class Resources(abc.ABC, ReadonlyResources):
             'markup_languages': ResCol(
                 '',
                 lambda: MARKUP_LANGUAGES),
+            'orthographies': ResCol(
+                'Orthography',
+                self.db.get_mini_dicts_getter('Orthography')),
+            'roles': ResCol(
+                '',
+                lambda: USER_ROLES),
             'sources': ResCol(
                 'Source',
                 self.db.get_mini_dicts_getter('Source')),
@@ -708,6 +741,9 @@ class Resources(abc.ABC, ReadonlyResources):
             'syntactic_categories': ResCol(
                 'SyntacticCategory',
                 self.db.get_mini_dicts_getter('SyntacticCategory')),
+            'syntactic_category_types': ResCol(
+                '',
+                lambda: SYNTACTIC_CATEGORY_TYPES),
             'tags': ResCol(
                 'Tag',
                 self.db.get_mini_dicts_getter('Tag')),
