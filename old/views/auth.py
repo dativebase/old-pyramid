@@ -1,15 +1,25 @@
 import os
 import logging
 import json
+
 from formencode.validators import Invalid
-from old.lib.schemata import LoginSchema, PasswordResetSchema
-import old.lib.helpers as h
-from old.views.resources import Resources
-from ..models import User, Page
-from pyramid.security import remember, forget
 from pyramid.view import view_config
 
-log = logging.getLogger(__name__)
+from old.lib.constants import (
+    JSONDecodeErrorResponse
+)
+from old.lib.schemata import (
+    LoginSchema,
+    PasswordResetSchema
+)
+import old.lib.helpers as h
+from old.models import (
+    User,
+    Page
+)
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 @view_config(route_name='authenticate', renderer='json')
@@ -19,12 +29,12 @@ def login(request):
         values = json.loads(request.body.decode(request.charset))
     except ValueError:
         request.response.status_int = 400
-        return Resources.JSONDecodeErrorResponse
+        return JSONDecodeErrorResponse
     try:
         result = schema.to_python(values)
-    except Invalid as e:
+    except Invalid as error:
         request.response.status_int = 400
-        return {'errors': e.unpack_errors()}
+        return {'errors': error.unpack_errors()}
     username = result.get('username')
     password = result.get('password')
     if username is None or password is None:
@@ -44,7 +54,7 @@ def login(request):
     request.session['user'] = user.get_dict()
     # request.session.save()
     home_page = request.dbsession.query(Page).filter(
-        Page.name == u'home').first()
+        Page.name == 'home').first()
     return {
         'authenticated': True,
         'user': user,
@@ -54,12 +64,11 @@ def login(request):
 
 def not_authenticated(request):
     request.response.status_int = 401
-    return {'error': u'The username and password provided are not valid.'}
+    return {'error': 'The username and password provided are not valid.'}
 
 
 @view_config(route_name='logout', renderer='json')
 def logout(request):
-    # request.response.headerlist.extend(forget(request))
     request.session.delete()
     return {'authenticated': False}
 
@@ -74,15 +83,15 @@ def email_reset_password(request):
     """
     schema = PasswordResetSchema()
     try:
-        values = json.loads(unicode(request.body, request.charset))
+        values = json.loads(request.body.decode(request.charset))
     except ValueError:
         request.response.status_int = 400
-        return Resources.JSONDecodeErrorResponse
+        return JSONDecodeErrorResponse
     try:
         result = schema.to_python(values)
-    except Invalid as e:
+    except Invalid as error:
         request.response.status_int = 400
-        return {'errors': e.unpack_errors()}
+        return {'errors': error.unpack_errors()}
     username = result.get('username')
     user = request.dbsession.query(User).filter(
         User.username == username).first()
@@ -91,17 +100,22 @@ def email_reset_password(request):
             new_password = h.generate_password()
             # TODO: instead of sending whole config, just get pyramid settings
             # that we need.
+            app_url = request.route_url('info')
             h.send_password_reset_email_to(
-                user, new_password, config=config)
+                user, new_password, request.registry.settings, app_url)
             user.password = str(
                 h.encrypt_password(new_password, user.salt))
             request.dbsession.add(user)
-            if os.path.split(config['__file__'])[-1] == 'test.ini':
+            if (    os.path.basename(
+                    request.registry.settings['__file__']) ==
+                    'test.ini'):
                 return {'valid_username': True, 'password_reset': True,
                         'new_password': new_password}
             else:
                 return {'valid_username': True, 'password_reset': True}
-        except:     # socket.error was too specific ...
+        except Exception as error:     # socket.error was too specific ...
+            LOGGER.warning('EMAIL RESET PASSWORD: MAIL SEND FAIL: %s: %s',
+                           error.__class__.__name__, error)
             request.response.status_int = 500
             return {'error': 'The server is unable to send email.'}
     else:

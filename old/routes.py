@@ -109,8 +109,6 @@ UNAUTHORIZED_RESP = Response(
 def authenticate(func):
     def wrapper(context, request):
         LOGGER.info('Authenticate decorator on %s', request.current_route_url())
-        LOGGER.info('FOX')
-        LOGGER.info(request.registry.settings)
         request = fix_for_tests(request)
         user = request.session.get('user')
         if user:
