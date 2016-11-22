@@ -19,6 +19,7 @@ from old.lib.constants import (
     UTTERANCE_TYPES
 )
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder, OLDSearchParseError
+from old.lib.bibtex import ENTRY_TYPES
 from old.lib.dbutils import (
     add_pagination,
     DBUtils,
@@ -717,6 +718,9 @@ class Resources(abc.ABC, ReadonlyResources):
             'elicitation_methods': ResCol(
                 'ElicitationMethod',
                 self.db.get_mini_dicts_getter('ElicitationMethod')),
+            'entry_types': ResCol(
+                '',
+                lambda: list(ENTRY_TYPES.keys())),
             'form_searches': ResCol(
                 'FormSearch',
                 self.db.get_mini_dicts_getter('FormSearch')),
