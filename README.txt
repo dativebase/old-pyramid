@@ -78,12 +78,29 @@ Done
 │   ├── info.py
 │   ├── oldcollections.py
 │   ├── keyboards.py
+│   ├── languages.py
+│   ├── login.py
+│   ├── orthographies.py
+│   ├── pages.py
+│   ├── rememberedforms.py
+│   ├── sources.py
+│   ├── speakers.py
+│   ├── syntacticcategories.py
+│   ├── users.py
 
 ├── lib
 │   ├── __init__.py
 │   ├── auth.py
+│   ├── base.py
+│   ├── bibtex.py
+│   ├── foma_worker.py
+│   ├── helpers.py
+│   ├── orthography.py
+│   ├── parse.py
     ├── parser.py
     ├── pyramid_routehelper.py TODO: DELETE
+│   ├── resize.py
+│   ├── schemata.py
 │   ├── simplelm
 │   │   ├── NGramStack.py
 │   │   ├── README.md
@@ -99,6 +116,7 @@ Done
 │   │   ├── run-NGramLibrary.sh
 │   │   └── train.corpus
 │   ├── SQLAQueryBuilder.py
+│   ├── utils.py
 │   ├── app_globals.py
         - WARNING/TODO: not using this
 
@@ -107,13 +125,6 @@ Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ├── controllers
-│   ├── languages.py
-│   ├── login.py
-│   ├── orthographies.py
-│   ├── pages.py
-│   ├── speakers.py
-│   ├── syntacticcategories.py
-│   ├── users.py
 
 TODO
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -131,22 +142,7 @@ TODO
 │   ├── phonologies.py
 │   ├── phonologybackups.py
 
-│   ├── rememberedforms.py
-│   ├── sources.py
 
-├── lib
-│   ├── base.py
-│   ├── bibtex.py
-│   ├── foma_worker.py
-│   ├── helpers.py
-│   ├── orthography.py
-│   ├── parse.py
-│   ├── parser.py
-│   ├── resize.py
-│   ├── schemata.py
-
-│   ├── simplelmc
-│   ├── utils.py
 
 ├── model
 │   ├── db_update_scripts
@@ -242,23 +238,4 @@ TODO
 │   ├── sync
 │   ├── test_models.py
 ├── websetup.py
-
-
-- Change ``import simplejson as json`` to just ``import json``
-
-- Add Copyright:
-
-# Copyright 2016 Joel Dunham
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
 
