@@ -37,23 +37,27 @@ should be reusable in OLD-external programs.
 
 """
 
-import logging
 import codecs
-import os
-from shutil import copyfile
 import errno
-import re
-import pickle
-from shutil import rmtree
-from uuid import uuid4
-from subprocess import Popen, PIPE
 from itertools import product
-import threading
+import logging
+import os
+import pickle
+import re
+from shutil import (
+    copyfile,
+    rmtree
+)
 from signal import SIGKILL
-from . import simplelm
+from subprocess import Popen, PIPE
+import threading
 import unicodedata
+from uuid import uuid4
 
-log = logging.getLogger(__name__)
+from . import simplelm
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Parse:
@@ -80,7 +84,7 @@ class Parse:
     """
 
     def __init__(self, parse, **kwargs):
-        """Initialization requires a ``basestring`` representation of the parse,
+        """Initialization requires a ``str`` representation of the parse,
         where such a representation consists of morphemes in f|g|c-f|g|c
         format, i.e., <*f*orm, *g*loss, *c*ategory> triples whose elements are
         delimited by ``self.rare_delimiter`` (represented by "|"), interleaved
@@ -89,7 +93,7 @@ class Parse:
         """
         self.morpheme_delimiters = kwargs.get('morpheme_delimiters', '-')
         self.rare_delimiter = kwargs.get('rare_delimiter', '\u2980')
-        if isinstance(parse, basestring):
+        if isinstance(parse, str):
             self.parse = parse
         else:
             if not parse:
@@ -152,18 +156,18 @@ class Parse:
                 parse.append(item[0])
         return ''.join(parse)
 
-    def esc_RE_meta_chars(self, string):
+    def esc_re_meta_chars(self, string):
         """Escapes regex metacharacters in ``string``.
 
-            >>> esc_RE_meta_chars('-')
+            >>> esc_re_meta_chars('-')
             '\\\-'
 
         """
-        def esc(c):
-            if c in '\\^$*+?{,}.|][()^-':
-                return re.escape(c)
-            return c
-        return ''.join([esc(c) for c in string])
+        def esc(char):
+            if char in '\\^$*+?{,}.|][()^-':
+                return re.escape(char)
+            return char
+        return ''.join([esc(char) for char in string])
 
     @property
     def morpheme_splitter(self):
@@ -178,7 +182,7 @@ class Parse:
             self._morpheme_splitter = lambda x: [x]
             if delimiters:
                 self._morpheme_splitter = re.compile(
-                    '([%s])' % ''.join([self.esc_RE_meta_chars(d) for d in
+                    '([%s])' % ''.join([self.esc_re_meta_chars(d) for d in
                                         delimiters])).split
             return self._morpheme_splitter
 
@@ -196,7 +200,7 @@ class Parse:
             if delimiters:
                 self._morpheme_only_splitter = re.compile(
                     '[%s]' % ''.join(
-                        [self.esc_RE_meta_chars(d) for d in delimiters])).split
+                        [self.esc_re_meta_chars(d) for d in delimiters])).split
             return self._morpheme_only_splitter
 
     @property
@@ -236,8 +240,8 @@ class Command:
         self.parent_directory = parent_directory
         self.object_type = kwargs.pop('object_type', 'command')
         self.make_directory_safely(self.directory)
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        for key, val in kwargs.items():
+            setattr(self, key, val)
 
     @property
     def file_type2extension(self):
@@ -470,12 +474,14 @@ class FomaFST(Command):
 
     @property
     def file_type2extension(self):
-        """Extend the base class's property of the same name so that ``get_file_path``
-        works appropriately for this type of command."""
+        """Extend the base class's property of the same name so that
+        ``get_file_path`` works appropriately for this type of command.
+        """
         if getattr(self, '_file_type2extension', None):
             return self._file_type2extension
         else:
-            self._file_type2extension = super(FomaFST, self).file_type2extension.copy()
+            self._file_type2extension = super(
+                FomaFST, self).file_type2extension.copy()
             self._file_type2extension.update({
                 'script': '.script',
                 'binary': '.foma',
@@ -484,7 +490,7 @@ class FomaFST(Command):
             return self._file_type2extension
 
     def generate_salt(self):
-        return unicode(uuid4().hex)
+        return str(uuid4().hex)
 
     def applyup(self, input_, boundaries=None):
         return self.apply('up', input_)
@@ -502,14 +508,14 @@ class FomaFST(Command):
         possible.
 
         :param str direction: 'up' or 'down', i.e., the direction in which to use the transducer
-        :param basestring/list input_: a transcription string or list thereof.
+        :param str/list input_: a transcription string or list thereof.
         :param bool boundaries: whether or not to add word boundary symbols to the inputs and remove
             them from the outputs.
         :returns: a dictionary: ``{input1: [output1, output2, ...], input2: [...], ...}``
-
         """
-        boundaries = boundaries if boundaries is not None else getattr(self, 'boundaries', False)
-        if isinstance(input_, basestring):
+        boundaries = boundaries if boundaries is not None else getattr(
+            self, 'boundaries', False)
+        if isinstance(input_, str):
             inputs = [input_]
         elif isinstance(input_, (list, tuple)):
             inputs = list(input_)
@@ -517,14 +523,20 @@ class FomaFST(Command):
             return None
         directory = self.directory
         random_string = self.generate_salt()
-        inputs_file_path = os.path.join(directory, 'inputs_%s.txt' % random_string)
-        outputs_file_path = os.path.join(directory, 'outputs_%s.txt' % random_string)
-        apply_file_path = os.path.join(directory, 'apply_%s.sh' % random_string)
+        inputs_file_path = os.path.join(
+            directory, 'inputs_%s.txt' % random_string)
+        outputs_file_path = os.path.join(
+            directory, 'outputs_%s.txt' % random_string)
+        apply_file_path = os.path.join(
+            directory, 'apply_%s.sh' % random_string)
         binary_path = self.get_file_path('binary')
         # Write the inputs to an '\n'-delimited file
         with codecs.open(inputs_file_path, 'w', 'utf8') as f:
             if boundaries:
-                f.write('\n'.join(input_.join([self.word_boundary_symbol, self.word_boundary_symbol])
+                f.write(
+                    '\n'.join(
+                        input_.join([self.word_boundary_symbol,
+                                     self.word_boundary_symbol])
                         for input_ in inputs))
             else:
                 f.write('\n'.join(inputs))
@@ -550,23 +562,26 @@ class FomaFST(Command):
 
     def foma_output_file2dict(self, file_, remove_word_boundaries=True):
         """Return the output file of a flookup apply request into a dictionary.
-
-        :param file file_: utf8-encoded file object with tab-delimited i/o pairs.
-        :param bool remove_word_boundaries: toggles whether word boundaries are removed in the output
-        :returns: dictionary of the form ``{i1: [01, 02, ...], i2: [...], ...}``.
-
+        :param file file_: utf8-encoded file object with tab-delimited i/o
+            pairs.
+        :param bool remove_word_boundaries: toggles whether word boundaries are
+            removed in the output
+        :returns: dictionary of the form ``{i1: [01, 02, ...], i2: [...],
+            ...}``.
         .. note::
-
-            The flookup foma utility returns '+?' when there is no output for a given 
-            input -- hence the replacement of '+?' with None below.
-
+            The flookup foma utility returns '+?' when there is no output for a
+            given input -- hence the replacement of '+?' with None below.
         """
         def word_boundary_remover(x):
-            if (x[0:1], x[-1:]) == (self.word_boundary_symbol, self.word_boundary_symbol):
+            if (x[0:1], x[-1:]) == (self.word_boundary_symbol,
+                                    self.word_boundary_symbol):
                 return x[1:-1]
             else:
                 return x
-        remover = word_boundary_remover if remove_word_boundaries else (lambda x: x)
+        if remove_word_boundaries:
+            remover = word_boundary_remover
+        else:
+            remover = lambda x: x
         result = {}
         for line in file_:
             line = line.strip()
@@ -579,14 +594,16 @@ class FomaFST(Command):
         return dict((k, filter(None, v)) for k, v in result.items())
 
     # Cf. http://code.google.com/p/foma/wiki/RegularExpressionReference#Reserved_symbols
-    foma_reserved_symbols = ['\u0021', '\u0022', '\u0023', '\u0024', '\u0025',
+    foma_reserved_symbols = [
+        '\u0021', '\u0022', '\u0023', '\u0024', '\u0025',
         '\u0026', '\u0028', '\u0029', '\u002A', '\u002B', '\u002C', '\u002D',
         '\u002E', '\u002F', '\u0030', '\u003A', '\u003B', '\u003C', '\u003E',
         '\u003F', '\u005B', '\u005C', '\u005D', '\u005E', '\u005F', '\u0060',
         '\u007B', '\u007C', '\u007D', '\u007E', '\u00AC', '\u00B9', '\u00D7',
         '\u03A3', '\u03B5', '\u207B', '\u2081', '\u2082', '\u2192', '\u2194',
         '\u2200', '\u2203', '\u2205', '\u2208', '\u2218', '\u2225', '\u2227',
-        '\u2228', '\u2229', '\u222A', '\u2264', '\u2265', '\u227A', '\u227B']
+        '\u2228', '\u2229', '\u222A', '\u2264', '\u2265', '\u227A', '\u227B'
+    ]
 
     # This is the string that flookup returns when an input has no output.
     flookup_no_output = '+?'
@@ -619,7 +636,6 @@ class FomaFST(Command):
             absolute path to the compiled foma FST.
 
         """
-        #log.warn('IN COMPILE')
         verification_string = verification_string or self.verification_string
         compiler_path = self.get_file_path('compiler')
         binary_path = self.get_file_path('binary')
@@ -629,19 +645,23 @@ class FomaFST(Command):
             returncode, output = self.run([compiler_path], timeout)
             if verification_string in output:
                 if returncode == 0:
-                    if (os.path.isfile(binary_path) and
-                        binary_mod_time != self.get_modification_time(binary_path)):
+                    if (    os.path.isfile(binary_path) and
+                            binary_mod_time != self.get_modification_time(
+                                binary_path)):
                         self.compile_succeeded = True
-                        self.compile_message = ('Compilation process terminated '
-                            'successfully and new binary file was written.')
+                        self.compile_message = (
+                            'Compilation process terminated successfully and'
+                            ' new binary file was written.')
                     else:
-                        self.compile_message = ('Compilation process terminated '
-                            'successfully yet no new binary file was written.')
+                        self.compile_message = (
+                            'Compilation process terminated successfully yet no'
+                            ' new binary file was written.')
                 else:
                     self.compile_message = 'Compilation process failed.'
             else:
-                self.compile_message = ('Foma script is not a well-formed %s %s.'
-                    % (self.object_type, output))[:255]
+                self.compile_message = (
+                    'Foma script is not a well-formed %s %s.' %
+                    (self.object_type, output))[:255]
         except Exception:
             self.compile_message = 'Compilation attempt raised an error.'
         if self.compile_succeeded:
@@ -651,28 +671,25 @@ class FomaFST(Command):
                 os.remove(binary_path)
             except Exception:
                 pass
-        self.compile_attempt = unicode(uuid4())
+        self.compile_attempt = str(uuid4())
 
     def decombine(self, string):
         """Alter a string so that any unicode combining characters it contains
-        are separated from their base characters by a space.  This was found to be
-        necessary in order to sidestep a bug (?) of foma wherein a morphophonology 
-        formed by the composition of (a) a morphology with space-separated base and
-        combining characters and (b) a phonology with adjacent base and combining
-        characters was not recognizing transcriptions containing such combining
-        characters, despite the fact that the phonology and morphology would both
-        individually recognize such strings.  Without first "decombining" the phonological
-        rules it is possible to create a vacuous phonology that when used to create
-        a morphophonology results in a transducer that is identical to the original
-        morphology in terms of states and transitions but differs only in its sigma
-        value, i.e., the elements of the alphabet, where the morphophonology will 
-        have base/combining multicharacter symbols in its sigma that (somehow) prevent
-        the 
-
+        are separated from their base characters by a space.  This was found to
+        be necessary in order to sidestep a bug (?) of foma wherein a
+        morphophonology formed by the composition of (a) a morphology with
+        space-separated base and combining characters and (b) a phonology with
+        adjacent base and combining characters was not recognizing
+        transcriptions containing such combining characters, despite the fact
+        that the phonology and morphology would both individually recognize
+        such strings.  Without first "decombining" the phonological rules it is
+        possible to create a vacuous phonology that when used to create a
+        morphophonology results in a transducer that is identical to the
+        original morphology in terms of states and transitions but differs only
+        in its sigma value, i.e., the elements of the alphabet, where the
+        morphophonology will have base/combining multicharacter symbols in its
+        sigma that (somehow) prevent the
         """
-
-        #print 'in parser.py, decombine'
-        #raise AttributeError   (I don't know why I was raising an error here. Probably trying to debug something ...
         string_list = []
         for c in string:
             if unicodedata.combining(c):
@@ -683,15 +700,12 @@ class FomaFST(Command):
 
     def save_script(self, decombine=False):
         """Save the unicode value of ``self.script`` to disk.
-
-        Also create the compiler shell script which will be used to compile the script.
-
-        :param bool decombine: if ``True``, the lines of the script will be "decombined",
-            see ``self.decombine`` above.
+        Also create the compiler shell script which will be used to compile the
+        script.
+        :param bool decombine: if ``True``, the lines of the script will be
+            "decombined", see ``self.decombine`` above.
         :returns: the absolute path to the newly created foma FST script file.
-
         """
-        #print 'in parser.py, save_script'
         try:
             self.make_directory_safely(self.directory)
             script_path = self.get_file_path('script')
@@ -706,12 +720,12 @@ class FomaFST(Command):
                             f.write(line)
                 else:
                     f.write(self.script)
-            #print 'finished writing script_path'
-            # The compiler shell script loads the foma script and compiles it to binary form.
+            # The compiler shell script loads the foma script and compiles it
+            # to binary form.
             with open(compiler_path, 'w') as f:
                 f.write('#!/bin/sh\nfoma -e "source %s" -e "regex %s;" '
                         '-e "save stack %s" -e "quit"' % (
-                        script_path, self.object_type, binary_path))
+                            script_path, self.object_type, binary_path))
             os.chmod(compiler_path, 0o744)
             return script_path
         except Exception:
@@ -719,20 +733,19 @@ class FomaFST(Command):
 
     def get_tests(self):
         """Return as a dictionary any tests defined in the script.
-
         By convention established here, a line in a foma script that begins with
         "#test " signifies a test.  After "#test " there should be a string of
-        characters followed by "->" followed by another string of characters.  The
-        first string is the lower side of the tape and the second is the upper side. 
-
+        characters followed by "->" followed by another string of characters.
+        The first string is the lower side of the tape and the second is the
+        upper side.
         """
-
         try:
             result = {}
-            test_lines = [l[6:] for l in self.script.splitlines() if l[:6] == '#test ']
+            test_lines = [l[6:] for l in self.script.splitlines()
+                          if l[:6] == '#test ']
             for l in test_lines:
                 try:
-                    i, o = map(unicode.strip, l.split('->'))
+                    i, o = map(str.strip, l.split('->'))
                     result.setdefault(i, []).append(o)
                 except ValueError:
                     pass
@@ -742,21 +755,17 @@ class FomaFST(Command):
 
     def run_tests(self):
         """Run all tests defined in the script and return a report.
-
         :returns: a dictionary representing the report on the tests.
-
         A line in a script that begins with "#test " signifies a
         test.  After "#test " there should be a string of characters followed by
         "->" followed by another string of characters.  The first string is the
-        lower side of the tape and the second is the upper side. 
-
+        lower side of the tape and the second is the upper side.
         """
-
         tests = self.get_tests()
         if not tests:
             return None
         results = self.applydown(tests.keys())
-        return dict([(t, {'expected': tests[t], 'actual': results[t]}) for t in tests])
+        return {t: {'expected': tests[t], 'actual': results[t]} for t in tests}
 
 
 class PhonologyFST(FomaFST):
@@ -772,11 +781,9 @@ class PhonologyFST(FomaFST):
 
 class MorphologyFST(FomaFST, Parse):
     """Represents a foma-based morphology finite-state transducer.
-
     .. note::
-
-        The second superclass ``Parse`` provides the ``morpheme_splitter`` property.
-
+        The second superclass ``Parse`` provides the ``morpheme_splitter``
+        property.
     """
 
     def __init__(self, parent_directory, **kwargs):
@@ -786,8 +793,9 @@ class MorphologyFST(FomaFST, Parse):
 
     @property
     def verification_string(self):
-        """The verification string of a morphology varies depending on whether the script
-        is written using the lexc formalism or the regular expression one.
+        """The verification string of a morphology varies depending on whether
+        the script is written using the lexc formalism or the regular
+        expression one.
         """
         if getattr(self, '_verification_string', None):
             return self._verification_string
@@ -802,7 +810,8 @@ class MorphologyFST(FomaFST, Parse):
         if getattr(self, '_file_type2extension', None):
             return self._file_type2extension
         else:
-            self._file_type2extension = super(MorphologyFST, self).file_type2extension.copy()
+            self._file_type2extension = super(
+                MorphologyFST, self).file_type2extension.copy()
             self._file_type2extension.update({
                 'lexicon': '.pickle',
                 'dictionary': '_dictionary.pickle',
@@ -812,31 +821,27 @@ class MorphologyFST(FomaFST, Parse):
 
 class LanguageModel(Command, Parse):
     """Represents ngram language model objects.
-
     This class assumes that the elements of the model are morphemes, not words.
-    Basically an interface to an LM toolkit that is mediated by Python subprocess control.
-
-    Primary read methods are ``get_probabilities`` and ``get_probability_one``.  Primary
-    write methods are ``write_arpa`` and ``generate_trie``, which should be called in that
-    order and which assume appropriate values for ``self.n`` and ``self.smoothing`` as well
-    as a corpus (and possibly a vocabulary) file written at ``self.get_file_path('corpus')``
-    (and at ``self.get_file_path('vocabulary')``).
-
+    Basically an interface to an LM toolkit that is mediated by Python
+    subprocess control.
+    Primary read methods are ``get_probabilities`` and ``get_probability_one``.
+    Primary write methods are ``write_arpa`` and ``generate_trie``, which
+    should be called in that order and which assume appropriate values for
+    ``self.n`` and ``self.smoothing`` as well as a corpus (and possibly a
+    vocabulary) file written at ``self.get_file_path('corpus')`` (and at
+    ``self.get_file_path('vocabulary')``).
     .. note::
-
         At present, only support for the MITLM toolkit is implemented.
-
     .. note::
-
         The second superclass ``Parse`` provides the ``morpheme_only_splitter`` property
-
     """
 
     def __init__(self, parent_directory, **kwargs):
         self.rare_delimiter = kwargs.pop('rare_delimiter', '\u2980')
         self.start_symbol = kwargs.pop('start_symbol', '<s>')
         self.end_symbol = kwargs.pop('end_symbol', '</s>')
-        kwargs['object_type'] = kwargs.get('object_type', 'morpheme_language_model')
+        kwargs['object_type'] = kwargs.get(
+            'object_type', 'morpheme_language_model')
         super(LanguageModel, self).__init__(parent_directory, **kwargs)
 
     toolkits = {
@@ -844,7 +849,7 @@ class LanguageModel(Command, Parse):
             'executable': 'estimate-ngram',
             'smoothing_algorithms': [
                 # cf. http://code.google.com/p/mitlm/wiki/Tutorial
-                'ML', 'FixKN', 'FixModKN', 'FixKNn', 'KN', 'ModKN', 'KNn'], 
+                'ML', 'FixKN', 'FixModKN', 'FixKNn', 'KN', 'ModKN', 'KNn'],
             'verification_string_getter': lambda x: 'Saving LM to %s' % x
         }
     }
@@ -879,25 +884,29 @@ class LanguageModel(Command, Parse):
 
     def get_probabilities(self, input_):
         """Return the probability of each sequence of morphemes in ``input_``.
-
-        :param basestring/list input_: a string of space-delimited morphemes or a list thereof.
-            Word boundary symbols will be added automatically and should not be included.
-        :returns: a dictionary with morpheme sequences as keys and log probabilities as values.
-
+        :param str/list input_: a string of space-delimited morphemes or a list
+            thereof. Word boundary symbols will be added automatically and
+            should not be included.
+        :returns: a dictionary with morpheme sequences as keys and log
+            probabilities as values.
         """
-        if isinstance(input_, basestring):
+        if isinstance(input_, str):
             morpheme_sequences = [input_]
         elif isinstance(input_, (list, tuple)):
             morpheme_sequences = input_
         else:
             return None
         splitter = self.space_splitter
-        morpheme_sequences = [(morpheme_sequence,
-            [self.start_symbol] + splitter.split(morpheme_sequence) + [self.end_symbol])
+        morpheme_sequences = [
+            (morpheme_sequence,
+             [self.start_symbol] + splitter.split(morpheme_sequence) +
+             [self.end_symbol])
             for morpheme_sequence in morpheme_sequences]
         trie = self.trie
-        return dict((morpheme_sequence, self.get_probability_one(morpheme_sequence_list, trie))
-                    for morpheme_sequence, morpheme_sequence_list in morpheme_sequences)
+        return {morpheme_sequence:
+                self.get_probability_one(morpheme_sequence_list, trie)
+                for morpheme_sequence, morpheme_sequence_list in
+                morpheme_sequences}
 
     def get_probability_one(self, morpheme_sequence_list, trie=None):
         """Return the log probability of the input list of morphemes.
@@ -940,13 +949,16 @@ class LanguageModel(Command, Parse):
 
     @property
     def write_arpa_command(self):
-        """Returns a list of strings representing a command to generate an ARPA file using the toolkit."""
+        """Returns a list of strings representing a command to generate an ARPA
+        file using the toolkit.
+        """
         cmd = []
         if self.toolkit == 'mitlm':
             order = str(self.order)
             smoothing = self.smoothing or 'ModKN'
             cmd = [self.executable, '-o', order, '-s', smoothing,
-                   '-t', self.get_file_path('corpus'), '-wl', self.get_file_path('arpa')]
+                   '-t', self.get_file_path('corpus'), '-wl',
+                   self.get_file_path('arpa')]
             if self.vocabulary:
                 cmd += ['-v', self.get_file_path('vocabulary')]
         return cmd
@@ -959,11 +971,10 @@ class LanguageModel(Command, Parse):
         return False
 
     def generate_trie(self):
-        """Load the contents of an ARPA-formatted LM file into a ``simplelm.LMTree`` instance and pickle it.
-
-        :returns: None; if successful, ``self.get_file_path('trie')`` points to a pickled
-            ``simplelm.LMTree`` instance.
-
+        """Load the contents of an ARPA-formatted LM file into a
+        ``simplelm.LMTree`` instance and pickle it.
+        :returns: None; if successful, ``self.get_file_path('trie')`` points to
+            a pickled ``simplelm.LMTree`` instance.
         """
         self._trie = simplelm.load_arpa(self.get_file_path('arpa'), 'utf8')
         pickle.dump(self._trie, open(self.get_file_path('trie'), 'wb'))
@@ -1070,7 +1081,9 @@ class MorphologicalParser(FomaFST, Parse):
         self.persist_cache = kwargs.pop('persist_cache', True)
         super(MorphologicalParser, self).__init__(parent_directory, **kwargs)
 
-    boundaries = False # parsers transparently/automatically wrap input transcriptions in word boundary symbols
+    # parsers transparently/automatically wrap input transcriptions in word
+    # boundary symbols
+    boundaries = False
     object_type2directory_name = {'morphologicalparser': 'morphological_parser'}
     object_type2file_name = {'morphologicalparser': 'morphophonology'}
 
@@ -1092,14 +1105,12 @@ class MorphologicalParser(FomaFST, Parse):
             self.object_type, self.object_type)
 
     def pretty_parse(self, input_,):
-        """A convenience interface to the ``parse`` method which returns triplet list
-        representations of parse.
-
+        """A convenience interface to the ``parse`` method which returns
+        triplet list representations of parse.
         """
-
         parses = self.parse(input_, parse_objects=True)
-        return dict((transcription, parse.triplet)
-                      for transcription, (parse, candidates) in parses.items())
+        return {transcription: parse.triplet
+                for transcription, (parse, candidates) in parses.items()}
 
     def parse(self, transcriptions, parse_objects=False, max_candidates=10):
         """Parse the input transcriptions.
@@ -1111,7 +1122,7 @@ class MorphologicalParser(FomaFST, Parse):
 
         """
 
-        if isinstance(transcriptions, basestring):
+        if isinstance(transcriptions, str):
             transcriptions = [transcriptions]
         transcriptions = list(set(transcriptions))
         parsed = {}
@@ -1147,15 +1158,14 @@ class MorphologicalParser(FomaFST, Parse):
                      rare_delimiter = self.my_morphology.rare_delimiter)
 
     def get_most_probable(self, candidates):
-        """Uses ``self.my_language_model`` to return the most probable of a list of candidate parses.
-
-        :param list candidates: list of unicode strings representing morphological parses.
-            These must be in 'f|g|c-f|g|c' format, i.e., morphemes are ``self.rare_delimiter``-
-            delimited form/gloss/category triples delimited by morpheme delimiters.
+        """Uses ``self.my_language_model`` to return the most probable of a
+        list of candidate parses.
+        :param list candidates: list of unicode strings representing
+            morphological parses. These must be in 'f|g|c-f|g|c' format, i.e.,
+            morphemes are ``self.rare_delimiter``-delimited form/gloss/category
+            triples delimited by morpheme delimiters.
         :returns: 2-tuple: (the most probable candidate, the sorted candidates).
-
         """
-
         if not candidates:
             return None, []
         temp = []
@@ -1163,51 +1173,50 @@ class MorphologicalParser(FomaFST, Parse):
             lm_input = self.morpheme_splitter(candidate)[::2]
             if self.my_language_model.categorial:
                 lm_input = [morpheme.split(self.my_morphology.rare_delimiter)[2]
-                    for morpheme in lm_input]
+                            for morpheme in lm_input]
             lm_input = ([self.my_language_model.start_symbol] + lm_input +
                         [self.my_language_model.end_symbol])
-            temp.append((candidate, self.my_language_model.get_probability_one(lm_input)))
+            temp.append(
+                (candidate,
+                 self.my_language_model.get_probability_one(lm_input)))
         #return sorted(temp, key=lambda x: x[1])[-1][0]
-        sorted_candidates = [c[0] for c in sorted(temp, key=lambda x: x[1], reverse=True)]
+        sorted_candidates = [
+            c[0] for c in sorted(temp, key=lambda x: x[1], reverse=True)]
         return sorted_candidates[0], sorted_candidates
 
     def get_candidates(self, transcriptions):
-        """Returns the morphophonologically valid parses of the input transcription.
-
+        """Returns the morphophonologically valid parses of the input
+        transcription.
         :param list transcriptions: surface transcriptions of words.
-        :returns: a dict from transcriptions to lists of strings representing candidate
-            parses in 'form|gloss|category' format.
-
+        :returns: a dict from transcriptions to lists of strings representing
+            candidate parses in 'form|gloss|category' format.
         """
-
         candidates = self.applyup(transcriptions)
         if not self.my_morphology.rich_upper:
             candidates = self.disambiguate(candidates)
         return candidates
 
     def disambiguate(self, candidates):
-        """Return parse candidates with rich representations, i.e., disambiguated.
-
-        Note that this is only necessary when ``self.my_morphology.rich_upper==False``.
-
-        :param dict candidates: keys are transcriptions, values are lists of strings
-            representing morphological parses.  Since they are being disambiguated,
-            we should expect these lists to be morpheme forms delimited by the
-            language's delimiters.
-        :returns: a dict of the same form as the input where the values are lists of
-            richly represented morphological parses, i.e., in f|g|c format.
-
+        """Return parse candidates with rich representations, i.e.,
+        disambiguated.
+        Note that this is only necessary when
+        ``self.my_morphology.rich_upper==False``.
+        :param dict candidates: keys are transcriptions, values are lists of
+            strings representing morphological parses.  Since they are being
+            disambiguated, we should expect these lists to be morpheme forms
+            delimited by the language's delimiters.
+        :returns: a dict of the same form as the input where the values are
+            lists of richly represented morphological parses, i.e., in f|g|c
+            format.
         This converts something like {'chiens': 'chien-s'} to
         {'chiens': 'chien|dog|N-s|PL|Phi'}.
-
         """
-
         def get_category(morpheme):
-            if type(morpheme) == list:
+            if isinstance(morpheme, list):
                 return morpheme[2]
             return morpheme
         def get_morpheme(morpheme):
-            if type(morpheme) == list:
+            if isinstance(morpheme, list):
                 return self.my_morphology.rare_delimiter.join(morpheme)
             return morpheme
         rules = self.my_morphology.rules_generated.split()
@@ -1223,32 +1232,36 @@ class MorphologicalParser(FomaFST, Parse):
                     for index, morpheme in enumerate(morphemes):
                         if index % 2 == 0:
                             homographs = [[morpheme, gloss, category]
-                                    for gloss, category in dictionary[morpheme]]
+                                          for gloss, category in
+                                          dictionary[morpheme]]
                             temp.append(homographs)
                         else:
                             temp.append(morpheme) # it's really a delimiter
                     for candidate in product(*temp):
-                        # Only add a disambiguated candidate if its category sequence accords
-                        # with the morphology's rules
+                        # Only add a disambiguated candidate if its category
+                        # sequence accords with the morphology's rules
                         if ''.join(get_category(x) for x in candidate) in rules:
-                            new_candidates.add(''.join(get_morpheme(x) for x in candidate))
+                            new_candidates.add(
+                                ''.join(get_morpheme(x) for x in candidate))
                 result[transcription] = list(new_candidates)
             return result
-        except Exception as e:
-            log.warn('some kind of exception occured in morphologicalparsers.py '
-                    'disambiguate_candidates: %s' % e)
+        except Exception as error:
+            LOGGER.warning(
+                'some kind of exception occured in morphologicalparsers.py'
+                ' disambiguate_candidates: %s', error)
             return dict((k, []) for k in candidates)
 
-    # A parser's morphology and language_model objects should always be accessed via the
-    # ``my_``-prefixed properties defined below.  These properties abstract away the complication
-    # that ``self.my_X`` may be a copy of ``self.X``.  The rationale behind this is that in a
-    # multi-user, multithreaded environment the updating of a referenced object (e.g., LM) should
-    # not silently change the behaviour of a parser -- the parser must be explicitly rewritten and re-compiled
-    # in order for changes to percolate.  This level of abstraction is important in the context
-    # of parse caching: if changes to, say, a referenced LM object were to silently change the
-    # parses of a parser, the parser's cache would not be cleared and those changes would not
-    # surface in parsing behaviour.
-
+    # A parser's morphology and language_model objects should always be
+    # accessed via the ``my_``-prefixed properties defined below. These
+    # properties abstract away the complication # that ``self.my_X`` may be a
+    # copy of ``self.X``.  The rationale behind this is that in a multi-user,
+    # multithreaded environment the updating of a referenced object (e.g., LM)
+    # should not silently change the behaviour of a parser -- the parser must
+    # be explicitly rewritten and re-compiled in order for changes to
+    # percolate. This level of abstraction is important in the context of parse
+    # caching: if changes to, say, a referenced LM object were to silently
+    # change the parses of a parser, the parser's cache would not be cleared
+    # and those changes would not # surface in parsing behaviour.
     @property
     def my_morphology(self):
         try:
@@ -1274,39 +1287,50 @@ class MorphologicalParser(FomaFST, Parse):
         self._my_language_model = value
 
     def export(self):
-        """Return a dictionary containing all of the core attribute/values of the parser.
+        """Return a dictionary containing all of the core attribute/values of
+        the parser.
         """
-
         return {
             'phonology': {
-                'word_boundary_symbol': getattr(self.phonology, 'word_boundary_symbol', '#')
+                'word_boundary_symbol': getattr(
+                    self.phonology, 'word_boundary_symbol', '#')
             },
             'morphology': {
-                'word_boundary_symbol': getattr(self.my_morphology, 'word_boundary_symbol', '#'),
-                'rare_delimiter': getattr(self.my_morphology, 'rare_delimiter', '\u2980'),
+                'word_boundary_symbol': getattr(
+                    self.my_morphology, 'word_boundary_symbol', '#'),
+                'rare_delimiter': getattr(
+                    self.my_morphology, 'rare_delimiter', '\u2980'),
                 'rich_upper': getattr(self.my_morphology, 'rich_upper', True),
                 'rich_lower': getattr(self.my_morphology, 'rich_lower', True),
-                'rules_generated': getattr(self.my_morphology, 'rules_generated', '')
+                'rules_generated': getattr(
+                    self.my_morphology, 'rules_generated', '')
             },
             'language_model': {
-                'rare_delimiter': getattr(self.my_language_model, 'rare_delimiter', '\u2980'),
-                'start_symbol': getattr(self.my_language_model, 'start_symbol', '<s>'),
-                'end_symbol': getattr(self.my_language_model, 'end_symbol', '</s>'),
-                'categorial': getattr(self.my_language_model, 'categorial', False)
+                'rare_delimiter': getattr(
+                    self.my_language_model, 'rare_delimiter', '\u2980'),
+                'start_symbol': getattr(
+                    self.my_language_model, 'start_symbol', '<s>'),
+                'end_symbol': getattr(
+                    self.my_language_model, 'end_symbol', '</s>'),
+                'categorial': getattr(
+                    self.my_language_model, 'categorial', False)
             },
             'parser': {
-                'word_boundary_symbol': getattr(self, 'word_boundary_symbol', '#'),
-                'morpheme_delimiters': getattr(self, 'morpheme_delimiters', None)
+                'word_boundary_symbol': getattr(
+                    self, 'word_boundary_symbol', '#'),
+                'morpheme_delimiters': getattr(
+                    self, 'morpheme_delimiters', None)
             }
         }
 
     @property
     def file_type2extension(self):
-        """Extend the base class's property of the same name so that ``get_file_path``
-        works appropriately for this type of command."""
+        """Extend the base class's property of the same name so that
+        ``get_file_path`` works appropriately for this type of command."""
         if getattr(self, '_file_type2extension', None):
             return self._file_type2extension
         else:
-            self._file_type2extension = super(MorphologicalParser, self).file_type2extension.copy()
+            self._file_type2extension = super(
+                MorphologicalParser, self).file_type2extension.copy()
             self._file_type2extension.update({'cache': '_cache.pickle'})
             return self._file_type2extension

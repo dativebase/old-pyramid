@@ -53,7 +53,7 @@ class Orthography:
         """Remove all spaces, newlines and tabs."""
         string = string.replace('\n', '')
         string = string.replace('\t', '')
-        string = string.replace(' ', '') 
+        string = string.replace(' ', '')
         return string
 
     def str2bool(self, string):
@@ -73,8 +73,8 @@ class Orthography:
         self.orthography_as_dict = self.get_orthography_as_dict(
             self.orthography_as_string)
         self.lowercase = self.get_kwargs_arg(kwargs, 'lowercase', True)
-        self.initial_glottal_stops = self.get_kwargs_arg(kwargs,
-                                                    'initial_glottal_stops', True)
+        self.initial_glottal_stops = self.get_kwargs_arg(
+            kwargs, 'initial_glottal_stops', True)
 
     def __repr__(self):
         return 'Orthography Object\n\t%s: %s\n\t%s: %s\n\n%s\n\n%s\n\n%s\n\n' % (
@@ -136,8 +136,8 @@ class Orthography:
         temp = result.split(',')
         result = {}
         for string in temp:
-            for x in string.split('|'):
-                result[x] = temp.index(string)
+            for part in string.split('|'):
+                result[part] = temp.index(string)
         return result
 
     def get_kwargs_arg(self, kwargs, key, default=None):
@@ -227,24 +227,18 @@ class OrthographyTranslator:
         #   capitalize the first word of sentences, but I'm not gonna right now ...)
         #  3. io.lc = False, oo.lc = True: map lc to lc and uc to lc
         #  4. io.lc = False, oo.lc = False: map lc to lc and uc to uc
-        
         if not self.input_orthography.lowercase:
             self.make_replacements_case_sensitive()
-        
         # Sort the keys according to length, longest words first, to prevent
         #  parts of n-graphs from being found-n-replaced before the n-graph is.
-        
         self.replacement_keys = self.replacements.keys()
-        self.replacement_keys.sort(lambda x,y:len(y)-len(x))
-        
+        self.replacement_keys.sort(lambda x, y: len(y) - len(x))
         # This is the pattern that does most of the work
         #  It matches a string in metalanguage tags ("<ml>" and "</ml>") or
         #  a key from self.replacements
-        
         self.regex = re.compile(
             "<ml>.*?</ml>|(" + "|".join(self.replacement_keys) + ")"
         )
-        
         # If the output orthography doesn't represent initial glottal stops,
         #  but the input orthography does, compile a regex to remove them from
         #  the input orthography.  That way, the replacement operation won't
@@ -278,7 +272,7 @@ class OrthographyTranslator:
         it as an object language input orthography graph and return
         self.replacements[string].
 
-        If string DOES begin with "<ml>" and end with "</ml>", then treat it as 
+        If string DOES begin with "<ml>" and end with "</ml>", then treat it as
         a metalanguage string and return it with the "<ml>" and "</ml>" tags.
         """
         if string[:4] == '<ml>' and string[-5:] == '</ml>':
@@ -300,18 +294,19 @@ class OrthographyTranslator:
                 return string.lower()
         return patt.sub(lambda x:get_replacement(x.group()), string)
 
-    def capitalize(self, str):
-        """If str contains an alpha character, return str with first alpha
+    def capitalize(self, string):
+        """If string contains an alpha character, return string with first alpha
         capitalized; else, return empty string.
         """
         result = ""
-        for i in range(len(str)):
-            if str[i].isalpha(): return str[:i] + str[i:].capitalize()
+        for i in range(len(string)):
+            if string[i].isalpha():
+                return string[:i] + string[i:].capitalize()
         return result
 
-    def is_capital(self, str):
+    def is_capital(self, string):
         """Returns true only if first alpha character found is uppercase."""
-        for char in str:
+        for char in string:
             if char.isalpha():
                 return char.isupper()
         return False
@@ -348,9 +343,11 @@ class CustomSorter():
         graphs.sort(key=len)
         graphs.reverse()
 
-        for graph in graphs: 
-            word = unicode(word.replace(graph,
-                            '%s,' % self.orthography.orthography_as_dict[graph]))
+        for graph in graphs:
+            word = str(
+                word.replace(
+                    graph,
+                    '%s,' % self.orthography.orthography_as_dict[graph]))
 
         # Filter out anything that is not a digit or a comma
         word = filter(lambda x: x in '01234546789,', word)

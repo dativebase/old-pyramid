@@ -497,15 +497,49 @@ def includeme(config):
 
     # rememberedforms "resource"
     # Pylons: controller='rememberedforms', action='show'
-    config.add_route('show_remembered_forms', '/rememberedforms/{id}',
+    config.add_route('show_remembered_forms',
+                     '/rememberedforms/{id}',
                      request_method='GET')
-    config.add_route('remembered_forms_update', '/rememberedforms/{id}',
+
+    config.add_view('old.views.rememberedforms.Rememberedforms'
+                    attr='show',
+                    route_name='show_remembered_forms',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('remembered_forms_update',
+                     '/rememberedforms/{id}',
                      request_method='PUT')
-    config.add_route('search_remembered_forms', '/rememberedforms/{id}',
+    config.add_view('old.views.rememberedforms.Rememberedforms'
+                    attr='update',
+                    route_name='remembered_forms_update',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(
+                                   ['administrator', 'contributor', 'viewer'],
+                                   user_id_is_args1=True)))
+
+    config.add_route('search_remembered_forms',
+                     '/rememberedforms/{id}',
                      request_method='SEARCH')
+    config.add_view('old.views.rememberedforms.Rememberedforms'
+                    attr='search',
+                    route_name='search_remembered_forms',
+                    request_method='SEARCH',
+                    renderer='json',
+                    decorator=authenticate)
+
     config.add_route('search_remembered_forms_post',
                      '/rememberedforms/{id}/search',
                      request_method='POST')
+    config.add_view('old.views.rememberedforms.Rememberedforms'
+                    attr='search',
+                    route_name='search_remembered_forms_post',
+                    request_method='POST',
+                    renderer='json',
+                    decorator=authenticate)
 
     # REST resource routes. See ``RESOURCES`` for config and ``add_resource``
     # for implementation.
