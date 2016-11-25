@@ -9,6 +9,7 @@ class Elicitationmethods(Resources):
     def __init__(self, request):
         self.model_name = 'ElicitationMethod'
         self.hmn_member_name = 'elicitation method'
+        self.member_name = 'elicitation_method'
         super().__init__(request)
 
     def _get_user_data(self, data):

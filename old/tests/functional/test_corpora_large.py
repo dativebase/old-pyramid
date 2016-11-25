@@ -13,27 +13,33 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import json
 import logging
 import os
-import json
+from subprocess import call
+from time import sleep
 
+from sqlalchemy.sql import and_
 import transaction
 
 from old.lib.constants import (
     UNAUTHORIZED_MSG,
+    JSONDecodeErrorResponse,
 )
-
 from old.lib.dbutils import DBUtils
-from time import sleep
-from sqlalchemy.sql import and_
-from old.tests import TestView, add_SEARCH_to_web_test_valid_methods, get_file_size, decompress_gzip_string
-import old.models as old_models
 import old.lib.helpers as h
+from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
+import old.models as old_models
 import old.models.modelbuilders as omb
 from old.models import Corpus
 from old.models.corpus import CorpusFile
-from subprocess import call
-from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
+from old.tests import (
+    TestView,
+    add_SEARCH_to_web_test_valid_methods,
+    get_file_size,
+    decompress_gzip_string
+)
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,10 +47,12 @@ LOGGER = logging.getLogger(__name__)
 url = Corpus._url()
 
 
-
-
 class TestCorporaLargeView(TestView):
-    """Test the ``CorporaController`` making use of large "lorem ipsum" datasets."""
+    """Test the ``CorporaController`` making use of large "lorem ipsum"
+    datasets.
+    Note: this test class is different from normal ones because it requries that
+    ``test_aaa_initialize`` be run first and ``test_zzz_cleanup`` be run last.
+    """
 
     def setUp(self):
         self.default_setup()
@@ -652,7 +660,7 @@ class TestCorporaLargeView(TestView):
                     method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                     environ=self.extra_environ_admin, status=400)
                 resp = response.json_body
-                assert resp ==  h.JSONDecodeErrorResponse
+                assert resp ==  JSONDecodeErrorResponse
 
                 # Failed TGrep2 search: malformed params
                 tgrep2pattern = json.dumps({'TGrep2pattern': 'NP-SBJ < DT . VP'})

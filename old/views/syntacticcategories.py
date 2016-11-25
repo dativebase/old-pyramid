@@ -15,6 +15,7 @@ class Syntacticcategories(Resources):
     def __init__(self, request):
         self.model_name = 'SyntacticCategory'
         self.hmn_member_name = 'syntactic category'
+        self.member_name = 'syntactic_category'
         super().__init__(request)
 
     def _get_new_edit_collections(self):

@@ -10,6 +10,8 @@ inflect_p.classical()
 member_name = sys.argv[1]
 if member_name == 'applicationsetting':
     model_name = 'ApplicationSettings'
+elif member_name == 'elicitationmethod':
+    model_name = 'ElicitationMethod'
 else:
     model_name = member_name.capitalize()
 member_name_pl = inflect_p.plural(member_name)

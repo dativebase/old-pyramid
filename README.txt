@@ -129,6 +129,7 @@ Done
 |   │   ├── test_collectionbackups.py
 |   │   ├── test_collections.py
 |   │   ├── test_corpora.py
+│   │   ├── test_corpora_large.py
 |   │   ├── test_corpusbackups.py
 |   │   ├── test_files.py
 |   │   ├── test_forms.py
@@ -138,10 +139,11 @@ Done
 Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+../../env/bin/python ./../pyl2pyr.py elicitationmethod ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_elicitationmethods.py tests/functional/test_elicitationmethods.py
+
 │   ├── functional
 │   │   ├── __init__.py
 │   │   ├── _toggle_tests.py
-│   │   ├── test_corpora_large.py
 │   │   ├── test_elicitationmethods.py
 │   │   ├── test_files.py
 │   │   ├── test_files_search.py

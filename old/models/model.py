@@ -81,13 +81,13 @@ class Model(object):
     }
 
     def __json__(self, request):
-        try:
-            return self.get_dict()
-        except AttributeError:
-            r = self.__dict__.copy()
-            if '_sa_instance_state' in r:
-                del r['_sa_instance_state']
-            return r
+        return self.get_dict()
+
+    def get_dict(self):
+        r = self.__dict__.copy()
+        if '_sa_instance_state' in r:
+            del r['_sa_instance_state']
+        return r
 
     @classmethod
     def _url(cls):
