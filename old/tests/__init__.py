@@ -15,7 +15,7 @@
 
 """Machinery for functional tests for the OLD Pyramid app."""
 
-from io import StringIO
+from io import StringIO, BytesIO
 import json
 import gzip
 import os
@@ -46,12 +46,14 @@ from old.models import (
 )
 import old.models as old_models
 
-__all__ = ['TestView', 'add_SEARCH_to_web_test_valid_methods', 'poll']
+__all__ = ['TestView', 'add_SEARCH_to_web_test_valid_methods', 'poll',
+           'get_file_size']
 
 
 # TODO: how to initialize the test database?
 # In Pylons, we did:
 # SetupCommand('setup-app').run([pylons.test.pylonsapp.config['__file__']])
+
 
 
 def add_SEARCH_to_web_test_valid_methods():
@@ -115,7 +117,11 @@ class TestView(TestCase):
         session_factory = get_session_factory(engine)
         return get_tm_session(session_factory, transaction.manager)
 
-    def __init__(self, *args, **kwargs):
+    def setUp(self):
+        self.default_setup()
+        self.create_db()
+
+    def default_setup(self):
         config_file = 'test.ini'
         self.settings = appconfig('config:{}'.format(config_file),
                                   relative_to='.')
@@ -129,6 +135,7 @@ class TestView(TestCase):
         testing.setUp()
         self.transaction = transaction
 
+    def create_db(self):
         # Create the database tables
         with transaction.manager:
             dbsession = self.get_dbsession()
@@ -144,8 +151,6 @@ class TestView(TestCase):
             Base.metadata.create_all(bind=dbsession.bind, checkfirst=True)
             dbsession.add_all(languages + [administrator, contributor, viewer])
             transaction.commit()
-
-        super().__init__(*args, **kwargs)
 
     def clear_all_models(self, retain=['Language']):
         """Convenience function for removing all OLD models from the database.
@@ -165,6 +170,7 @@ class TestView(TestCase):
 
     def tearDown(self, **kwargs):
         """Clean up after a test."""
+        print('TEAR FOX DOWN!')
         clear_all_tables = kwargs.get('clear_all_tables', False)
         dirs_to_clear = kwargs.get('dirs_to_clear', [])
         dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
@@ -516,7 +522,7 @@ class TestView(TestCase):
 
 
 def decompress_gzip_string(compressed_data):
-    compressed_stream = StringIO(compressed_data)
+    compressed_stream = BytesIO(compressed_data)
     gzip_file = gzip.GzipFile(fileobj=compressed_stream, mode="rb")
     return gzip_file.read()
 

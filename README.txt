@@ -125,6 +125,7 @@ Done
 │   ├── functional
 │   │   ├── __init__.py
 |   │   ├── test_auth.py
+│   │   ├── test_applicationsettings.py
 |   │   ├── test_collectionbackups.py
 |   │   ├── test_collections.py
 |   │   ├── test_corpora.py
@@ -137,7 +138,39 @@ Done
 Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-│   │   ├── test_applicationsettings.py
+│   ├── functional
+│   │   ├── __init__.py
+│   │   ├── _toggle_tests.py
+│   │   ├── test_corpora_large.py
+│   │   ├── test_elicitationmethods.py
+│   │   ├── test_files.py
+│   │   ├── test_files_search.py
+│   │   ├── test_formbackups.py
+│   │   ├── test_forms.py
+│   │   ├── test_forms_search.py
+│   │   ├── test_formsearches.py
+│   │   ├── test_languages.py
+│   │   ├── test_login.py
+│   │   ├── test_morphemelanguagemodelbackups.py
+│   │   ├── test_morphemelanguagemodels.py
+│   │   ├── test_morphologicalparsers.py
+│   │   ├── test_morphologies.py
+│   │   ├── test_morphologybackups.py
+│   │   ├── test_oldcollections.py
+│   │   ├── test_oldcollections_search.py
+│   │   ├── test_orthographies.py
+│   │   ├── test_pages.py
+│   │   ├── test_phonologies.py
+│   │   ├── test_phonologybackups.py
+│   │   ├── test_rememberedforms.py
+│   │   ├── test_sources.py
+│   │   ├── test_speakers.py
+│   │   ├── test_syntacticcategories.py
+│   │   ├── test_tags.py
+│   │   ├── test_users.py
+│   ├── scripts
+│   │   └── _requests_tests.py
+
 
 TODO
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -212,43 +245,6 @@ TODO
 │   │       ├── test_phonology_medium.script
 │   │       ├── test_phonology_no_phonology.script
 │   │       └── test_phonology_no_tests.script
-
-│   ├── functional
-│   │   ├── __init__.py
-│   │   ├── _toggle_tests.py
-│   │   ├── test_applicationsettings.py
-│   │   ├── test_collectionbackups.py
-│   │   ├── test_corpora.py
-│   │   ├── test_corpora_large.py
-│   │   ├── test_corpusbackups.py
-│   │   ├── test_elicitationmethods.py
-│   │   ├── test_files.py
-│   │   ├── test_files_search.py
-│   │   ├── test_formbackups.py
-│   │   ├── test_forms.py
-│   │   ├── test_forms_search.py
-│   │   ├── test_formsearches.py
-│   │   ├── test_languages.py
-│   │   ├── test_login.py
-│   │   ├── test_morphemelanguagemodelbackups.py
-│   │   ├── test_morphemelanguagemodels.py
-│   │   ├── test_morphologicalparsers.py
-│   │   ├── test_morphologies.py
-│   │   ├── test_morphologybackups.py
-│   │   ├── test_oldcollections.py
-│   │   ├── test_oldcollections_search.py
-│   │   ├── test_orthographies.py
-│   │   ├── test_pages.py
-│   │   ├── test_phonologies.py
-│   │   ├── test_phonologybackups.py
-│   │   ├── test_rememberedforms.py
-│   │   ├── test_sources.py
-│   │   ├── test_speakers.py
-│   │   ├── test_syntacticcategories.py
-│   │   ├── test_tags.py
-│   │   ├── test_users.py
-│   ├── scripts
-│   │   └── _requests_tests.py
 
 │   ├── sync
 │   ├── test_models.py

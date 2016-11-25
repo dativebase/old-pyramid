@@ -12,6 +12,11 @@ LOGGER = logging.getLogger(__name__)
 class Syntacticcategories(Resources):
     """Generate responses to requests on syntactic category resources."""
 
+    def __init__(self, request):
+        self.model_name = 'SyntacticCategory'
+        self.hmn_member_name = 'syntactic category'
+        super().__init__(request)
+
     def _get_new_edit_collections(self):
         return ('syntactic_category_types',)
 

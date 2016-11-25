@@ -10,6 +10,8 @@ inflect_p.classical()
 member_name = sys.argv[1]
 if member_name == 'applicationsetting':
     model_name = 'ApplicationSettings'
+else:
+    model_name = member_name.capitalize()
 member_name_pl = inflect_p.plural(member_name)
 
 src, dst = sys.argv[2:]
@@ -33,8 +35,10 @@ REPLACE = (
     ('from onlinelinguisticdatabase.', 'from old.'),
     ('from old.model import ', 'from old.models import '),
     ('from old.tests import TestController, url',
-        'from old.tests import TestView'),
+        'from old.tests import TestView, add_SEARCH_to_web_test_valid_methods'),
     ('import onlinelinguisticdatabase.', 'import old.'),
+    ('import old.model as model', 'import old.models as old_models'),
+    ('model.', 'old_models.'),
     ('log = logging.', 'LOGGER = logging.'),
     ('log.', 'LOGGER.'),
     ('h.gen', 'omb.gen'),
@@ -60,6 +64,13 @@ REPLACE = (
     ('== None', 'is None'),
     ('== True', 'is True'),
     ('== False', 'is False'),
+    (', 0744', ', 0o744'),
+    ('self._add_SEARCH_to_web_test_valid_methods',
+        'add_SEARCH_to_web_test_valid_methods'),
+    ('self.config', 'self.settings'),
+    ('unicode(', 'str('),
+    ('h.clear_all_models', 'db.clear_all_models'),
+    ('h.clear_all_tables', 'db.clear_all_tables'),
 )
 
 RE_REPLACE = (
@@ -91,6 +102,7 @@ ADD_POST = (
 
 DEL_POST = (
     'from old.model.meta import Session',
+    'from old.old_models.meta import Session',
 )
 
 

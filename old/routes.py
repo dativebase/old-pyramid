@@ -30,7 +30,10 @@ RESOURCES = {
         'history': True
     },
     'collectionbackup': {'searchable': True},
-    'corpus': {'history': True},
+    'corpus': {
+        'searchable': True,
+        'history': True
+    },
     'corpusbackup': {'searchable': True},
     'elicitationmethod': {},
     'file': {'searchable': True},
@@ -76,7 +79,7 @@ def fix_for_tests(request):
     """Modifies the request if certain environment variables are present;
     purpose is to simulate different login states for testing.
     """
-    if os.path.basename(request.registry.settings['__file__']) == 'test.ini':
+    if os.path.basename(request.registry.settings.get('__file__', '')) == 'test.ini':
         if 'test.authentication.role' in request.environ:
             role = request.environ['test.authentication.role']
             user = request.dbsession.query(User).filter(User.role==role).first()
@@ -204,19 +207,19 @@ def get_search_config(collection_name):
         return (
             (
                 'search_corpus_forms',
-                '/corpora/{{id}}',
+                '/corpora/{id}',
                 'SEARCH',
                 'search'
             ), (
                 'search_corpus_forms_post',
-                '/corpora/{{id}}/search',
+                '/corpora/{id}/search',
                 'POST',
                 'search'
             ), (
-                'new_search_corpus_forms'
+                'new_search_corpus_forms',
                 '/corpora/new_search',
                 'GET',
-                'new_search'
+                'new_searchx'
             )
         )
     return (
@@ -257,6 +260,9 @@ def add_resource(config, member_name, rsrc_config=None):
         for route_name, path, request_method, attr in get_search_config(
                 collection_name):
             config.add_route(route_name, path, request_method=request_method)
+            if member_name:
+                print('{} {} will call {}.{}'.format(request_method, path,
+                      view_callable, attr))
             config.add_view(view_callable,
                             attr=attr,
                             route_name=route_name,
@@ -293,6 +299,8 @@ def add_resource(config, member_name, rsrc_config=None):
             path = '{}/{{id}}'.format(path)
         request_method = {'create': 'POST', 'delete': 'DELETE',
                           'update': 'PUT'}.get(action, 'GET')
+        print('{} {} will call {}.{}'.format(request_method, path,
+              view_callable, action))
         config.add_route(route_name, path, request_method=request_method)
         config.add_view(view_callable,
                         attr=action,
@@ -340,7 +348,8 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
-    config.add_route('new_search_corpora', '/corpora/new_search_corpora',
+    config.add_route('new_search_corpora',
+                     '/corpora/new_search_corpora',
                      request_method='GET')
     config.add_view('old.views.corpora.Corpora',
                     attr='new_search_corpora',
@@ -361,9 +370,9 @@ def includeme(config):
 
     # To search within the forms of a corpus, use one of the following two:
     # Pylons: controller='corpora', action='search',
-    config.add_route('search_corpus', '/corpora/{id}', request_method='SEARCH')
-    config.add_route('search_corpus_post', '/corpora/{id}/search',
-                     request_method='POST')
+    # config.add_route('search_corpus', '/corpora/{id}', request_method='SEARCH')
+    # config.add_route('search_corpus_post', '/corpora/{id}/search',
+    #                  request_method='POST')
 
     config.add_route('corpus_serve_file',
                      '/corpora/{id}/servefile/{file_id}',
@@ -395,8 +404,6 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
-
-    config.add_route('corpora_new_search', '/corpora/new_search')
 
     config.add_route('serve_file', '/files/{id}/serve', request_method='GET')
     config.add_view('old.views.files.Files',

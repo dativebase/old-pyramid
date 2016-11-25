@@ -150,7 +150,7 @@ class Corpora(Resources):
                 'Form', query, user)
         return add_pagination(query, python_search_params.get('paginator'))
 
-    def new_search(self):
+    def new_searchx(self):
         """Return the data necessary to search across the form resources within
         the corpus.
         """
