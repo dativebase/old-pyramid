@@ -186,8 +186,11 @@ def get_auth_decorators(resource, action):
                 return (authenticate,
                         authorize(['administrator', 'contributor', 'viewer'],
                                   user_id_is_args1=True))
-            else:
+            return (authenticate, authorize(['administrator']))
+        elif resource == 'applicationsetting':
+            if action in ('update', 'edit', 'create', 'new', 'delete'):
                 return (authenticate, authorize(['administrator']))
+            return authenticate
         return (authenticate, authorize(['administrator', 'contributor']))
     return authenticate
 
@@ -501,7 +504,7 @@ def includeme(config):
                      '/rememberedforms/{id}',
                      request_method='GET')
 
-    config.add_view('old.views.rememberedforms.Rememberedforms'
+    config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='show',
                     route_name='show_remembered_forms',
                     request_method='GET',
@@ -511,7 +514,7 @@ def includeme(config):
     config.add_route('remembered_forms_update',
                      '/rememberedforms/{id}',
                      request_method='PUT')
-    config.add_view('old.views.rememberedforms.Rememberedforms'
+    config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='update',
                     route_name='remembered_forms_update',
                     request_method='PUT',
@@ -524,7 +527,7 @@ def includeme(config):
     config.add_route('search_remembered_forms',
                      '/rememberedforms/{id}',
                      request_method='SEARCH')
-    config.add_view('old.views.rememberedforms.Rememberedforms'
+    config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='search',
                     route_name='search_remembered_forms',
                     request_method='SEARCH',
@@ -534,7 +537,7 @@ def includeme(config):
     config.add_route('search_remembered_forms_post',
                      '/rememberedforms/{id}/search',
                      request_method='POST')
-    config.add_view('old.views.rememberedforms.Rememberedforms'
+    config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='search',
                     route_name='search_remembered_forms_post',
                     request_method='POST',

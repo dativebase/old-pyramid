@@ -73,7 +73,9 @@ class ReadonlyResources:
         self.primary_key = 'id'
         # Names
         self.collection_name = self.__class__.__name__.lower()
-        self.member_name = self.inflect_p.singular_noun(self.collection_name)
+        if not getattr(self, 'member_name', None):
+            self.member_name = self.inflect_p.singular_noun(
+                self.collection_name)
         if not getattr(self, 'hmn_member_name', None):
             self.hmn_member_name = self.member_name
         if not getattr(self, 'model_name', None):
@@ -727,6 +729,9 @@ class Resources(abc.ABC, ReadonlyResources):
             'grammaticalities': ResCol(
                 'ApplicationSettings',
                 self.db.get_grammaticalities),
+            'languages': ResCol(
+                'Language',
+                self.db.get_languages),
             'markup_languages': ResCol(
                 '',
                 lambda: MARKUP_LANGUAGES),

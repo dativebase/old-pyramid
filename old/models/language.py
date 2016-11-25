@@ -34,3 +34,16 @@ class Language(Base):
     Ref_Name = Column(Unicode(150))
     Comment = Column(Unicode(150))
     datetime_modified = Column(DateTime, default=now)
+
+    def get_dict(self):
+        return {
+            'Id': self.Id,
+            'Part2B': self.Part2B,
+            'Part2T': self.Part2T,
+            'Part1': self.Part1,
+            'Scope': self.Scope,
+            'Type': self.Type,
+            'Ref_Name': self.Ref_Name,
+            'Comment': self.Comment,
+            'datetime_modified': self.datetime_modified
+        }

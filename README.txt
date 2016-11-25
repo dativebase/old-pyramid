@@ -66,6 +66,7 @@ Done
 
 ├── controllers
 │   ├── __init__.py
+│   ├── applicationsettings.py
 │   ├── collectionbackups.py
 │   ├── corpora.py
 │   ├── corpusbackups.py
@@ -120,18 +121,29 @@ Done
 │   ├── app_globals.py
         - WARNING/TODO: not using this
 
+├── tests
+│   ├── functional
+│   │   ├── __init__.py
+|   │   ├── test_auth.py
+|   │   ├── test_collectionbackups.py
+|   │   ├── test_collections.py
+|   │   ├── test_corpora.py
+|   │   ├── test_corpusbackups.py
+|   │   ├── test_files.py
+|   │   ├── test_forms.py
+|   │   └── test_tags.py
+
 
 Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-├── controllers
+│   │   ├── test_applicationsettings.py
 
 TODO
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ├── controllers
 │   ├── error.py ??? ...
-│   ├── applicationsettings.py
 
 │   ├── morphemelanguagemodelbackups.py
 │   ├── morphemelanguagemodels.py
@@ -170,6 +182,7 @@ TODO
 │       ├── iso_639_3.tab
 │       └── iso_639_3_trunc.tab
 ├── syncs.sqlite
+
 ├── tests
 │   ├── __init__.py
 │   ├── __init__.py.bk
@@ -199,6 +212,7 @@ TODO
 │   │       ├── test_phonology_medium.script
 │   │       ├── test_phonology_no_phonology.script
 │   │       └── test_phonology_no_tests.script
+
 │   ├── functional
 │   │   ├── __init__.py
 │   │   ├── _toggle_tests.py
@@ -235,6 +249,7 @@ TODO
 │   │   ├── test_users.py
 │   ├── scripts
 │   │   └── _requests_tests.py
+
 │   ├── sync
 │   ├── test_models.py
 ├── websetup.py

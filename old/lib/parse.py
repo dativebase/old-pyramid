@@ -54,46 +54,53 @@ if not 'PhonologyFST' in dir(parser):
 
 CONFIG_FILE = 'config.pickle'
 CONFIG_PATH = os.path.join(SCRIPT_DIR, CONFIG_FILE)
-CONFIG = pickle.load(open(CONFIG_PATH, 'rb'))
+# CONFIG = pickle.load(open(CONFIG_PATH, 'rb'))
 CACHE_FILE = 'cache.pickle'
 CACHE_PATH = os.path.join(SCRIPT_DIR, CACHE_FILE)
 
-phonology = parser.PhonologyFST(
-    parent_directory = SCRIPT_DIR,
-    word_boundary_symbol = CONFIG['phonology']['word_boundary_symbol']
-)
+def get_config():
+    return pickle.load(open(CONFIG_PATH, 'rb'))
 
-morphology = parser.MorphologyFST(
-    parent_directory = SCRIPT_DIR,
-    word_boundary_symbol = CONFIG['morphology']['word_boundary_symbol'],
-    rare_delimiter = CONFIG['morphology']['rare_delimiter'],
-    rich_upper = CONFIG['morphology']['rich_upper'],
-    rich_lower = CONFIG['morphology']['rich_lower'],
-    rules_generated = CONFIG['morphology']['rules_generated']
-)
+def get_phonology():
+    return parser.PhonologyFST(
+        parent_directory = SCRIPT_DIR,
+        word_boundary_symbol = get_config()['phonology']['word_boundary_symbol']
+    )
 
-language_model = parser.LanguageModel(
-    parent_directory = SCRIPT_DIR,
-    rare_delimiter = CONFIG['language_model']['rare_delimiter'],
-    start_symbol = CONFIG['language_model']['start_symbol'],
-    end_symbol = CONFIG['language_model']['end_symbol'],
-    categorial = CONFIG['language_model']['categorial']
-)
+def get_morphology():
+    return parser.MorphologyFST(
+        parent_directory = SCRIPT_DIR,
+        word_boundary_symbol = get_config()['morphology']['word_boundary_symbol'],
+        rare_delimiter = get_config()['morphology']['rare_delimiter'],
+        rich_upper = get_config()['morphology']['rich_upper'],
+        rich_lower = get_config()['morphology']['rich_lower'],
+        rules_generated = get_config()['morphology']['rules_generated']
+    )
 
-parser = parser.MorphologicalParser(
-    parent_directory = SCRIPT_DIR,
-    word_boundary_symbol = CONFIG['parser']['word_boundary_symbol'],
-    morpheme_delimiters = CONFIG['parser']['morpheme_delimiters'],
-    phonology = phonology,
-    morphology = morphology,
-    language_model = language_model,
-    cache = parser.Cache(path=CACHE_PATH)
-)
+def get_language_model():
+    return parser.LanguageModel(
+        parent_directory = SCRIPT_DIR,
+        rare_delimiter = get_config()['language_model']['rare_delimiter'],
+        start_symbol = get_config()['language_model']['start_symbol'],
+        end_symbol = get_config()['language_model']['end_symbol'],
+        categorial = get_config()['language_model']['categorial']
+    )
+
+def get_parser():
+    return parser.MorphologicalParser(
+        parent_directory = SCRIPT_DIR,
+        word_boundary_symbol = get_config()['parser']['word_boundary_symbol'],
+        morpheme_delimiters = get_config()['parser']['morpheme_delimiters'],
+        phonology = phonology,
+        morphology = morphology,
+        language_model = language_model,
+        cache = parser.Cache(path=CACHE_PATH)
+    )
 
 if __name__ == '__main__':
 
     for input_ in sys.argv[1:]:
-        parse = parser.pretty_parse(input_)[input_]
+        parse = get_parser().pretty_parse(input_)[input_]
         if parse:
             print('%s %s' % (input_, ' '.join(parse)))
         else:

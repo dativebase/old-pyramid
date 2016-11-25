@@ -93,7 +93,11 @@ class Model(object):
     def _url(cls):
         __url = getattr(cls, '__url', None)
         if not __url:
-            cls.__url = URL(inflect_p.plural(cls.__tablename__))
+            if cls.__tablename__ == 'applicationsettings':
+                collection_name = 'applicationsettings'
+            else:
+                collection_name = inflect_p.plural(cls.__tablename__)
+            cls.__url = URL(collection_name)
         return cls.__url
 
     # Maps names of tables to the sets of attributes required for mini-dict creation
