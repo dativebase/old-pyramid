@@ -6,6 +6,7 @@ import logging
 from formencode.validators import Invalid
 import inflect
 from sqlalchemy.sql import asc
+from sqlalchemy.exc import OperationalError
 
 from old.lib.constants import (
     ALLOWED_FILE_TYPES,
@@ -203,10 +204,18 @@ class ReadonlyResources:
                            self.request.body, error)
             self.request.response.status_int = 400
             return {'error': 'The specified search parameters generated an'
-                             'invalid database query'}
+                             ' invalid database query'}
         query = self._eagerload_model(sqla_query)
         query = self._filter_query(query)
-        return add_pagination(query, python_search_params.get('paginator'))
+        try:
+            return add_pagination(query, python_search_params.get('paginator'))
+        except OperationalError:
+            self.request.response.status_int = 400
+            return {'error': 'The specified search parameters generated an'
+                             ' invalid database query'}
+        except Invalid as error:  # For paginator schema errors.
+            self.request.response.status_int = 400
+            return {'errors': error.unpack_errors()}
 
     def new_search(self):
         """Return the data necessary to search over this type of resource.

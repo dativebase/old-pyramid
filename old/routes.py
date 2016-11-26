@@ -260,9 +260,6 @@ def add_resource(config, member_name, rsrc_config=None):
         for route_name, path, request_method, attr in get_search_config(
                 collection_name):
             config.add_route(route_name, path, request_method=request_method)
-            if member_name:
-                print('{} {} will call {}.{}'.format(request_method, path,
-                      view_callable, attr))
             config.add_view(view_callable,
                             attr=attr,
                             route_name=route_name,
@@ -299,8 +296,6 @@ def add_resource(config, member_name, rsrc_config=None):
             path = '{}/{{id}}'.format(path)
         request_method = {'create': 'POST', 'delete': 'DELETE',
                           'update': 'PUT'}.get(action, 'GET')
-        print('{} {} will call {}.{}'.format(request_method, path,
-              view_callable, action))
         config.add_route(route_name, path, request_method=request_method)
         config.add_view(view_callable,
                         attr=action,
