@@ -1476,14 +1476,17 @@ class TestFilesSearchView(TestView):
             assert resp['items'][0]['id'] == result_set[3]['id']
             assert resp['items'][-1]['id'] == result_set[5]['id']
 
-            # An invalid paginator (here 'page' is less than 1) will result in formencode.Invalid
-            # being raised resulting in a response with a 400 status code and a JSON error msg.
+            # An invalid paginator (here 'page' is less than 1) will result in
+            # formencode.Invalid being raised resulting in a response with a
+            # 400 status code and a JSON error msg.
             json_query = json.dumps({
                 'query': {
                     'filter': ['File', 'name', 'like', '%N%']},
                 'paginator': {'page': 0, 'items_per_page': 3}})
-            response = self.app.request(url('index'), method='SEARCH', body=json_query.encode('utf8'),
-                headers=self.json_headers, environ=self.extra_environ_admin, status=400)
+            response = self.app.request(
+                url('index'), method='SEARCH', body=json_query.encode('utf8'),
+                headers=self.json_headers, environ=self.extra_environ_admin,
+                status=400)
             resp = response.json_body
             assert resp['errors']['page'] == 'Please enter a number that is 1 or greater'
 
