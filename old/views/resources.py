@@ -98,7 +98,8 @@ class ReadonlyResources:
         if not self._query_builder:
             self._query_builder = SQLAQueryBuilder(
                 self.request.dbsession,
-                self.model_name,
+                model_name=self.model_name,
+                primary_key=self.primary_key,
                 settings=self.request.registry.settings)
         return self._query_builder
 
@@ -287,14 +288,14 @@ class ReadonlyResources:
         """Return a particular model instance (and the id value), given the
         model id supplied in the URL path.
         """
-        id_ = self.request.matchdict['id']
+        id_ = int(self.request.matchdict['id'])
         if eager:
             return (
                 self._eagerload_model(
-                    self.request.dbsession.query(self.model_cls)).get(int(id_)),
+                    self.request.dbsession.query(self.model_cls)).get(id_),
                 id_)
         else:
-            return self.request.dbsession.query(self.model_cls).get(int(id_)), id_
+            return self.request.dbsession.query(self.model_cls).get(id_), id_
 
     ###########################################################################
     # Utilities
@@ -309,7 +310,8 @@ class ReadonlyResources:
                                                         user)
 
     def _rsrc_not_exist(self, id_):
-        return 'There is no %s with id %s' % (self.hmn_member_name, id_)
+        return 'There is no %s with %s %s' % (self.hmn_member_name,
+                                              self.primary_key, id_)
 
     def add_order_by(self, query, order_by_params, query_builder=None):
         """Add an ORDER BY clause to the query using the get_SQLA_order_by
