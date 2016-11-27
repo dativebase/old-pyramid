@@ -142,6 +142,7 @@ Done
 │   │   ├── test_forms_search.py
 │   │   ├── test_languages.py
 │   │   ├── test_login.py => test_auth.py
+│   │   ├── test_orthographies.py
 |   │   └── test_tags.py
 
 
@@ -154,20 +155,13 @@ Doing
 ../../env/bin/python ./../pyl2pyr.py formsearch ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_formsearches.py tests/functional/test_formsearches.py
 ../../env/bin/python ./../pyl2pyr.py language ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_languages.py tests/functional/test_languages.py
 ../../env/bin/python ./../pyl2pyr.py collection ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_oldcollections_search.py tests/functional/test_oldcollections_search.py
-
 ../../env/bin/python ./../pyl2pyr.py orthography ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_orthographies.py tests/functional/test_orthographies.py
+
+../../env/bin/python ./../pyl2pyr.py page ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_pages.py tests/functional/test_pages.py
 
 
 │   ├── functional
-│   │   ├── test_morphemelanguagemodelbackups.py
-│   │   ├── test_morphemelanguagemodels.py
-│   │   ├── test_morphologicalparsers.py
-│   │   ├── test_morphologies.py
-│   │   ├── test_morphologybackups.py
-│   │   ├── test_phonologies.py
-│   │   ├── test_phonologybackups.py
 
-│   │   ├── test_orthographies.py
 │   │   ├── test_pages.py
 │   │   ├── test_rememberedforms.py
 │   │   ├── test_sources.py
@@ -175,6 +169,14 @@ Doing
 │   │   ├── test_syntacticcategories.py
 │   │   ├── test_tags.py
 │   │   ├── test_users.py
+
+│   │   ├── test_morphemelanguagemodelbackups.py
+│   │   ├── test_morphemelanguagemodels.py
+│   │   ├── test_morphologicalparsers.py
+│   │   ├── test_morphologies.py
+│   │   ├── test_morphologybackups.py
+│   │   ├── test_phonologies.py
+│   │   ├── test_phonologybackups.py
 
 │   ├── scripts
 │   │   └── _requests_tests.py
