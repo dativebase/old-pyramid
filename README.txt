@@ -133,7 +133,10 @@ Done
 |   │   ├── test_corpusbackups.py
 │   │   ├── test_elicitationmethods.py
 |   │   ├── test_files.py
+│   │   ├── test_files_search.py
+│   │   ├── test_formbackups.py
 |   │   ├── test_forms.py
+│   │   ├── test_forms_search.py
 |   │   └── test_tags.py
 
 
@@ -141,15 +144,15 @@ Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ../../env/bin/python ./../pyl2pyr.py file ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_files_search.py tests/functional/test_files_search.py
+../../env/bin/python ./../pyl2pyr.py formbackup ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_formbackups.py tests/functional/test_formbackups.py
+../../env/bin/python ./../pyl2pyr.py form ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_forms_search.py tests/functional/test_forms_search.py
+../../env/bin/python ./../pyl2pyr.py formsearch ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_formsearches.py tests/functional/test_formsearches.py
+│   │   ├── test_formsearches.py
+
 
 │   ├── functional
 │   │   ├── __init__.py
 │   │   ├── _toggle_tests.py
-│   │   ├── test_files_search.py
-│   │   ├── test_formbackups.py
-│   │   ├── test_forms.py
-│   │   ├── test_forms_search.py
-│   │   ├── test_formsearches.py
 │   │   ├── test_languages.py
 │   │   ├── test_login.py
 │   │   ├── test_morphemelanguagemodelbackups.py

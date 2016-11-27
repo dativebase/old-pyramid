@@ -14,6 +14,8 @@ elif member_name == 'elicitationmethod':
     model_name = 'ElicitationMethod'
 elif member_name == 'formbackup':
     model_name = 'FormBackup'
+elif member_name == 'formsearch':
+    model_name = 'FormSearch'
 else:
     model_name = member_name.capitalize()
 member_name_pl = inflect_p.plural(member_name)

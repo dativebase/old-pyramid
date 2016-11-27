@@ -56,7 +56,7 @@ class Formsearches(Resources):
         resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': 'There is no %s with id %s' % (self.member_name,
+            return {'error': 'There is no %s with id %s' % (self.hmn_member_name,
                                                             id_)}
         if self._model_access_unauth(resource_model) is not False:
             LOGGER.info('User not authorized to access edit action on model')
