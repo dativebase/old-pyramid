@@ -15,10 +15,10 @@ class Orthographies(Resources):
         """Update (and delete) on an orthography is permitted only if that
         orthography is not referenced in the current application settings.
         """
-        if self.logged_in_user == 'administrator':
+        if self.logged_in_user.role == 'administrator':
             return False
         app_set = self.db.current_app_set
-        if resource_model in (
+        if app_set and resource_model in (
                 app_set.storage_orthography,
                 app_set.input_orthography,
                 app_set.output_orthography):

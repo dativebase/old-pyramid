@@ -129,6 +129,7 @@ Done
 │   │   ├── test_applicationsettings.py
 |   │   ├── test_collectionbackups.py
 |   │   ├── test_collections.py (test_oldcollections.py)
+│   │   ├── test_collections_search.py (test_oldcollections_search.py)
 |   │   ├── test_corpora.py
 │   │   ├── test_corpora_large.py
 |   │   ├── test_corpusbackups.py
@@ -152,9 +153,9 @@ Doing
 ../../env/bin/python ./../pyl2pyr.py form ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_forms_search.py tests/functional/test_forms_search.py
 ../../env/bin/python ./../pyl2pyr.py formsearch ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_formsearches.py tests/functional/test_formsearches.py
 ../../env/bin/python ./../pyl2pyr.py language ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_languages.py tests/functional/test_languages.py
-
 ../../env/bin/python ./../pyl2pyr.py collection ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_oldcollections_search.py tests/functional/test_oldcollections_search.py
 
+../../env/bin/python ./../pyl2pyr.py orthography ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_orthographies.py tests/functional/test_orthographies.py
 
 
 │   ├── functional
@@ -163,12 +164,11 @@ Doing
 │   │   ├── test_morphologicalparsers.py
 │   │   ├── test_morphologies.py
 │   │   ├── test_morphologybackups.py
-
-│   │   ├── test_oldcollections_search.py
-│   │   ├── test_orthographies.py
-│   │   ├── test_pages.py
 │   │   ├── test_phonologies.py
 │   │   ├── test_phonologybackups.py
+
+│   │   ├── test_orthographies.py
+│   │   ├── test_pages.py
 │   │   ├── test_rememberedforms.py
 │   │   ├── test_sources.py
 │   │   ├── test_speakers.py
