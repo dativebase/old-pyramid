@@ -89,7 +89,9 @@ class Source(Base):
         'name', 'size', etc. (cf. get_mini_user_dict of the model superclass) and
         lacks keys for some attributes.
         """
-        source_dict = self.__dict__
+        source_dict = self.__dict__.copy()
+        if source_dict.get('_sa_instance_state'):
+            del source_dict['_sa_instance_state']
         source_dict['file'] = self.get_mini_file_dict(self.file)
         source_dict['crossref_source'] = self.get_mini_source_dict(self.crossref_source)
         return source_dict

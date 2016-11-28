@@ -731,9 +731,6 @@ class Resources(abc.ABC, ReadonlyResources):
             'elicitation_methods': ResCol(
                 'ElicitationMethod',
                 self.db.get_mini_dicts_getter('ElicitationMethod')),
-            'entry_types': ResCol(
-                '',
-                lambda: list(ENTRY_TYPES.keys())),
             'form_searches': ResCol(
                 'FormSearch',
                 self.db.get_mini_dicts_getter('FormSearch')),
@@ -767,6 +764,9 @@ class Resources(abc.ABC, ReadonlyResources):
             'tags': ResCol(
                 'Tag',
                 self.db.get_mini_dicts_getter('Tag')),
+            'types': ResCol(  # BibTeX entry types
+                '',
+                lambda: list(ENTRY_TYPES.keys())),
             'users': ResCol(
                 'User',
                 self.db.get_mini_dicts_getter('User')),

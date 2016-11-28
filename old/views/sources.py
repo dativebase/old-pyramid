@@ -1,15 +1,16 @@
 import datetime
 
+import old.lib.helpers as h
 from old.views.resources import Resources
 
 
 class Sources(Resources):
 
     def _get_new_edit_collections(self):
-        return ('entry_types',)
+        return ('types',)
 
     def _get_mandatory_collections(self):
-        return ('entry_types',)
+        return ('types',)
 
     def _get_user_data(self, data):
         return {

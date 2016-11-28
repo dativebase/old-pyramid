@@ -707,7 +707,7 @@ class ValidBibTeXEntryType(FancyValidator):
     }
 
     def _to_python(self, value, state):
-        if value.lower() in bibtex.entry_types.keys():
+        if value.lower() in bibtex.ENTRY_TYPES.keys():
             return value.lower()
         else:
             raise Invalid(
@@ -770,7 +770,7 @@ class ValidBibTeXEntry(FancyValidator):
             if len(required_fields) > 1:
                 return 'values'
             return 'a value'
-        required = bibtex.entry_types.get(entry_type, {}).get('required', [])
+        required = bibtex.ENTRY_TYPES.get(entry_type, {}).get('required', [])
         required_fields = [r for r in required if isinstance(r, str)]
         disjunctively_required_fields = [
             r for r in required if isinstance(r, tuple)]
@@ -800,15 +800,15 @@ class ValidBibTeXEntry(FancyValidator):
         type_ = values.get('type', '')
         required_fields, disjunctively_required_fields, msg = \
             self.parse_requirements(type_)
-        required_fields_values = filter(
+        required_fields_values = list(filter(
             None,
-            [self.get_required_value(values, rf) for rf in required_fields])
+            [self.get_required_value(values, rf) for rf in required_fields]))
         if len(required_fields_values) != len(required_fields):
             invalid = True
         else:
             for drf in disjunctively_required_fields:
-                dr_values = filter(
-                    None, [self.get_required_value(values, rf) for rf in drf])
+                dr_values = list(filter(
+                    None, [self.get_required_value(values, rf) for rf in drf]))
                 if not dr_values:
                     invalid = True
         if invalid:

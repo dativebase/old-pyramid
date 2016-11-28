@@ -181,6 +181,8 @@ def get_paginated_query_results(query, paginator):
     items = query.slice(start, end).all()
     if paginator.get('minimal'):
         items = minimal(items)
+    else:
+        items = [mod.get_dict() for mod in items]
     return {
         'paginator': paginator,
         'items': items
