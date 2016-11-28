@@ -1060,9 +1060,9 @@ class KeyboardSchema(Schema):
 
 
 class ValidUsernameAndPassword(FancyValidator):
-    """Validator for the username, password and password_confirm fields.  Unfortunately,
-    I do not know how to throw compound errors so these fields may contain multiple
-    errors yet only the first encountered will be returned.
+    """Validator for the username, password and password_confirm fields.
+    Unfortunately, I do not know how to throw compound errors so these fields
+    may contain multiple errors yet only the first encountered will be returned.
     """
     messages = {
         'bad_password': 'The submitted password is invalid; valid passwords'
@@ -1141,8 +1141,25 @@ class ValidUsernameAndPassword(FancyValidator):
             elif (
                     (id_ and query.filter(
                         and_(User.username==username, User.id!=id_)).first()) or
-                    (not id_ and query.filter(User.username==username).first())):
+                    ((not id_) and query.filter(User.username==username).first())):
                 # No duplicate usernames
+
+                if id_:
+                    print('FOX ID BUT USERNAME NOT UNIQUE')
+                    match = state.db.dbsession.query(User).filter(
+                        and_(User.username==username, User.id!=id_)).first()
+                    if match:
+                        print('user with id {} already has username {} but'
+                              ' different id from current one, which is {}'.format(
+                                  match.id, match.username, id_))
+                else:
+                    print('FOX NO ID')
+                    match = state.db.dbsession.query(User).filter(
+                        User.username==username).first()
+                    if match:
+                        print('user {} already has username {}'.format(
+                            match.id, match.username))
+
                 raise Invalid(self.message('nonunique_username', state,
                                            username=username),
                               'username', state)

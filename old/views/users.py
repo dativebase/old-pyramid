@@ -29,10 +29,11 @@ class Users(Resources):
         return resource_model.get_full_dict()
 
     def _update_resource_model(self, resource_model, data):
+        changed = False
         user_data = self._get_user_data(data)
         if data['password'] is not None:
             user_data['password'] = str(
-                h.encrypt_password(data['password'], resource_model.salt))
+                h.encrypt_password(data['password'], resource_model.salt.encode('utf8')))
         if data['username'] is not None:
             username = h.normalize(data['username'])
             if username != resource_model.username:
@@ -49,6 +50,16 @@ class Users(Resources):
                 setattr(resource_model, attr, val)
             return resource_model
         return changed
+
+    def _get_update_state(self, values, id_, resource_model):
+        """User update validation requires the to-be-updated user (as dict)
+        as well as the current user.
+        """
+        update_state = self._get_create_state(values)
+        update_state.id = id_
+        update_state.user_to_update = resource_model.get_full_dict()
+        update_state.user = self.logged_in_user.get_full_dict()
+        return update_state
 
     def _post_create(self, user):
         h.create_user_directory(user, self.request.registry.settings)
@@ -73,7 +84,7 @@ class Users(Resources):
         create_data = self._get_user_data(data)
         create_data['salt'] = str(h.generate_salt())
         create_data['password'] = str(
-            h.encrypt_password(data['password'], create_data['salt']))
+            h.encrypt_password(data['password'], create_data['salt'].encode('utf8')))
         create_data['username'] = h.normalize(data['username'])
         create_data['datetime_modified'] = datetime.datetime.utcnow()
         return create_data
@@ -86,9 +97,3 @@ class Users(Resources):
 
     def _pre_delete(self, user):
         h.destroy_user_directory(user, self.request.registry.settings)
-
-    def _delete_impossible(self, user_model):
-        """Restricted and foreign word users cannot be deleted."""
-        if user_model.name in ('restricted', 'foreign word'):
-            return 'The restricted and foreign word users cannot be deleted.'
-        return False

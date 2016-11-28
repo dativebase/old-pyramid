@@ -443,7 +443,7 @@ class Resources(abc.ABC, ReadonlyResources):
         except ValueError:
             self.request.response.status_int = 400
             return JSONDecodeErrorResponse
-        state = self._get_update_state(values, id_)
+        state = self._get_update_state(values, id_, resource_model)
         try:
             data = schema.to_python(values, state)
         except Invalid as error:
@@ -623,7 +623,7 @@ class Resources(abc.ABC, ReadonlyResources):
             db=self.db,
             logged_in_user=self.logged_in_user)
 
-    def _get_update_state(self, values, id_):
+    def _get_update_state(self, values, id_, resource_model):
         update_state = self._get_create_state(values)
         update_state.id = id_
         return update_state
