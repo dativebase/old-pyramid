@@ -182,6 +182,7 @@ Done
 │   │   ├── test_orthographies.py
 │   │   ├── test_pages.py
 │   │   ├── test_sources.py
+│   │   ├── test_speakers.py
 |   │   └── test_tags.py
 
 
@@ -197,15 +198,16 @@ Doing
 ../../env/bin/python ./../pyl2pyr.py orthography ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_orthographies.py tests/functional/test_orthographies.py
 ../../env/bin/python ./../pyl2pyr.py page ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_pages.py tests/functional/test_pages.py
 ../../env/bin/python ./../pyl2pyr.py source ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_sources.py tests/functional/test_sources.py
-
 ../../env/bin/python ./../pyl2pyr.py speaker ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_speakers.py tests/functional/test_speakers.py
 
-│   │   ├── test_speakers.py
+../../env/bin/python ./../pyl2pyr.py syntacticcategory ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_syntacticcategories.py tests/functional/test_syntacticcategories.py
+
+│   │   ├── test_syntacticcategories.py
 
 │   ├── functional
 
 │   │   ├── test_rememberedforms.py
-│   │   ├── test_syntacticcategories.py
+
 │   │   ├── test_tags.py
 │   │   ├── test_users.py
 
