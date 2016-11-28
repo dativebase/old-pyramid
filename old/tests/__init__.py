@@ -170,7 +170,6 @@ class TestView(TestCase):
 
     def tearDown(self, **kwargs):
         """Clean up after a test."""
-        print('TEAR FOX DOWN!')
         clear_all_tables = kwargs.get('clear_all_tables', False)
         dirs_to_clear = kwargs.get('dirs_to_clear', [])
         dirs_to_destroy = kwargs.get('dirs_to_destroy', [])

@@ -125,7 +125,40 @@ Done
 │   ├── app_globals.py
         - WARNING/TODO: not using this
 
+├── public
+│   └── iso_639_3_languages_data
+│       ├── iso_639_3.tab
+│       └── iso_639_3_trunc.tab
+
 ├── tests
+
+│   ├── data
+│   │   ├── datasets
+│   │   │   ├── loremipsum_100.txt
+│   │   │   ├── loremipsum_1000.txt
+│   │   │   ├── loremipsum_10000.txt
+│   │   │   ├── loremipsum_100_mysql.sql
+│   │   │   └── loremipsum_30000.txt
+│   │   ├── files
+│   │   │   ├── illicit.html
+│   │   │   ├── illicit.wav
+│   │   │   ├── large_image.gif
+│   │   │   ├── large_image.jpg
+│   │   │   ├── large_image.png
+│   │   │   ├── old_test.jpg
+│   │   │   ├── old_test.ogg
+│   │   │   └── old_test.wav
+│   │   ├── morphophonologies
+│   │   │   ├── blaold_morphophonology.foma
+│   │   │   └── blaold_morphophonology.script
+│   │   └── phonologies
+│   │       ├── test_phonology.script
+│   │       ├── test_phonology_large.script
+│   │       ├── test_phonology_malformed.script
+│   │       ├── test_phonology_medium.script
+│   │       ├── test_phonology_no_phonology.script
+│   │       └── test_phonology_no_tests.script
+
 │   ├── functional
 │   │   ├── __init__.py (empty)
 │   │   ├── _toggle_tests.py (no longer necessary, I think)
@@ -148,6 +181,7 @@ Done
 │   │   ├── test_login.py => test_auth.py
 │   │   ├── test_orthographies.py
 │   │   ├── test_pages.py
+│   │   ├── test_sources.py
 |   │   └── test_tags.py
 
 
@@ -162,15 +196,15 @@ Doing
 ../../env/bin/python ./../pyl2pyr.py collection ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_oldcollections_search.py tests/functional/test_oldcollections_search.py
 ../../env/bin/python ./../pyl2pyr.py orthography ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_orthographies.py tests/functional/test_orthographies.py
 ../../env/bin/python ./../pyl2pyr.py page ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_pages.py tests/functional/test_pages.py
-
 ../../env/bin/python ./../pyl2pyr.py source ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_sources.py tests/functional/test_sources.py
 
-│   │   ├── test_sources.py
+../../env/bin/python ./../pyl2pyr.py speaker ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_speakers.py tests/functional/test_speakers.py
+
+│   │   ├── test_speakers.py
 
 │   ├── functional
 
 │   │   ├── test_rememberedforms.py
-│   │   ├── test_speakers.py
 │   │   ├── test_syntacticcategories.py
 │   │   ├── test_tags.py
 │   │   ├── test_users.py
@@ -202,8 +236,6 @@ TODO
 │   ├── phonologies.py
 │   ├── phonologybackups.py
 
-
-
 ├── model
 │   ├── db_update_scripts
 │   │   ├── 0.2.7_1.0a1
@@ -225,41 +257,11 @@ TODO
 │   │   │   └── old_update_db_1.2.4_1.2.5.py
 │   │   └── makemigrations.py
 
-├── public
-│   └── iso_639_3_languages_data
-│       ├── iso_639_3.tab
-│       └── iso_639_3_trunc.tab
 ├── syncs.sqlite
 
 ├── tests
 │   ├── __init__.py
 │   ├── __init__.py.bk
-│   ├── data
-│   │   ├── datasets
-│   │   │   ├── loremipsum_100.txt
-│   │   │   ├── loremipsum_1000.txt
-│   │   │   ├── loremipsum_10000.txt
-│   │   │   ├── loremipsum_100_mysql.sql
-│   │   │   └── loremipsum_30000.txt
-│   │   ├── files
-│   │   │   ├── illicit.html
-│   │   │   ├── illicit.wav
-│   │   │   ├── large_image.gif
-│   │   │   ├── large_image.jpg
-│   │   │   ├── large_image.png
-│   │   │   ├── old_test.jpg
-│   │   │   ├── old_test.ogg
-│   │   │   └── old_test.wav
-│   │   ├── morphophonologies
-│   │   │   ├── blaold_morphophonology.foma
-│   │   │   └── blaold_morphophonology.script
-│   │   └── phonologies
-│   │       ├── test_phonology.script
-│   │       ├── test_phonology_large.script
-│   │       ├── test_phonology_malformed.script
-│   │       ├── test_phonology_medium.script
-│   │       ├── test_phonology_no_phonology.script
-│   │       └── test_phonology_no_tests.script
 
 │   ├── sync
 │   ├── test_models.py
