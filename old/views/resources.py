@@ -83,7 +83,8 @@ class ReadonlyResources:
             self.model_name = self.member_name.capitalize()
         self.schema_cls_name = self.model_name + 'Schema'
         # Classes
-        self.model_cls = getattr(old_models, self.model_name)
+        if not getattr(self, 'model_cls', None):
+            self.model_cls = getattr(old_models, self.model_name)
         self.schema_cls = getattr(old_schemata, self.schema_cls_name, None)
 
     @property

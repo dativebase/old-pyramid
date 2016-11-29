@@ -299,8 +299,9 @@ class ValidOLDModelObject(FancyValidator):
                                  model_name_eng=model_name_eng),
                     value, state)
             else:
-                if self.model_name in ('Form', 'File', 'Collection') and \
-                getattr(state, 'user', None):
+                if (    self.model_name in ('Form', 'File', 'Collection') and
+                        getattr(state, 'user', None)):
+                    print('FOX HAVE state.user')
                     unrestricted_users = state.db.get_unrestricted_users()
                     if state.user.is_authorized_to_access_model(
                             model_object, unrestricted_users):
@@ -312,6 +313,7 @@ class ValidOLDModelObject(FancyValidator):
                                          model_name_eng=model_name_eng),
                             value, state)
                 else:
+                    print('FOX NO HAVE state.user')
                     return model_object
 
 

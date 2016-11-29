@@ -38,8 +38,10 @@ from old.lib.dbutils import (
     add_pagination,
     get_eagerloader
 )
-from old.views.resources import Resources
-
+from old.views.resources import (
+    Resources,
+    SchemaState
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -67,8 +69,9 @@ class Rememberedforms(Resources):
     """
 
     def __init__(self, request):
-        super().__init__(request)
         self.model_name = 'Form'
+        self.model_cls = Form
+        super().__init__(request)
 
     def show(self):
         """Return a user's remembered forms.
@@ -94,11 +97,11 @@ class Rememberedforms(Resources):
         get_params = dict(self.request.GET)
         try:
             query = self.add_order_by(query, get_params)
+            query = self._filter_restricted_models(query)
+            return add_pagination(query, get_params)
         except Invalid as error:
             self.request.response.status_int = 400
             return {'errors': error.unpack_errors()}
-        query = self._filter_restricted_models(query)
-        return add_pagination(query, get_params)
 
     def update(self):
         """Update a user's remembered forms and return them.
@@ -119,15 +122,19 @@ class Rememberedforms(Resources):
         schema = FormIdsSchemaNullable
         if not user:
             self.request.response.status_int = 404
-            return {'error': 'There is no user with id %s' % id}
+            return {'error': 'There is no user with id %s' % id_}
         try:
             values = json.loads(
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
             return JSONDecodeErrorResponse
+        state = SchemaState(
+            full_dict=values,
+            db=self.db,
+            id=id_)
         try:
-            data = schema.to_python(values)
+            data = schema.to_python(values, state)
         except Invalid as error:
             self.request.response.status_int = 400
             return {'errors': error.unpack_errors()}
