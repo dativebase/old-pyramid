@@ -1,5 +1,5 @@
 import datetime
-from old.models import Model
+
 from pyramid.authentication import (
     AuthTktAuthenticationPolicy,
     AuthTktCookieHelper,
@@ -12,6 +12,9 @@ from pyramid.security import (
     Authenticated
 )
 from pyramid.settings import asbool
+
+from old.models import Model
+from old.lib.foma_worker import start_foma_worker
 
 
 def asint(setting):
@@ -200,11 +203,8 @@ def get_user(request):
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
-
-    TODO:
-    # start foma worker -- used for long-running tasks like FST compilation
-    foma_worker = start_foma_worker()
     """
+    foma_worker = start_foma_worker()
     config = Configurator(settings=settings)
     config.include('pyramid_beaker')
     config.include('pyramid_jinja2')

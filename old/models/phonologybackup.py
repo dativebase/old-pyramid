@@ -65,8 +65,8 @@ class PhonologyBackup(Base):
         self.name = phonology_dict['name']
         self.description = phonology_dict['description']
         self.script = phonology_dict['script']
-        self.enterer = unicode(json.dumps(phonology_dict['enterer']))
-        self.modifier = unicode(json.dumps(phonology_dict['modifier']))
+        self.enterer = json.dumps(phonology_dict['enterer'])
+        self.modifier = json.dumps(phonology_dict['modifier'])
         self.datetime_entered = phonology_dict['datetime_entered']
         self.datetime_modified = phonology_dict['datetime_modified']
         self.compile_succeeded = phonology_dict['compile_succeeded']

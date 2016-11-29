@@ -487,18 +487,57 @@ def includeme(config):
                      '/morphologies/{id}/servecompiled',
                      request_method='GET')
 
-    config.add_route('phonology_applydown', '/phonologies/{id}/applydown',
+    config.add_route('phonology_applydown',
+                     '/phonologies/{id}/applydown',
                      request_method='PUT')
-    config.add_route('phonology_phonologize', '/phonologies/{id}/phonologize',
+    config.add_view('old.views.phonologies.Phonologies',
+                    attr='applydown',
+                    route_name='phonology_applydown',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('phonology_phonologize',
+                     '/phonologies/{id}/phonologize',
                      request_method='PUT')
-    config.add_route('phonology_compile', '/phonologies/{id}/compile',
-                     request_method='PUT')
+    config.add_view('old.views.phonologies.Phonologies',
+                    attr='applydown',
+                    route_name='phonology_phonologize',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('phonology_compile',
+                     '/phonologies/{id}/compile',
+                      request_method='PUT')
+    config.add_view('old.views.phonologies.Phonologies',
+                    attr='compile',
+                    route_name='phonology_compile',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
     config.add_route('phonology_servecompiled',
                      '/phonologies/{id}/servecompiled',
                      request_method='GET')
+    config.add_view('old.views.phonologies.Phonologies',
+                    attr='servecompiled',
+                    route_name='phonology_servecompiled',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
+
     config.add_route('phonology_runtests',
                      '/phonologies/{id}/runtests',
                      request_method='GET')
+    config.add_view('old.views.phonologies.Phonologies',
+                    attr='runtests',
+                    route_name='phonology_runtests',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
 
     # rememberedforms "resource"
     # Pylons: controller='rememberedforms', action='show'

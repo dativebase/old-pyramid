@@ -46,16 +46,31 @@ http://www.ibm.com/developerworks/aix/library/au-threadingpython/.
 """
 
 import logging
+import os
 import queue
 import threading
 from uuid import uuid4
 
+from paste.deploy import appconfig
+import transaction
+
 import old.lib.constants as oldc
 import old.lib.helpers as h
 import old.models as old_models
+from old.models import (
+    get_engine,
+    get_session_factory,
+    get_tm_session,
+)
 
 
 LOGGER = logging.getLogger(__name__)
+HANDLER = logging.FileHandler('fomaworker.log')
+FORMATTER = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+HANDLER.setFormatter(FORMATTER)
+LOGGER.addHandler(HANDLER)
+LOGGER.setLevel(logging.DEBUG)
+
 
 
 ################################################################################
@@ -69,24 +84,39 @@ class FomaWorkerThread(threading.Thread):
     """Define the foma worker.
     """
     def run(self):
+        LOGGER.debug('run called in FomaWorkerThread instance')
         while True:
             msg = FOMA_WORKER_Q.get()
             try:
+                LOGGER.debug('FomaWorkerThread trying to call %s',
+                             msg.get('func'))
                 globals()[msg.get('func')](**msg.get('args'))
             except Exception as error:
                 LOGGER.warning('Unable to process in worker thread: %s', error)
+            LOGGER.debug('FormaWorkerThread calling task_done on FOMA_WORKER_Q')
             FOMA_WORKER_Q.task_done()
 
 
 def start_foma_worker():
     """Called in :mod:`onlinelinguisticdatabase.config.environment.py`.
     """
+    LOGGER.debug('starting forma worker 1')
     foma_worker = FomaWorkerThread()
     foma_worker.setDaemon(True)
     foma_worker.start()
+    LOGGER.debug('starting forma worker 2')
     foma_worker2 = FomaWorkerThread()
     foma_worker2.setDaemon(True)
     foma_worker2.start()
+
+
+def get_dbsession(config_path):
+    config_dir, config_file = os.path.split(config_path)
+    settings = appconfig('config:{}'.format(config_file),
+                         relative_to=config_dir)
+    engine = get_engine(settings)
+    session_factory = get_session_factory(engine)
+    return get_tm_session(session_factory, transaction.manager)
 
 
 ################################################################################
@@ -96,13 +126,31 @@ def start_foma_worker():
 
 def compile_phonology(**kwargs):
     """Compile the foma script of a phonology and save it to the db with values
-    that indicating compilation success.
+    that indicate compilation success.
     """
-    phonology = kwargs['dbsession'].query(old_models.Phonology).get(kwargs['phonology_id'])
-    phonology.compile(kwargs['timeout'])
-    phonology.datetime_modified = h.now()
-    phonology.modifier_id = kwargs['user_id']
-    kwargs['dbsession'].flush()
+
+    mylogger = logging.getLogger(__name__)
+    mylogger.addHandler(HANDLER)
+    mylogger.setLevel(logging.DEBUG)
+
+    mylogger.debug('FOX IN COMPILE PHONOLOGY')
+    mylogger.debug(kwargs)
+    with transaction.manager:
+        mylogger.debug('FOX getting dbsession')
+        dbsession = get_dbsession(kwargs['config_path'])
+        mylogger.debug('FOX got dbsession')
+        mylogger.debug(dbsession)
+        phonology = dbsession.query(
+            old_models.Phonology).get(kwargs['phonology_id'])
+        mylogger.debug('FOX got phonology')
+        mylogger.debug(phonology)
+        phonology.compile(kwargs['timeout'])
+        mylogger.debug('FOX compiled')
+        phonology.datetime_modified = h.now()
+        phonology.modifier_id = kwargs['user_id']
+        #transaction.commit()
+        dbsession.flush()
+        mylogger.debug('FOX committed to db')
 
 
 ################################################################################

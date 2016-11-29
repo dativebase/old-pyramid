@@ -181,6 +181,7 @@ Done
 │   │   ├── test_login.py => test_auth.py
 │   │   ├── test_orthographies.py
 │   │   ├── test_pages.py
+│   │   ├── test_rememberedforms.py
 │   │   ├── test_sources.py
 │   │   ├── test_speakers.py
 │   │   ├── test_syntacticcategories.py
@@ -191,35 +192,9 @@ Done
 Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-../../env/bin/python ./../pyl2pyr.py file ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_files_search.py tests/functional/test_files_search.py
-../../env/bin/python ./../pyl2pyr.py formbackup ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_formbackups.py tests/functional/test_formbackups.py
-../../env/bin/python ./../pyl2pyr.py form ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_forms_search.py tests/functional/test_forms_search.py
-../../env/bin/python ./../pyl2pyr.py formsearch ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_formsearches.py tests/functional/test_formsearches.py
-../../env/bin/python ./../pyl2pyr.py language ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_languages.py tests/functional/test_languages.py
-../../env/bin/python ./../pyl2pyr.py collection ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_oldcollections_search.py tests/functional/test_oldcollections_search.py
-../../env/bin/python ./../pyl2pyr.py orthography ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_orthographies.py tests/functional/test_orthographies.py
-../../env/bin/python ./../pyl2pyr.py page ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_pages.py tests/functional/test_pages.py
-../../env/bin/python ./../pyl2pyr.py source ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_sources.py tests/functional/test_sources.py
-../../env/bin/python ./../pyl2pyr.py speaker ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_speakers.py tests/functional/test_speakers.py
-../../env/bin/python ./../pyl2pyr.py syntacticcategory ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_syntacticcategories.py tests/functional/test_syntacticcategories.py
-../../env/bin/python ./../pyl2pyr.py user ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_users.py tests/functional/test_users.py
-
-../../env/bin/python ./../pyl2pyr.py form ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_rememberedforms.py tests/functional/test_rememberedforms.py
-
-│   ├── functional
-
-│   │   ├── test_rememberedforms.py
-
-│   │   ├── test_morphemelanguagemodelbackups.py
-│   │   ├── test_morphemelanguagemodels.py
-│   │   ├── test_morphologicalparsers.py
-│   │   ├── test_morphologies.py
-│   │   ├── test_morphologybackups.py
-│   │   ├── test_phonologies.py
-│   │   ├── test_phonologybackups.py
-
-│   ├── scripts
-│   │   └── _requests_tests.py
+├── controllers
+│   ├── phonologies.py
+│   ├── phonologybackups.py
 
 
 TODO
@@ -234,8 +209,6 @@ TODO
 │   ├── morphologicalparsers.py
 │   ├── morphologies.py
 │   ├── morphologybackups.py
-│   ├── phonologies.py
-│   ├── phonologybackups.py
 
 ├── model
 │   ├── db_update_scripts
@@ -257,6 +230,22 @@ TODO
 │   │   ├── 1.2.4_1.2.5
 │   │   │   └── old_update_db_1.2.4_1.2.5.py
 │   │   └── makemigrations.py
+
+../../env/bin/python ./../pyl2pyr.py form ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_rememberedforms.py tests/functional/test_rememberedforms.py
+
+../../env/bin/python ./../pyl2pyr.py phonology ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_phonologies.py tests/functional/test_phonologies.py
+
+├── tests
+│   ├── functional
+│   │   ├── test_morphemelanguagemodelbackups.py
+│   │   ├── test_morphemelanguagemodels.py
+│   │   ├── test_morphologicalparsers.py
+│   │   ├── test_morphologies.py
+│   │   ├── test_morphologybackups.py
+│   │   ├── test_phonologies.py
+│   │   ├── test_phonologybackups.py
+│   ├── scripts
+│   │   └── _requests_tests.py
 
 ├── syncs.sqlite
 
