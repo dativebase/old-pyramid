@@ -932,8 +932,8 @@ class TestPhonologiesView(TestView):
         assert phonology_binary_filename in os.listdir(phonology_dir)
 
     def test_applydown(self):
-        """Tests that ``GET /phonologies/id/applydown`` phonologizes input morpho-phonemic segmentations.
-
+        """Tests that ``GET /phonologies/id/applydown`` phonologizes input
+        morpho-phonemic segmentations.
         """
         with transaction.manager:
             dbsession = self.get_dbsession()
@@ -1016,8 +1016,9 @@ class TestPhonologiesView(TestView):
 
             # Repeat the above but use the synonym ``PUT /phonologies/id/phonologize``.
             params = json.dumps({'transcriptions': 'nit-wa'})
-            response = self.app.put(url('/phonologies/%d/phonologize' % phonology1_id),
-                                    params, self.json_headers, self.extra_environ_admin)
+            response = self.app.put(
+                '/phonologies/%d/phonologize' % phonology1_id, params,
+                self.json_headers, self.extra_environ_admin)
             resp = response.json_body
             assert resp[u'nit-wa'] == [u'nita']
 
@@ -1082,7 +1083,7 @@ class TestPhonologiesView(TestView):
                 "nit-ya\u0301api": [u"nitsaapi", "nitsi\u0301aapi"]
             }
 
-            params = json.dumps({'transcriptions': tests.keys()})
+            params = json.dumps({'transcriptions': list(tests.keys())})
             response = self.app.put(
                 '/phonologies/{id}/applydown'.format(id=phonology1_id),
                 params, self.json_headers, self.extra_environ_admin)
@@ -1111,12 +1112,12 @@ class TestPhonologiesView(TestView):
                 '/phonologies/{id}/applydown'.format(id=phonology1_id),
                 params, self.json_headers, self.extra_environ_admin, status=400)
             resp = response.json_body
-            assert resp == h.JSONDecodeErrorResponse
+            assert resp == oldc.JSONDecodeErrorResponse
 
             # Attempt to phonologize with a non-existent phonology id; expect to fail
             params = json.dumps({'transcriptions': 'nit-wa'})
             response = self.app.put(
-                '/phonologies/{id}/applydown'.format(id=phonology1_id),
+                '/phonologies/{id}/applydown'.format(id=123456789),
                  params, self.json_headers, self.extra_environ_admin,
                  status=404)
             resp = response.json_body
@@ -1138,7 +1139,7 @@ class TestPhonologiesView(TestView):
 
             params = json.dumps({'transcriptions': 'nit-wa'})
             response = self.app.put(
-                '/phonologies/{id}/applydown'.format(id=phonology1_id),
+                '/phonologies/{id}/applydown'.format(id=phonology2_id),
                  params, self.json_headers, self.extra_environ_admin,
                  status=400)
             resp = response.json_body
@@ -1218,7 +1219,7 @@ class TestPhonologiesView(TestView):
                 extra_environ=self.extra_environ_admin)
             resp = response.json_body
             assert resp.keys()
-            assert 'expected' in resp.values()[0] and 'actual' in resp.values()[0]
+            assert 'expected' in list(resp.values())[0] and 'actual' in list(resp.values())[0]
             # Just for interest's sake, let's see how many tests were correct
             correct = total = 0
             incorrect = []
@@ -1398,7 +1399,7 @@ class TestPhonologiesView(TestView):
             extra_environ = {'test.authentication.role': 'contributor',
                              'test.application_settings': True}
             response = self.app.get(
-                url(controller='phonologies', action='history', id=phonology_id),
+                '/phonologies/{id}/history'.format(id=phonology_id),
                 headers=self.json_headers, extra_environ=extra_environ)
             resp = response.json_body
             assert response.content_type == 'application/json'
@@ -1433,7 +1434,7 @@ class TestPhonologiesView(TestView):
             # as the one retrieved above
             phonology_UUID = resp['phonology']['UUID']
             response = self.app.get(
-                url(controller='phonologies', action='history', id=phonology_UUID),
+                '/phonologies/{id}/history'.format(id=phonology_UUID),
                 headers=self.json_headers, extra_environ=extra_environ)
             resp_UUID = response.json_body
             assert resp == resp_UUID
@@ -1443,13 +1444,13 @@ class TestPhonologiesView(TestView):
             bad_id = 103
             bad_UUID = str(uuid4())
             response = self.app.get(
-                url(controller='phonologies', action='history', id=bad_id),
+                '/phonologies/{id}/history'.format(id=bad_id),
                 headers=self.json_headers, extra_environ=extra_environ,
                 status=404)
             resp = response.json_body
             assert resp['error'] == 'No phonologies or phonology backups match %d' % bad_id
             response = self.app.get(
-                url(controller='phonologies', action='history', id=bad_UUID),
+                '/phonologies/{id}/history'.format(id=bad_UUID),
                 headers=self.json_headers, extra_environ=extra_environ,
                 status=404)
             resp = response.json_body
@@ -1461,7 +1462,7 @@ class TestPhonologiesView(TestView):
 
             # ... and get its history again, this time using the phonology's UUID
             response = self.app.get(
-                url(controller='phonologies', action='history', id=phonology_UUID),
+                '/phonologies/{id}/history'.format(id=phonology_UUID),
                 headers=self.json_headers, extra_environ=extra_environ)
             by_UUID_resp = response.json_body
             assert by_UUID_resp['phonology'] is None
@@ -1494,7 +1495,7 @@ class TestPhonologiesView(TestView):
             # Get the deleted phonology's history again, this time using its id.  The 
             # response should be the same as the response received using the UUID.
             response = self.app.get(
-                url(controller='phonologies', action='history', id=phonology_id),
+                '/phonologies/{id}/history'.format(id=phonology_id),
                 headers=self.json_headers, extra_environ=extra_environ)
             by_phonology_id_resp = response.json_body
             assert by_phonology_id_resp == by_UUID_resp

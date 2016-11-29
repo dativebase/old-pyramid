@@ -48,7 +48,7 @@ def patch_sqlite(settings):
     """
     RDBMS_Name, *rest = settings['sqlalchemy.url'].split(':')
     if RDBMS_Name == 'sqlite':
-        @event.listens_for(Engine, 'connect')
+        @event.listens_for(Engine, 'connect', once=True)
         def sqlite_patches(dbapi_connection, connection_record):
             # Define a regexp function for SQLite,
             def regexp(expr, item):

@@ -591,7 +591,7 @@ class FomaFST(Command):
                 except:
                     i = o = line
                 result.setdefault(i, []).append({self.flookup_no_output: None}.get(o, o))
-        return dict((k, filter(None, v)) for k, v in result.items())
+        return {k: list(filter(None, v)) for k, v in result.items()}
 
     # Cf. http://code.google.com/p/foma/wiki/RegularExpressionReference#Reserved_symbols
     foma_reserved_symbols = [
@@ -764,7 +764,7 @@ class FomaFST(Command):
         tests = self.get_tests()
         if not tests:
             return None
-        results = self.applydown(tests.keys())
+        results = self.applydown(list(tests.keys()))
         return {t: {'expected': tests[t], 'actual': results[t]} for t in tests}
 
 
