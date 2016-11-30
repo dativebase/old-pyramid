@@ -170,7 +170,7 @@ class Morphology(MorphologyFST, Base):
             return pos_sequences
         if self.extract_morphemes_from_rules_corpus:
             return pos_sequences
-        valid_elements = set(morphemes.keys() + self.delimiters)
+        valid_elements = set(list(morphemes.keys()) + self.delimiters)
         new_pos_sequences = set()
         for pos_sequence in pos_sequences:
             pos_sequence_set = set(pos_sequence)
@@ -432,7 +432,8 @@ class Morphology(MorphologyFST, Base):
 
         """
         yield u'define morphology (\n'
-        foma_disjuncts = filter(None, map(self._pos_sequence2foma_disjunct, pos_sequences))
+        foma_disjuncts = list(
+            filter(None, map(self._pos_sequence2foma_disjunct, pos_sequences)))
         if foma_disjuncts:
             for foma_disjunct in foma_disjuncts[:-1]:
                 yield u'    (%s) |\n' % foma_disjunct

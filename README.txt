@@ -88,6 +88,7 @@ Done
 │   ├── orthographies.py
 │   ├── pages.py
 │   ├── phonologies.py
+│   ├── phonologybackups.py
 │   ├── rememberedforms.py
 │   ├── sources.py
 │   ├── speakers.py
@@ -183,6 +184,7 @@ Done
 │   │   ├── test_orthographies.py
 │   │   ├── test_pages.py
 │   │   ├── test_phonologies.py
+│   │   ├── test_phonologybackups.py
 │   │   ├── test_rememberedforms.py
 │   │   ├── test_sources.py
 │   │   ├── test_speakers.py
@@ -195,7 +197,15 @@ Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ├── controllers
-│   ├── phonologybackups.py
+│   ├── morphologies.py
+│   ├── morphologybackups.py
+├── tests
+│   ├── functional
+│   │   ├── test_morphologies.py
+│   │   ├── test_morphologybackups.py
+
+../../env/bin/python ./../pyl2pyr.py morphology ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_morphologies.py tests/functional/test_morphologies.py
+../../env/bin/python ./../pyl2pyr.py morphologybackup ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_morphologybackups.py tests/functional/test_morphologybackups.py
 
 
 TODO
@@ -208,8 +218,6 @@ TODO
 │   ├── morphemelanguagemodels.py
 │   ├── morphologicalparserbackups.py
 │   ├── morphologicalparsers.py
-│   ├── morphologies.py
-│   ├── morphologybackups.py
 
 ├── model
 │   ├── db_update_scripts
@@ -236,15 +244,12 @@ TODO
 
 ../../env/bin/python ./../pyl2pyr.py phonology ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_phonologies.py tests/functional/test_phonologies.py
 ../../env/bin/python ./../pyl2pyr.py phonologybackup ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_phonologybackups.py tests/functional/test_phonologybackups.py
-│   │   ├── test_phonologybackups.py
 
 ├── tests
 │   ├── functional
 │   │   ├── test_morphemelanguagemodelbackups.py
 │   │   ├── test_morphemelanguagemodels.py
 │   │   ├── test_morphologicalparsers.py
-│   │   ├── test_morphologies.py
-│   │   ├── test_morphologybackups.py
 │   │   ├── test_phonologybackups.py
 │   ├── scripts
 │   │   └── _requests_tests.py

@@ -726,6 +726,9 @@ class Resources(abc.ABC, ReadonlyResources):
             'collection_types': ResCol(
                 '',
                 lambda: COLLECTION_TYPES),
+            'corpora': ResCol(
+                'Corpus',
+                self.db.get_mini_dicts_getter('Corpus')),
             'corpus_formats': ResCol(
                 '',
                 lambda: list(CORPUS_FORMATS.keys())),

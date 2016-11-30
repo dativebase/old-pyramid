@@ -75,10 +75,10 @@ class MorphologyBackup(Base):
         self.name = morphology_dict['name']
         self.description = morphology_dict['description']
         self.script_type = morphology_dict['script_type']
-        self.rules_corpus = unicode(json.dumps(morphology_dict['rules_corpus']))
-        self.lexicon_corpus = unicode(json.dumps(morphology_dict['lexicon_corpus']))
-        self.enterer = unicode(json.dumps(morphology_dict['enterer']))
-        self.modifier = unicode(json.dumps(morphology_dict['modifier']))
+        self.rules_corpus = json.dumps(morphology_dict['rules_corpus'])
+        self.lexicon_corpus = json.dumps(morphology_dict['lexicon_corpus'])
+        self.enterer = json.dumps(morphology_dict['enterer'])
+        self.modifier = json.dumps(morphology_dict['modifier'])
         self.datetime_entered = morphology_dict['datetime_entered']
         self.datetime_modified = morphology_dict['datetime_modified']
         self.compile_succeeded = morphology_dict['compile_succeeded']

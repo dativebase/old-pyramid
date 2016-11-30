@@ -131,7 +131,6 @@ def compile_phonology(**kwargs):
     that indicate compilation success.
     """
     mylogger = get_local_logger()
-    mylogger.debug('FOX IN COMPILE PHONOLOGY')
     with transaction.manager:
         dbsession = get_dbsession(kwargs['config_path'])
         phonology = dbsession.query(
@@ -157,6 +156,7 @@ def generate_and_compile_morphology(**kwargs):
     :param float kwargs['timeout']: how many seconds to wait before killing the
         foma compile process.
     """
+    mylogger = get_local_logger()
     with transaction.manager:
         dbsession = get_dbsession(kwargs['config_path'])
         morphology = dbsession.query(

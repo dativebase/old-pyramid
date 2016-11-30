@@ -462,6 +462,7 @@ class DBUtils:
         """Like ``clear_all_models`` above, except **much** faster."""
         for table in reversed(Base.metadata.sorted_tables):
             if table.name not in retain:
+                print('deleting table ', table.name)
                 self.dbsession.execute(table.delete())
         self.dbsession.flush()
 

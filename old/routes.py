@@ -474,18 +474,64 @@ def includeme(config):
                      '/morphologicalparsers/{id}/servecompiled',
                      request_method='GET')
 
-    config.add_route('morphology_applydown', '/morphologies/{id}/applydown',
-                     request_method='PUT')
-    config.add_route('morphology_applyup', '/morphologies/{id}/applyup',
-                     request_method='PUT')
-    config.add_route('morphology_generate', '/morphologies/{id}/generate',
-                     request_method='PUT')
-    config.add_route('morphology_generate_and_compile',
-                     '/morphologies/{id}/generate_and_compile',
-                     request_method='PUT')
+    ###########################################################################
+    # Morphology Special Routing
+    ###########################################################################
+
     config.add_route('morphology_servecompiled',
                      '/morphologies/{id}/servecompiled',
                      request_method='GET')
+    config.add_view('old.views.morphologies.Morphologies',
+                    attr='servecompiled',
+                    route_name='morphology_servecompiled',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('morphology_applydown',
+                     '/morphologies/{id}/applydown',
+                     request_method='PUT')
+    config.add_view('old.views.morphologies.Morphologies',
+                    attr='applydown',
+                    route_name='morphology_applydown',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('morphology_applyup',
+                     '/morphologies/{id}/applyup',
+                     request_method='PUT')
+    config.add_view('old.views.morphologies.Morphologies',
+                    attr='applyup',
+                    route_name='morphology_applyup',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('morphology_generate', '/morphologies/{id}/generate',
+                     request_method='PUT')
+    config.add_view('old.views.morphologies.Morphologies',
+                    attr='generate',
+                    route_name='morphology_generate',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
+    config.add_route('morphology_generate_and_compile',
+                     '/morphologies/{id}/generate_and_compile',
+                     request_method='PUT')
+    config.add_view('old.views.morphologies.Morphologies',
+                    attr='generate_and_compile',
+                    route_name='morphology_generate_and_compile',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
+    ###########################################################################
+    # Phonology Special Routing
+    ###########################################################################
 
     config.add_route('phonology_applydown',
                      '/phonologies/{id}/applydown',
@@ -539,12 +585,14 @@ def includeme(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
 
-    # rememberedforms "resource"
+    ###########################################################################
+    # Remembered Forms Special "Resource"
+    ###########################################################################
+
     # Pylons: controller='rememberedforms', action='show'
     config.add_route('show_remembered_forms',
                      '/rememberedforms/{id}',
                      request_method='GET')
-
     config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='show',
                     route_name='show_remembered_forms',
@@ -585,12 +633,10 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
-    # REST resource routes. See ``RESOURCES`` for config and ``add_resource``
-    # for implementation.
+    ###########################################################################
+    # REST Resource Routes
+    ###########################################################################
+
+    # See ``RESOURCES`` for config and ``add_resource`` for implementation.
     for member_name, rsrc_config in RESOURCES.items():
         add_resource(config, member_name, rsrc_config)
-
-    # Map '/collections' to oldcollections controller (conflict with Python
-    # collections module).
-    # TODO: still necessary in Pyramid?
-    # config.add_route('collections', controller='oldcollections')

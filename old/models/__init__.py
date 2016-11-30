@@ -48,8 +48,10 @@ def patch_sqlite(settings):
     """
     RDBMS_Name, *rest = settings['sqlalchemy.url'].split(':')
     if RDBMS_Name == 'sqlite':
-        @event.listens_for(Engine, 'connect', once=True)
-        def sqlite_patches(dbapi_connection, connection_record):
+        #@event.listens_for(Engine, 'connect', once=True)
+        #def sqlite_patches(dbapi_connection, connection_record):
+        @event.listens_for(Engine, 'begin')
+        def sqlite_patches(dbapi_connection):
             # Define a regexp function for SQLite,
             def regexp(expr, item):
                 """This is the Python re-based regexp function that we provide
@@ -65,9 +67,9 @@ def patch_sqlite(settings):
                 # fields.
                 except TypeError:
                     return item and patt.search(str(item)) is not None
-            dbapi_connection.create_function('regexp', 2, regexp)
+            dbapi_connection.connection.create_function('regexp', 2, regexp)
             # Make LIKE searches case-sensitive in SQLite.
-            cursor = dbapi_connection.cursor()
+            cursor = dbapi_connection.connection.cursor()
             cursor.execute("PRAGMA case_sensitive_like=ON")
             cursor.close()
 

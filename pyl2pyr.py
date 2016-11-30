@@ -18,6 +18,8 @@ elif member_name == 'formsearch':
     model_name = 'FormSearch'
 elif member_name == 'syntacticcategory':
     model_name = 'SyntacticCategory'
+elif member_name == 'morphologybackup':
+    model_name = 'MorphologyBackup'
 else:
     model_name = member_name.capitalize()
 member_name_pl = inflect_p.plural(member_name)
