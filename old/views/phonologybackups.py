@@ -1,8 +1,14 @@
-from pyramid.response import Response
-from pyramid.view import view_config
-from old.views.resources import Resources
+import logging
 
-from sqlalchemy.exc import DBAPIError
+from old.views.resources import ReadonlyResources
 
-class Phonologybackups(Resources):
-    pass
+
+LOGGER = logging.getLogger(__name__)
+
+
+class Phonologybackups(ReadonlyResources):
+
+    def __init__(self, request):
+        self.model_name = 'PhonologyBackup'
+        self.hmn_member_name = 'phonology backup'
+        super().__init__(request)

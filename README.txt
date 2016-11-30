@@ -87,6 +87,7 @@ Done
 │   ├── login.py
 │   ├── orthographies.py
 │   ├── pages.py
+│   ├── phonologies.py
 │   ├── rememberedforms.py
 │   ├── sources.py
 │   ├── speakers.py
@@ -181,6 +182,7 @@ Done
 │   │   ├── test_login.py => test_auth.py
 │   │   ├── test_orthographies.py
 │   │   ├── test_pages.py
+│   │   ├── test_phonologies.py
 │   │   ├── test_rememberedforms.py
 │   │   ├── test_sources.py
 │   │   ├── test_speakers.py
@@ -193,7 +195,6 @@ Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ├── controllers
-│   ├── phonologies.py
 │   ├── phonologybackups.py
 
 
@@ -234,6 +235,8 @@ TODO
 ../../env/bin/python ./../pyl2pyr.py form ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_rememberedforms.py tests/functional/test_rememberedforms.py
 
 ../../env/bin/python ./../pyl2pyr.py phonology ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_phonologies.py tests/functional/test_phonologies.py
+../../env/bin/python ./../pyl2pyr.py phonologybackup ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_phonologybackups.py tests/functional/test_phonologybackups.py
+│   │   ├── test_phonologybackups.py
 
 ├── tests
 │   ├── functional
@@ -242,7 +245,6 @@ TODO
 │   │   ├── test_morphologicalparsers.py
 │   │   ├── test_morphologies.py
 │   │   ├── test_morphologybackups.py
-│   │   ├── test_phonologies.py
 │   │   ├── test_phonologybackups.py
 │   ├── scripts
 │   │   └── _requests_tests.py
