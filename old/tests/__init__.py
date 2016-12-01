@@ -68,27 +68,6 @@ def add_SEARCH_to_web_test_valid_methods():
     webtest.lint.valid_methods = tuple(new_valid_methods)
 
 
-def poll(requester, changing_attr, changing_attr_originally,
-         log, wait=2, vocal=True, task_descr='task'):
-    """Poll a resource by calling ``requester`` until the value of
-    ``changing_attr`` no longer matches ``changing_attr_originally``.
-    """
-    seconds_elapsed = 0
-    while True:
-        response = requester()
-        resp = json.loads(response.body)
-        if changing_attr_originally != resp[changing_attr]:
-            if vocal:
-                log.debug('Task terminated')
-            break
-        else:
-            if vocal:
-                log.debug('Waiting for %s to terminate: %s', task_descr,
-                          h.human_readable_seconds(seconds_elapsed))
-        sleep(wait)
-        seconds_elapsed = seconds_elapsed + wait
-    return resp
-
 
 class TestView(TestCase):
     """Base test view for testing OLD Pyramid views.
@@ -159,26 +138,17 @@ class TestView(TestCase):
         """Convenience function for removing all OLD models from the database.
         The retain parameter is a list of model names that should not be cleared.
         """
-        print('IN CLEAR ALL FUCKING MODELS')
-        x = get_model_names()
-        print(x)
-        print('FUCK YOU')
-        #dbsession = self.get_dbsession()
         for model_name in get_model_names():
-            print('DELETING ', model_name)
             if model_name not in retain:
                 model = getattr(old_models, model_name)
                 if not issubclass(model, old_models.Model):
-                    print('NOT DELETING {} because is not old_models.Model instance'.format(model_name))
                     continue
-                print('FOX deleting all {} models'.format(model_name))
                 models = dbsession.query(model).all()
                 for model in models:
                     dbsession.delete(model)
 
     def tearDown(self, **kwargs):
         """Clean up after a test."""
-        print('teardown of __init__')
         with transaction.manager:
             dbsession = self.get_dbsession()
             db = DBUtils(dbsession, self.settings)
@@ -186,10 +156,8 @@ class TestView(TestCase):
             dirs_to_clear = kwargs.get('dirs_to_clear', [])
             dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
             if clear_all_tables:
-                print('CLEAR ALL FUCKING TABLES')
                 db.clear_all_tables(['language'])
             else:
-                print('CLEAR ALL FUCKING MODELS')
                 self.clear_all_models(dbsession)
             transaction.commit()
             #administrator = h.generate_default_administrator(
@@ -203,22 +171,11 @@ class TestView(TestCase):
             #    dbsession.add_all([administrator, contributor, viewer])
             #    transaction.commit()
             for dir_path in dirs_to_clear:
-                print('we want to clear dir ', dir_path)
-                print('that dir is ', getattr(self, dir_path))
                 h.clear_directory_of_files(getattr(self, dir_path))
             for dir_name in dirs_to_destroy:
                 h.destroy_all_directories(self.inflect_p.plural(dir_name),
                                         self.settings)
             testing.tearDown()
-
-            print('EXTANT FORM SEARCHES FOX TESTS __INIT__')
-            fss = dbsession.query(old_models.FormSearch).all()
-            for fs in fss:
-                print('FOX form search name: ', fs.name)
-            print('DONE EXTANT FORM SEARCHES FOX TESTS __INIT__')
-            fss = dbsession.query(old_models.Form).all()
-            for fs in fss:
-                print('FOX form id: ', fs.id)
 
     def _setattrs(self):
         """Set a whole bunch of instance attributes that are useful in tests."""
@@ -542,6 +499,27 @@ class TestView(TestCase):
             'input_orthography': None,
             'output_orthography': None
         }
+
+    def poll(self, requester, changing_attr, changing_attr_originally,
+             log, wait=2, vocal=True, task_descr='task'):
+        """Poll a resource by calling ``requester`` until the value of
+        ``changing_attr`` no longer matches ``changing_attr_originally``.
+        """
+        seconds_elapsed = 0
+        while True:
+            response = requester()
+            resp = response.json_body
+            if changing_attr_originally != resp[changing_attr]:
+                if vocal:
+                    log.debug('Task terminated')
+                break
+            else:
+                if vocal:
+                    log.debug('Waiting for %s to terminate: %s', task_descr,
+                              h.human_readable_seconds(seconds_elapsed))
+            sleep(wait)
+            seconds_elapsed = seconds_elapsed + wait
+        return resp
 
 
 def decompress_gzip_string(compressed_data):

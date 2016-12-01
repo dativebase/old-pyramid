@@ -54,7 +54,7 @@ import threading
 import unicodedata
 from uuid import uuid4
 
-import old.lib.simplelm
+from old.lib import simplelm
 
 
 LOGGER = logging.getLogger(__name__)

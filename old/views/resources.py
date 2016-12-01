@@ -13,6 +13,7 @@ from old.lib.constants import (
     COLLECTION_TYPES,
     CORPUS_FORMATS,
     JSONDecodeErrorResponse,
+    LANGUAGE_MODEL_TOOLKITS,
     MARKUP_LANGUAGES,
     SYNTACTIC_CATEGORY_TYPES,
     UNAUTHORIZED_MSG,
@@ -73,7 +74,10 @@ class ReadonlyResources:
         self._query_builder = None
         self.primary_key = 'id'
         # Names
-        self.collection_name = self.__class__.__name__.lower()
+        if not getattr(self, 'collection_name', None):
+            self.collection_name = self.__class__.__name__.lower()
+        if not getattr(self, 'hmn_collection_name', None):
+            self.hmn_collection_name = self.collection_name
         if not getattr(self, 'member_name', None):
             self.member_name = self.inflect_p.singular_noun(
                 self.collection_name)
@@ -557,7 +561,7 @@ class Resources(abc.ABC, ReadonlyResources):
         else:
             self.request.response.status_int = 404
             return {'error': 'No %s or %s backups match %s' % (
-                self.collection_name, self.member_name, id_)}
+                self.hmn_collection_name, self.hmn_member_name, id_)}
 
     ###########################################################################
     # Private methods for write-able resources
@@ -747,6 +751,9 @@ class Resources(abc.ABC, ReadonlyResources):
             'markup_languages': ResCol(
                 '',
                 lambda: MARKUP_LANGUAGES),
+            'morphologies': ResCol(
+                'Morphology',
+                self.db.get_mini_dicts_getter('Morphology')),
             'orthographies': ResCol(
                 'Orthography',
                 self.db.get_mini_dicts_getter('Orthography')),
@@ -768,6 +775,9 @@ class Resources(abc.ABC, ReadonlyResources):
             'tags': ResCol(
                 'Tag',
                 self.db.get_mini_dicts_getter('Tag')),
+            'toolkits': ResCol(
+                '',
+                lambda: LANGUAGE_MODEL_TOOLKITS),
             'types': ResCol(  # BibTeX entry types
                 '',
                 lambda: list(ENTRY_TYPES.keys())),

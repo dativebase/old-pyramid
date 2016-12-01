@@ -62,9 +62,9 @@ class MorphemeLanguageModelBackup(Base):
         self.morphemelanguagemodel_id = morpheme_language_model_dict['id']
         self.name = morpheme_language_model_dict['name']
         self.description = morpheme_language_model_dict['description']
-        self.corpus = unicode(json.dumps(morpheme_language_model_dict['corpus']))
-        self.enterer = unicode(json.dumps(morpheme_language_model_dict['enterer']))
-        self.modifier = unicode(json.dumps(morpheme_language_model_dict['modifier']))
+        self.corpus = json.dumps(morpheme_language_model_dict['corpus'])
+        self.enterer = json.dumps(morpheme_language_model_dict['enterer'])
+        self.modifier = json.dumps(morpheme_language_model_dict['modifier'])
         self.datetime_entered = morpheme_language_model_dict['datetime_entered']
         self.datetime_modified = morpheme_language_model_dict['datetime_modified']
         self.generate_succeeded = morpheme_language_model_dict['generate_succeeded']
@@ -76,7 +76,7 @@ class MorphemeLanguageModelBackup(Base):
         self.toolkit = morpheme_language_model_dict['toolkit']
         self.order = morpheme_language_model_dict['order']
         self.smoothing = morpheme_language_model_dict['smoothing']
-        self.vocabulary_morphology = unicode(json.dumps(morpheme_language_model_dict['vocabulary_morphology']))
+        self.vocabulary_morphology = json.dumps(morpheme_language_model_dict['vocabulary_morphology'])
         self.restricted = morpheme_language_model_dict['restricted']
         self.categorial = morpheme_language_model_dict['categorial']
 

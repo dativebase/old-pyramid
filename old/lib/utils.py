@@ -124,7 +124,7 @@ def create_OLD_directories(settings):
     """Make all of the required OLD directories."""
     for directory_name in ('files', 'reduced_files', 'users', 'corpora',
                            'phonologies', 'morphologies',
-                           'morphological_parsers'):
+                           'morpheme_language_models', 'morphological_parsers'):
         make_directory_safely(get_old_directory_path(directory_name, settings))
 
 

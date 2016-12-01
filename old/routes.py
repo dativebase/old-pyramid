@@ -445,15 +445,44 @@ def includeme(config):
     config.add_route('morpheme_lm_compute_perplexity',
                      '/morphemelanguagemodels/{id}/compute_perplexity',
                      request_method='PUT')
+    config.add_view('old.views.morphemelanguagemodels.Morphemelanguagemodels',
+                    attr='compute_perplexity',
+                    route_name='morpheme_lm_compute_perplexity',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
     config.add_route('generate_morpheme_lm',
                      '/morphemelanguagemodels/{id}/generate',
                      request_method='PUT')
+    config.add_view('old.views.morphemelanguagemodels.Morphemelanguagemodels',
+                    attr='generate',
+                    route_name='generate_morpheme_lm',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
     config.add_route('morpheme_lm_get_probabilities',
                      '/morphemelanguagemodels/{id}/get_probabilities',
                      request_method='PUT')
+    config.add_view('old.views.morphemelanguagemodels.Morphemelanguagemodels',
+                    attr='get_probabilities',
+                    route_name='morpheme_lm_get_probabilities',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=authenticate)
+
     config.add_route('morpheme_lm_serve_arpa',
                      '/morphemelanguagemodels/{id}/serve_arpa',
                      request_method='GET')
+    config.add_view('old.views.morphemelanguagemodels.Morphemelanguagemodels',
+                    attr='serve_arpa',
+                    route_name='morpheme_lm_serve_arpa',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
 
     config.add_route('mparser_apply_down',
                      '/morphologicalparsers/{id}/applydown',

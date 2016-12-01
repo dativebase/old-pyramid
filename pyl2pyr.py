@@ -20,6 +20,10 @@ elif member_name == 'syntacticcategory':
     model_name = 'SyntacticCategory'
 elif member_name == 'morphologybackup':
     model_name = 'MorphologyBackup'
+elif member_name == 'morphemelanguagemodel':
+    model_name = 'MorphemeLanguageModel'
+elif member_name == 'morphemelanguagemodelbackup':
+    model_name = 'MorphemeLanguageModelBackup'
 else:
     model_name = member_name.capitalize()
 member_name_pl = inflect_p.plural(member_name)
