@@ -513,16 +513,22 @@ class FomaFST(Command):
             them from the outputs.
         :returns: a dictionary: ``{input1: [output1, output2, ...], input2: [...], ...}``
         """
+        LOGGER.debug('in apply')
         boundaries = boundaries if boundaries is not None else getattr(
             self, 'boundaries', False)
+        LOGGER.debug('in apply got boundaries: {}'.format(boundaries))
         if isinstance(input_, str):
             inputs = [input_]
         elif isinstance(input_, (list, tuple)):
             inputs = list(input_)
         else:
+            LOGGER.debug('in apply; returning None, bad type {}'.format(type(input)))
             return None
+        LOGGER.debug('in apply ensured input_ is a list')
         directory = self.directory
+        LOGGER.debug('in apply got directory')
         random_string = self.generate_salt()
+        LOGGER.debug('in apply generated salt')
         inputs_file_path = os.path.join(
             directory, 'inputs_%s.txt' % random_string)
         outputs_file_path = os.path.join(
@@ -530,6 +536,7 @@ class FomaFST(Command):
         apply_file_path = os.path.join(
             directory, 'apply_%s.sh' % random_string)
         binary_path = self.get_file_path('binary')
+        LOGGER.debug('in apply got paths')
         # Write the inputs to an '\n'-delimited file
         with codecs.open(inputs_file_path, 'w', 'utf8') as f:
             if boundaries:
@@ -540,24 +547,30 @@ class FomaFST(Command):
                         for input_ in inputs))
             else:
                 f.write('\n'.join(inputs))
+        LOGGER.debug('in apply wrote inputs to disk')
         # Write the shell script that pipes the input file into flookup
         with codecs.open(apply_file_path, 'w', 'utf8') as f:
             f.write('#!/bin/sh\ncat %s | flookup %s%s' % (
                 inputs_file_path,
                 {'up': '', 'down': '-i '}.get(direction, '-i '),
                 binary_path))
+        LOGGER.debug('in apply wrote apply shell script')
         os.chmod(apply_file_path, 0o744)
+        LOGGER.debug('in apply made executable')
         # Execute the shell script and pipe its output to the output file
         with open(os.devnull, 'w') as devnull:
             with codecs.open(outputs_file_path, 'w', 'utf8') as outfile:
                 p = Popen(apply_file_path, shell=False, stdout=outfile, stderr=devnull)
         p.communicate()
+        LOGGER.debug('in apply called the apply shell script')
         # Parse the output file, clean up and return the parsed outputs
         with codecs.open(outputs_file_path, 'r', 'utf8') as f:
             result = self.foma_output_file2dict(f, remove_word_boundaries=boundaries)
+        LOGGER.debug('in apply wrote result to output file')
         os.remove(inputs_file_path)
         os.remove(outputs_file_path)
         os.remove(apply_file_path)
+        LOGGER.debug('in apply remove tmp files and about to return result')
         return result
 
     def foma_output_file2dict(self, file_, remove_word_boundaries=True):
@@ -636,41 +649,58 @@ class FomaFST(Command):
             absolute path to the compiled foma FST.
 
         """
+        LOGGER.debug('in compile')
         verification_string = verification_string or self.verification_string
+        LOGGER.debug('in compile got verification string: {}'.format(verification_string))
         compiler_path = self.get_file_path('compiler')
+        LOGGER.debug('in compile got compiler_path: {}'.format(compiler_path))
         binary_path = self.get_file_path('binary')
+        LOGGER.debug('in compile got binary path')
         binary_mod_time = self.get_modification_time(binary_path)
+        LOGGER.debug('in compile got binary mod time')
         self.compile_succeeded = False
         try:
+            LOGGER.debug('in compile trying to compile')
             returncode, output = self.run([compiler_path], timeout)
+            LOGGER.debug('in compile got a compile rc')
             if verification_string in output:
+                LOGGER.debug('in compile verification string in output')
                 if returncode == 0:
+                    LOGGER.debug('in compile return code is 0')
                     if (    os.path.isfile(binary_path) and
                             binary_mod_time != self.get_modification_time(
                                 binary_path)):
+                        LOGGER.debug('in compile successful compilation')
                         self.compile_succeeded = True
                         self.compile_message = (
                             'Compilation process terminated successfully and'
                             ' new binary file was written.')
                     else:
+                        LOGGER.debug('in compile no new binary file ?!...')
                         self.compile_message = (
                             'Compilation process terminated successfully yet no'
                             ' new binary file was written.')
                 else:
+                    LOGGER.debug('in compile compilation failed')
                     self.compile_message = 'Compilation process failed.'
             else:
+                LOGGER.debug('in compile verification string NOT in output')
                 self.compile_message = (
                     'Foma script is not a well-formed %s %s.' %
                     (self.object_type, output))[:255]
-        except Exception:
+        except Exception as e:
+            LOGGER.debug('in compile got exception {} {}'.format(e, e.__class__.__name__))
             self.compile_message = 'Compilation attempt raised an error.'
         if self.compile_succeeded:
+            LOGGER.debug('in compile compile succeeded')
             os.chmod(binary_path, 0o744)
         else:
+            LOGGER.debug('in compile compile failed')
             try:
                 os.remove(binary_path)
             except Exception:
                 pass
+        LOGGER.debug('in compile done, changing uuid compile_attempt attr')
         self.compile_attempt = str(uuid4())
 
     def decombine(self, string):
@@ -790,6 +820,9 @@ class MorphologyFST(FomaFST, Parse):
         self.rare_delimiter = kwargs.pop('rare_delimiter', '\u2980')
         kwargs['object_type'] = kwargs.get('object_type', 'morphology')
         super(MorphologyFST, self).__init__(parent_directory, **kwargs)
+
+    def __repr__(self):
+        return '<MorphologyFST at {}>'.format(id(self))
 
     @property
     def verification_string(self):
@@ -1000,17 +1033,18 @@ class LanguageModel(Command, Parse):
 
 
 class Cache:
-    """For caching parses; basically a dict with some conveniences and pickle-based persistence.
+    """For caching parses; basically a dict with some conveniences and
+    pickle-based persistence.
 
-    A MorphologicalParser instance can be expected to access and set keys via the familiar Python
-    dictionary interface as well as request that the cache be persisted, i.e., by calling
-    ``cache.persist()``.  Thus this class implements the following interface:
+    A MorphologicalParser instance can be expected to access and set keys via
+    the familiar Python dictionary interface as well as request that the cache
+    be persisted, i.e., by calling ``cache.persist()``. Thus this class
+    implements the following interface:
 
     - ``__setitem__(k, v)``
     - ``__getitem__(k)``
     - ``get(k, default)``
     - ``persist()``
-
     """
 
     def __init__(self, path=None):
@@ -1114,37 +1148,47 @@ class MorphologicalParser(FomaFST, Parse):
 
     def parse(self, transcriptions, parse_objects=False, max_candidates=10):
         """Parse the input transcriptions.
-
-        :param list transcriptions: unicode strings representing transcriptions of words.
+        :param list transcriptions: unicode strings representing transcriptions
+            of words.
         :param bool parse_objects: if True, instances of Parse will be returned.
         :param int max_candidates: max number of candidates to return.
         :returns: a dict from transcriptions to (parse, candidates) tuples.
-
         """
-
+        LOGGER.debug('in parse')
         if isinstance(transcriptions, str):
             transcriptions = [transcriptions]
+        LOGGER.debug('in parse ensured transcriptions list')
         transcriptions = list(set(transcriptions))
+        LOGGER.debug('in parse only unique transcriptions')
         parsed = {}
         unparsed = []
+        LOGGER.debug('in parse set vars')
         for transcription in transcriptions:
+            LOGGER.debug('in parse triaging {}'.format(transcription))
             cached_parse, cached_candidates = self.cache.get(transcription, (False, False))
             if cached_parse is not False:
                 parsed[transcription] = cached_parse, cached_candidates
             else:
                 unparsed.append(transcription)
+        LOGGER.debug('in parse done triage')
         unparsed = self.get_candidates(unparsed) # This is where the foma subprocess is enlisted.
+        LOGGER.debug('in parse got candidates from foma')
         for transcription, candidates in unparsed.items():
+            LOGGER.debug('in parse getting most probable for {}'.format(transcription))
             parse, sorted_candidates = self.get_most_probable(candidates)
             if max_candidates:
                 sorted_candidates = sorted_candidates[:max_candidates]
             self.cache[transcription] = parsed[transcription] = parse, sorted_candidates
+        LOGGER.debug('in parse done probabilities')
         if self.persist_cache:
             self.cache.persist()
+        LOGGER.debug('in parse done caching')
         if parse_objects:
+            LOGGER.debug('in parse returning parse objects')
             return dict((transcription, (self.get_parse_object(parse),
                                          map(self.get_parse_object, candidates)))
                         for transcription, (parse, candidates) in parsed.items())
+        LOGGER.debug('in parse returning parsed')
         return parsed
 
     def get_parse_object(self, parse_string):
@@ -1191,9 +1235,13 @@ class MorphologicalParser(FomaFST, Parse):
         :returns: a dict from transcriptions to lists of strings representing
             candidate parses in 'form|gloss|category' format.
         """
+        LOGGER.debug('in get_candidates')
         candidates = self.applyup(transcriptions)
+        LOGGER.debug('in get_candidates called applyup')
         if not self.my_morphology.rich_upper:
+            LOGGER.debug('in get_candidates about to disambiguate')
             candidates = self.disambiguate(candidates)
+        LOGGER.debug('in get_candidates returning candidates')
         return candidates
 
     def disambiguate(self, candidates):
@@ -1211,25 +1259,39 @@ class MorphologicalParser(FomaFST, Parse):
         This converts something like {'chiens': 'chien-s'} to
         {'chiens': 'chien|dog|N-s|PL|Phi'}.
         """
+        LOGGER.debug('in disambiguate:')
         def get_category(morpheme):
             if isinstance(morpheme, list):
                 return morpheme[2]
             return morpheme
+        LOGGER.debug('in disambiguate 2:')
         def get_morpheme(morpheme):
             if isinstance(morpheme, list):
                 return self.my_morphology.rare_delimiter.join(morpheme)
             return morpheme
+        self.my_morphology
+        LOGGER.debug('in disambiguate 3:')
+        LOGGER.debug('self.my_morphology: {}'.format(self.my_morphology))
+        LOGGER.debug('self.morphology_rules_generated: {}'.format(self.morphology_rules_generated))
+        LOGGER.debug('self.my_morphology.rules_generated: {}'.format(self.my_morphology.rules_generated))
+        #LOGGER.debug('self.morphology.rules_generated: {}'.format(self.morphology.rules_generated))
         rules = self.my_morphology.rules_generated.split()
+        LOGGER.debug('in disambiguate: called split on my_morphology.rules_generated {}'.format(self.my_morphology.rules_generated))
         dictionary_path = self.my_morphology.get_file_path('dictionary')
+        LOGGER.debug('in disambiguate: got dictionary path')
         try:
             dictionary = pickle.load(open(dictionary_path, 'rb'))
+            LOGGER.debug('in disambiguate: pickle-loaded dictionary')
             result = {}
             for transcription, candidate_list in candidates.items():
+                LOGGER.debug('in disambiguate: working on transcription {} and candidates'.format(transcription))
                 new_candidates = set()
                 for candidate in candidate_list:
+                    LOGGER.debug('in disambiguate: working on candidate {}'.format(candidate))
                     temp = []
                     morphemes = self.morpheme_splitter(candidate)
                     for index, morpheme in enumerate(morphemes):
+                        LOGGER.debug('in disambiguate: looking at morpheme {}'.format(morpheme))
                         if index % 2 == 0:
                             homographs = [[morpheme, gloss, category]
                                           for gloss, category in
@@ -1238,14 +1300,17 @@ class MorphologicalParser(FomaFST, Parse):
                         else:
                             temp.append(morpheme) # it's really a delimiter
                     for candidate in product(*temp):
+                        LOGGER.debug('in disambiguate: looking at "candidate" {}'.format(candidate))
                         # Only add a disambiguated candidate if its category
                         # sequence accords with the morphology's rules
                         if ''.join(get_category(x) for x in candidate) in rules:
                             new_candidates.add(
                                 ''.join(get_morpheme(x) for x in candidate))
                 result[transcription] = list(new_candidates)
+            LOGGER.debug('in disambiguate: done: returning result.')
             return result
         except Exception as error:
+            LOGGER.debug('in disambiguate: error: {}'.format(error.__class__.__name__))
             LOGGER.warning(
                 'some kind of exception occured in morphologicalparsers.py'
                 ' disambiguate_candidates: %s', error)
@@ -1264,10 +1329,16 @@ class MorphologicalParser(FomaFST, Parse):
     # and those changes would not # surface in parsing behaviour.
     @property
     def my_morphology(self):
+        LOGGER.debug('in my_morphology property')
         try:
-            return self._my_morphology
+            result = self._my_morphology
+            LOGGER.debug('in my_morphology property: have self._my_morphology:'
+                         ' {}'.format(result))
+            return result
         except AttributeError:
             self._my_morphology = self.morphology
+            LOGGER.debug('in my_morphology property: Attribute error: set'
+                         ' self._my_morphology to {}'.format(self.morphology))
             return self._my_morphology
 
     @my_morphology.setter

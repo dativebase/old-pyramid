@@ -87,6 +87,8 @@ Done
 │   ├── login.py
 │   ├── morphologies.py
 │   ├── morphologybackups.py
+│   ├── morphemelanguagemodelbackups.py
+│   ├── morphemelanguagemodels.py
 │   ├── orthographies.py
 │   ├── pages.py
 │   ├── phonologies.py
@@ -183,6 +185,8 @@ Done
 │   │   ├── test_forms_search.py
 │   │   ├── test_languages.py
 │   │   ├── test_login.py => test_auth.py
+│   │   ├── test_morphemelanguagemodelbackups.py
+│   │   ├── test_morphemelanguagemodels.py
 │   │   ├── test_morphologies.py
 │   │   ├── test_morphologybackups.py
 │   │   ├── test_orthographies.py
@@ -200,13 +204,13 @@ Done
 Doing
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-│   ├── morphemelanguagemodelbackups.py
-│   ├── morphemelanguagemodels.py
-│   │   ├── test_morphemelanguagemodelbackups.py
-│   │   ├── test_morphemelanguagemodels.py
+├── controllers
+│   ├── morphologicalparserbackups.py
+│   ├── morphologicalparsers.py
+│   ├── functional
+│   │   ├── test_morphologicalparsers.py
 
-../../env/bin/python ./../pyl2pyr.py morphemelanguagemodel ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_morphemelanguagemodels.py tests/functional/test_morphemelanguagemodels.py
-../../env/bin/python ./../pyl2pyr.py morphemelanguagemodelbackup ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_morphemelanguagemodelbackups.py tests/functional/test_morphemelanguagemodelbackups.py
+../../env/bin/python ./../pyl2pyr.py morphologicalparser ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_morphologicalparsers.py tests/functional/test_morphologicalparsers.py
 
 
 TODO
@@ -215,22 +219,12 @@ TODO
 ├── controllers
 │   ├── error.py ??? ...
 
-│   ├── morphologicalparserbackups.py
-│   ├── morphologicalparsers.py
-
-../../env/bin/python ./../pyl2pyr.py morphemelanguagemodel ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_morphemelanguagemodels.py tests/functional/test_morphemelanguagemodels.py
-../../env/bin/python ./../pyl2pyr.py morphemelanguagemodelbackup ~/Documents/old/onlinelinguisticdatabase/tests/functional/test_morphemelanguagemodelbackups.py tests/functional/test_morphemelanguagemodelbackups.py
-
 ├── tests
-
 │   ├── __init__.py
 │   ├── __init__.py.bk
 │   ├── sync
 │   ├── test_models.py
 
-│   ├── functional
-│   │   ├── test_morphologicalparsers.py
-│   │   ├── test_phonologybackups.py
 
 │   ├── scripts
 │   │   └── _requests_tests.py

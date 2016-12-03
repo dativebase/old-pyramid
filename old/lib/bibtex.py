@@ -36,8 +36,8 @@ e1 = '''
 parser = Parser()
 bib_data = parser.parse_stream(StringIO(e1))
 knuth86a = parser.data.entries['knuth:86a']
-unicode(knuth86a.persons['author'][0])
-u'Knuth, Donald E.'
+str(knuth86a.persons['author'][0])
+'Knuth, Donald E.'
 
 """
 

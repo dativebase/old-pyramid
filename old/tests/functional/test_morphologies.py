@@ -147,13 +147,6 @@ class TestMorphologiesView(TestView):
             })
             params = json.dumps(params)
 
-            # FOX
-            print('EXTANT FORM SEARCHES FOX')
-            fss = dbsession.query(old_models.FormSearch).all()
-            for fs in fss:
-                print('FOX form search name: ', fs.name)
-            print('DONE EXTANT FORM SEARCHES FOX')
-
             response = self.app.post(fs_url('create'), params, self.json_headers, self.extra_environ_admin)
             lexicon_form_search_id = response.json_body['id']
             params = self.corpus_create_params.copy()

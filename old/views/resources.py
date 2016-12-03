@@ -754,9 +754,15 @@ class Resources(abc.ABC, ReadonlyResources):
             'morphologies': ResCol(
                 'Morphology',
                 self.db.get_mini_dicts_getter('Morphology')),
+            'morpheme_language_models': ResCol(
+                'MorphemeLanguageModel',
+                self.db.get_mini_dicts_getter('MorphemeLanguageModel')),
             'orthographies': ResCol(
                 'Orthography',
                 self.db.get_mini_dicts_getter('Orthography')),
+            'phonologies': ResCol(
+                'Phonology',
+                self.db.get_mini_dicts_getter('Phonology')),
             'roles': ResCol(
                 '',
                 lambda: USER_ROLES),

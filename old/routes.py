@@ -441,6 +441,10 @@ def includeme(config):
     config.add_route('email_reset_password', '/login/email_reset_password',
                      request_method='POST')
 
+    ###########################################################################
+    # Morpheme Language Model Special Routing
+    ###########################################################################
+
     # Pylons: controller='morphemelanguagemodels', action='compute_perplexity'
     config.add_route('morpheme_lm_compute_perplexity',
                      '/morphemelanguagemodels/{id}/compute_perplexity',
@@ -484,24 +488,83 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
+    ###########################################################################
+    # Morphological Parser Special Routing
+    ###########################################################################
+
     config.add_route('mparser_apply_down',
                      '/morphologicalparsers/{id}/applydown',
                      request_method='PUT')
+    config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
+                    attr='applydown',
+                    route_name='mparser_apply_down',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=authenticate)
+
     config.add_route('mparser_apply_up',
                      '/morphologicalparsers/{id}/applyup',
                      request_method='PUT')
-    config.add_route('mparser_export', '/morphologicalparsers/{id}/export',
+    config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
+                    attr='applyup',
+                    route_name='mparser_apply_up',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=authenticate)
+
+    config.add_route('mparser_export',
+                     '/morphologicalparsers/{id}/export',
                      request_method='GET')
-    config.add_route('mparser_generate', '/morphologicalparsers/{id}/generate',
+    config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
+                    attr='export',
+                    route_name='mparser_export',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
+    config.add_route('mparser_generate',
+                     '/morphologicalparsers/{id}/generate',
                      request_method='PUT')
+    config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
+                    attr='generate',
+                    route_name='mparser_generate',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
     config.add_route('mparser_generate_and_compile',
                      '/morphologicalparsers/{id}/generate_and_compile',
                      request_method='PUT')
-    config.add_route('mparser_parse', '/morphologicalparsers/{id}/parse',
+    config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
+                    attr='generate_and_compile',
+                    route_name='mparser_generate_and_compile',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
+    config.add_route('mparser_parse',
+                     '/morphologicalparsers/{id}/parse',
                      request_method='PUT')
+    config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
+                    attr='parse',
+                    route_name='mparser_parse',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=authenticate)
+
     config.add_route('mparser_servecompiled',
                      '/morphologicalparsers/{id}/servecompiled',
                      request_method='GET')
+    config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
+                    attr='servecompiled',
+                    route_name='mparser_servecompiled',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
 
     ###########################################################################
     # Morphology Special Routing

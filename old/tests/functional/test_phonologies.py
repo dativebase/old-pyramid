@@ -578,8 +578,6 @@ class TestPhonologiesView(TestView):
             assert resp['error'] == 'Foma and flookup are not installed.'
             return
 
-        print('FOMA IS INSTALLED FOX')
-
         # Attempt to get the compiled script before it has been created.
         response = self.app.get(
             '/phonologies/{id}/servecompiled'.format(id=phonology1_id),
@@ -587,8 +585,6 @@ class TestPhonologiesView(TestView):
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['error'] == 'Phonology %d has not been compiled yet.' % phonology1_id
-
-        print('SUCCESSFULLY FAILED TO GET COMPILED FOMA SCRIPT BEFORE COMPILE')
 
         # Compile the phonology's script
         response = self.app.put(
@@ -599,8 +595,6 @@ class TestPhonologiesView(TestView):
         compile_attempt = resp['compile_attempt']
         compile_succeeded = resp['compile_succeeded']
         compile_message = resp['compile_message']
-
-        print('SUCCESSFULLY ISSUED COMPILE REQUEST')
 
         # Poll ``GET /phonologies/phonology1_id`` until ``compile_attempt`` has
         # changed.

@@ -53,11 +53,11 @@ class MorphologicalParserBackup(Base):
         self.morphologicalparser_id = morphological_parser_dict['id']
         self.name = morphological_parser_dict['name']
         self.description = morphological_parser_dict['description']
-        self.phonology = unicode(json.dumps(morphological_parser_dict['phonology']))
-        self.morphology = unicode(json.dumps(morphological_parser_dict['morphology']))
-        self.language_model = unicode(json.dumps(morphological_parser_dict['language_model']))
-        self.enterer = unicode(json.dumps(morphological_parser_dict['enterer']))
-        self.modifier = unicode(json.dumps(morphological_parser_dict['modifier']))
+        self.phonology = json.dumps(morphological_parser_dict['phonology'])
+        self.morphology = json.dumps(morphological_parser_dict['morphology'])
+        self.language_model = json.dumps(morphological_parser_dict['language_model'])
+        self.enterer = json.dumps(morphological_parser_dict['enterer'])
+        self.modifier = json.dumps(morphological_parser_dict['modifier'])
         self.datetime_entered = morphological_parser_dict['datetime_entered']
         self.datetime_modified = morphological_parser_dict['datetime_modified']
         self.compile_succeeded = morphological_parser_dict['compile_succeeded']
@@ -70,12 +70,17 @@ class MorphologicalParserBackup(Base):
             'morphologicalparser_id': self.morphologicalparser_id,
             'UUID': self.UUID,
             'name': self.name,
-            'phonology': self.get_mini_dict_for(self.phonology),
-            'morphology': self.get_mini_dict_for(self.morphology),
-            'language_model': self.get_mini_dict_for(self.language_model),
+            #'phonology': self.get_mini_dict_for(self.phonology),
+            'phonology': self.json_loads(self.phonology),
+            #'morphology': self.get_mini_dict_for(self.morphology),
+            'morphology': self.json_loads(self.morphology),
+            #'language_model': self.get_mini_dict_for(self.language_model),
+            'language_model': self.json_loads(self.language_model),
             'description': self.description,
-            'enterer': self.get_mini_user_dict(self.enterer),
-            'modifier': self.get_mini_user_dict(self.modifier),
+            'enterer': self.json_loads(self.enterer),
+            #'enterer': self.get_mini_user_dict(self.enterer),
+            'modifier': self.json_loads(self.modifier),
+            #'modifier': self.get_mini_user_dict(self.modifier),
             'datetime_entered': self.datetime_entered,
             'datetime_modified': self.datetime_modified,
             'compile_succeeded': self.compile_succeeded,

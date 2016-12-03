@@ -1544,9 +1544,6 @@ class TestFilesView(TestView):
                 old_models.File).get(to_delete_id)
             file_path = os.path.join(self.files_path, to_delete_name)
 
-            # LOGGER
-            # FOX
-
             assert not os.path.exists(file_path), '{} does exist'.format(file_path)
             assert 'old_test.jpg' not in os.listdir(self.files_path)
             assert file_that_was_deleted is None

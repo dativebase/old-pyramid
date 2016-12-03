@@ -51,12 +51,15 @@ import queue
 import threading
 from uuid import uuid4
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from paste.deploy import appconfig
 import transaction
 
 import old.lib.constants as oldc
 import old.lib.helpers as h
 import old.models as old_models
+from old.models.morphologicalparser import Cache
 from old.models import (
     get_engine,
     get_session_factory,
@@ -92,7 +95,8 @@ class FomaWorkerThread(threading.Thread):
                              msg.get('func'))
                 globals()[msg.get('func')](**msg.get('args'))
             except Exception as error:
-                LOGGER.warning('Unable to process in worker thread: %s', error)
+                LOGGER.warning('Unable to process in worker thread: %s %s',
+                    error.__class__.__name__, error)
             FOMA_WORKER_Q.task_done()
 
 
@@ -106,13 +110,17 @@ def start_foma_worker():
     foma_worker2.start()
 
 
+def get_dbsession_from_settings(settings):
+    engine = get_engine(settings)
+    session_factory = get_session_factory(engine)
+    return get_tm_session(session_factory, transaction.manager)
+
+
 def get_dbsession(config_path):
     config_dir, config_file = os.path.split(config_path)
     settings = appconfig('config:{}'.format(config_file),
                          relative_to=config_dir)
-    engine = get_engine(settings)
-    session_factory = get_session_factory(engine)
-    return get_tm_session(session_factory, transaction.manager)
+    return get_dbsession_from_settings(settings)
 
 
 ################################################################################
@@ -164,12 +172,12 @@ def generate_and_compile_morphology(**kwargs):
         try:
             morphology.write(oldc.UNKNOWN_CATEGORY)
         except Exception as error:
-            LOGGER.warning(error)
+            LOGGER.warning('%s %s', error.__class__.__name__, error)
         if kwargs.get('compile', True):
             try:
                 morphology.compile(kwargs['timeout'])
             except Exception as error:
-                LOGGER.warning(error)
+                LOGGER.warning('%s %s', error.__class__.__name__, error)
         morphology.generate_attempt = str(uuid4())
         morphology.modifier_id = kwargs['user_id']
         morphology.datetime_modified = h.now()
@@ -256,21 +264,28 @@ def compute_perplexity(**kwargs):
 # MORPHOLOGICAL PARSER (MORPHOPHONOLOGY)
 ################################################################################
 
-
 def generate_and_compile_parser(**kwargs):
     """Write the parser's morphophonology FST script to file and compile it if
     ``compile_`` is True.  Generate the language model and pickle it.
     """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
-        parser = dbsession.query(old_models.MorphologicalParser).get(
-            kwargs['morphological_parser_id'])
-        parser.changed = False
-        parser.write()
-        if kwargs.get('compile', True):
-            parser.compile(kwargs['timeout'])
-        parser.modifier_id = kwargs['user_id']
-        parser.datetime_modified = h.now()
-        if parser.changed:
-            parser.cache.clear(persist=True)
-        transaction.commit()
+    config_dir, config_file = os.path.split(kwargs['config_path'])
+    settings = appconfig('config:{}'.format(config_file),
+                         relative_to=config_dir)
+    engine = create_engine(settings['sqlalchemy.url'])
+    Session = sessionmaker(bind=engine)
+    dbsession = Session()
+    parser = dbsession.query(old_models.MorphologicalParser).get(
+        kwargs['morphological_parser_id'])
+    cache = Cache(parser, settings, get_dbsession_from_settings)
+    parser.cache = cache
+    parser.changed = False
+    parser.write()
+    dbsession.commit()
+    if kwargs.get('compile', True):
+        parser.compile(kwargs['timeout'])
+    parser.modifier_id = kwargs['user_id']
+    parser.datetime_modified = h.now()
+    if parser.changed:
+        parser.cache.clear(persist=True)
+    dbsession.add(parser)
+    dbsession.commit()

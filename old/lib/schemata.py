@@ -301,7 +301,6 @@ class ValidOLDModelObject(FancyValidator):
             else:
                 if (    self.model_name in ('Form', 'File', 'Collection') and
                         getattr(state, 'user', None)):
-                    print('FOX HAVE state.user')
                     unrestricted_users = state.db.get_unrestricted_users()
                     if state.user.is_authorized_to_access_model(
                             model_object, unrestricted_users):
@@ -313,7 +312,6 @@ class ValidOLDModelObject(FancyValidator):
                                          model_name_eng=model_name_eng),
                             value, state)
                 else:
-                    print('FOX NO HAVE state.user')
                     return model_object
 
 
@@ -1147,7 +1145,6 @@ class ValidUsernameAndPassword(FancyValidator):
                 # No duplicate usernames
 
                 if id_:
-                    print('FOX ID BUT USERNAME NOT UNIQUE')
                     match = state.db.dbsession.query(User).filter(
                         and_(User.username==username, User.id!=id_)).first()
                     if match:
@@ -1155,7 +1152,6 @@ class ValidUsernameAndPassword(FancyValidator):
                               ' different id from current one, which is {}'.format(
                                   match.id, match.username, id_))
                 else:
-                    print('FOX NO ID')
                     match = state.db.dbsession.query(User).filter(
                         User.username==username).first()
                     if match:

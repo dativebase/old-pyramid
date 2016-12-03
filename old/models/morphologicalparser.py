@@ -112,10 +112,11 @@ from shutil import copyfile
 import logging
 import json
 
-
-# TODO: Need ``Session`` (SQLAlchemy) here ...
-from pyramid.threadlocal import get_current_registry
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import transaction
+
+LOGGER = logging.getLogger(__name__)
 
 
 def get_engine(settings, prefix='sqlalchemy.'):
@@ -128,7 +129,7 @@ def get_session_factory(engine):
     return factory
 
 
-log = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 class Parse(Base):
     """A parse is a parser-specific mapping from a transcription to a parse.
@@ -150,6 +151,7 @@ class Parse(Base):
     candidates = Column(UnicodeText)
     parser_id = Column(Integer, ForeignKey('morphologicalparser.id', ondelete='SET NULL'))
     datetime_modified = Column(DateTime, default=now)
+
 
 class MorphologicalParser(MorphologicalParser, Base):
 
@@ -226,10 +228,11 @@ class MorphologicalParser(MorphologicalParser, Base):
         }
 
     def compile(self, timeout=30*60, verification_string=None):
-        """A wrapper around the superclass's ``compile`` method which sets ``self.changed``
-        to ``True`` if the compile request results in a changed binary foma file.  Note that
-        we only perform the (potentially expensive) test for a file change if ``self.changed``
-        is false.  This makes sense because if ``self.changed`` is ``True``, some previous test
+        """A wrapper around the superclass's ``compile`` method which sets
+        ``self.changed`` to ``True`` if the compile request results in a
+        changed binary foma file.  Note that we only perform the (potentially
+        expensive) test for a file change if ``self.changed`` is false.  This
+        makes sense because if ``self.changed`` is ``True``, some previous test
         has already uncovered a change so there is no need to retest.
 
         """
@@ -270,10 +273,12 @@ class MorphologicalParser(MorphologicalParser, Base):
             self.replicate_morphology()
             self.replicate_phonology()
             self.generate_succeeded = True
-            self.generate_message = u''
-        except Exception:
+            self.generate_message = ''
+        except Exception as error:
+            LOGGER.debug('Error in write method of morphparser model: %s %s',
+                error.__class__.__name__, error)
             pass
-        self.generate_attempt = unicode(uuid4())
+        self.generate_attempt = str(uuid4())
 
     def write_morphophonology_script(self):
         """Generate and write to disk the morphophonology script:
@@ -407,10 +412,9 @@ class MorphologicalParser(MorphologicalParser, Base):
     def replicate_attributes(self):
         """Make copies of attr values of referenced core objects.
 
-        If the values of any of these attributes change from what they were previously,
-        set ``self.changed`` to ``True``.  This information can be used to decide whether
-        to clear the cache.
-
+        If the values of any of these attributes change from what they were
+        previously, set ``self.changed`` to ``True``.  This information can be
+        used to decide whether to clear the cache.
         """
         changed = False
         if getattr(self, 'phonology', None):
@@ -443,12 +447,11 @@ class MorphologicalParser(MorphologicalParser, Base):
 
     @property
     def my_morphology(self):
-        """Here we override the default ``my_morphology`` property and provide one which
-        defaults to a minimal Morphology instance generated on the fly using attribute
-        values copied from ``self.morphology`` at parser create/update time.  Note that
-        we construct this Morphology instance with only those attributes needed to successfully
-        call ``self.parse``.
-
+        """Here we override the default ``my_morphology`` property and provide
+        one which defaults to a minimal Morphology instance generated on the
+        fly using attribute values copied from ``self.morphology`` at parser
+        create/update time.  Note that we construct this Morphology instance
+        with only those attributes needed to successfully call ``self.parse``.
         """
         try:
             return self._my_morphology
@@ -496,61 +499,59 @@ class MorphologicalParser(MorphologicalParser, Base):
     def cache(self, value):
         self._cache = value
 
-class Cache(object):
-    """For caching parses; an interface to the MorphologicalParser().parses collection, a one-to-many relation.
 
-    A MorphologicalParser instance can be expected to access and set "keys" (i.e,. transcriptions)
-    via the familiar Python dictionary interface as well as request that the cache be persisted and
-    cleared by calling ``persist()`` and ``clear()``.  Thus this class implements the following
-    interface:
+class Cache(object):
+    """For caching parses; an interface to the MorphologicalParser().parses
+    collection, a one-to-many relation.
+
+    A MorphologicalParser instance can be expected to access and set "keys"
+    (i.e,. transcriptions) via the familiar Python dictionary interface as well
+    as request that the cache be persisted and cleared by calling ``persist()``
+    and ``clear()``.  Thus this class implements the following interface:
 
     - ``__setitem__(k, v)``
     - ``__getitem__(k)``
     - ``get(k, default)``
     - ``persist()``
     - ``clear()``
-
     """
 
-    def __init__(self, parser):
-        # log.warn('DB CACHE CONSTRUCTED!')
+    def __init__(self, parser, settings, session_getter):
+        # LOGGER.warn('DB CACHE CONSTRUCTED!')
         self.updated = False # means that ``self._store`` is in sync with persistent cache
         self.parser = parser
         self._store = {}
-
-        print('Cache inited')
-        settings = get_current_registry().settings
-        print(settings)
-        engine = get_engine(settings)
-        session_factory = get_session_factory(engine)
-        with transaction.manager:
-            self.Session = get_tm_session(session_factory, transaction.manager)
+        self.settings = settings
+        self.session_getter = session_getter
 
     def __setitem__(self, k, v):
-        # log.warn('DB_CACHE[%s] = %s CALLED' % (k, v))
+        # LOGGER.warn('DB_CACHE[%s] = %s CALLED' % (k, v))
         if k not in self._store:
             self.updated = True
         self._store[k] = v
 
     def __getitem__(self, k):
-        # log.warn('DB_CACHE.__getitem__(%s) CALLED' % k)
+        # LOGGER.warn('DB_CACHE.__getitem__(%s) CALLED' % k)
         try:
             return self._store[k]
         except KeyError as e:
-            parse = self.Session.query(Parse).filter(Parse.parser_id==self.parser.id).\
-                filter(Parse.transcription==k).first()
-            if parse:
-                # log.warn('GOT %s FROM DB IN DB_CACHE' % k)
-                self._store[k] = parse.parse, json.loads(parse.candidates)
-                return self._store[k]
-            else:
-                raise e
+            with transaction.manager:
+                dbsession = self.session_getter(self.settings)
+                parse = dbsession.query(Parse).filter(
+                    Parse.parser_id==self.parser.id).filter(
+                    Parse.transcription==k).first()
+                if parse:
+                    # LOGGER.warn('GOT %s FROM DB IN DB_CACHE' % k)
+                    self._store[k] = parse.parse, json.loads(parse.candidates)
+                    return self._store[k]
+                else:
+                    raise e
 
     def get(self, k, default=None):
         try:
             return self[k]
         except KeyError:
-            # log.warn('DB_CACHE.get(%s, %s) RETURNED %s' % (k, default, default))
+            # LOGGER.warn('DB_CACHE.get(%s, %s) RETURNED %s' % (k, default, default))
             return default
 
     def update(self, dict_, **kwargs):
@@ -563,19 +564,22 @@ class Cache(object):
         """Update the persistence layer with the value of ``self._store``.
         """
         if self.updated:
-            persisted = [parse.transcription for parse in self.Session.query(Parse).\
-                filter(Parse.parser_id==self.parser.id).\
-                filter(Parse.transcription.in_(self._store.keys())).all()]
-            unpersisted = [Parse(transcription=transcription,
-                                 parse=parse,
-                                 candidates = self.json_dumps_candidates(candidates),
-                                 parser=self.parser)
-                           for transcription, (parse, candidates) in self._store.items()
-                           if transcription not in persisted]
-            self.Session.add_all(unpersisted)
-            self.Session.commit()
-            # log.warn('DB_CACHE: PERSISTED %s' % u', '.join([p.transcription for p in unpersisted]))
-            self.updated = False
+            with transaction.manager:
+                dbsession = self.session_getter(self.settings)
+                persisted = [
+                    parse.transcription for parse in dbsession.query(Parse).\
+                    filter(Parse.parser_id==self.parser.id).\
+                    filter(Parse.transcription.in_(self._store.keys())).all()]
+                unpersisted = [Parse(transcription=transcription,
+                                    parse=parse,
+                                    candidates = self.json_dumps_candidates(candidates),
+                                    parser=self.parser)
+                            for transcription, (parse, candidates) in self._store.items()
+                            if transcription not in persisted]
+                dbsession.add_all(unpersisted)
+                transaction.commit()
+                # LOGGER.warn('DB_CACHE: PERSISTED %s' % u', '.join([p.transcription for p in unpersisted]))
+                self.updated = False
 
     def json_dumps_candidates(self, candidates):
         candidates = json.dumps(candidates)
@@ -586,25 +590,29 @@ class Cache(object):
 
     def clear(self, persist=False):
         """Clear the cache and its persistence layer.
-
-        This should be called if any of the attribute values or files that affect 
-        parsing functionality are altered.  Currently, ``generate_and_compile_parser``
-        calls ``parser.cache.clear()`` if, in the course of generating and compiling
-        the parser's files, the parser changes.
-
-
+        This should be called if any of the attribute values or files that
+        affect parsing functionality are altered. Currently,
+        ``generate_and_compile_parser`` calls ``parser.cache.clear()`` if, in
+        the course of generating and compiling the parser's files, the parser
+        changes.
         """
         self._store = {}
         if persist:
-            delete = Parse.__table__.delete().\
-                where(Parse.__table__.c.parser_id==self.parser.id)
-            self.Session.execute(delete)
+            engine = create_engine(self.settings['sqlalchemy.url'])
+            Session = sessionmaker(bind=engine)
+            dbsession = Session()
+            delete = Parse.__table__.delete().where(
+                Parse.__table__.c.parser_id==self.parser.id)
+            dbsession.execute(delete)
+            dbsession.commit()
 
     def export(self):
         """Update the local store with the persistence layer and return the store.
         """
-        persisted = dict((p.transcription, (p.parse, json.loads(p.candidates))) for p in
-            self.Session.query(Parse).filter(Parse.parser_id==self.parser.id).all())
-        self._store.update(persisted)
-        return self._store
-
+        with transaction.manager:
+            dbsession = self.session_getter(self.settings)
+            persisted = {p.transcription: (p.parse, json.loads(p.candidates))
+                         for p in dbsession.query(Parse).filter(
+                             Parse.parser_id==self.parser.id).all()}
+            self._store.update(persisted)
+            return self._store

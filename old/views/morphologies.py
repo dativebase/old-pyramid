@@ -4,6 +4,7 @@ import os
 import pickle
 from uuid import uuid4
 
+from formencode.validators import Invalid
 from pyramid.response import FileResponse
 
 from old.models import MorphologyBackup
@@ -29,7 +30,7 @@ class Morphologies(Resources):
             return {'error': self._rsrc_not_exist(id_)}
         if self._model_access_unauth(morphology) is not False:
             self.request.response.status_int = 403
-            return UNAUTHORIZED_MSG
+            return oldc.UNAUTHORIZED_MSG
         morphology_dict = morphology.get_dict()
         if self.request.GET.get('script') == '1':
             morphology_script_path = morphology.get_file_path('script')
@@ -165,7 +166,7 @@ class Morphologies(Resources):
             return {'error': 'Foma and flookup are not installed.'}
         morphology_binary_path = morphology.get_file_path('binary')
         if not os.path.isfile(morphology_binary_path):
-            response.status_int = 400
+            self.request.response.status_int = 400
             return {'error': 'Morphology %d has not been compiled yet.' % (
                 morphology.id,)}
         try:
