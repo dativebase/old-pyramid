@@ -1,54 +1,42 @@
+# Copyright 2016 Joel Dunham
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+"""Setup the OLD application: database tables and directory structure"""
+
 import logging
 import os
-import pprint
 import sys
 import transaction
 
 from pyramid.paster import (
     get_appsettings,
     setup_logging,
-    )
-
+)
 from pyramid.scripts.common import parse_vars
+
+import old.lib.helpers as h
+import old.models.modelbuilders as omb
 
 from ..models.meta import Base
 from ..models import (
     get_engine,
     get_session_factory,
     get_tm_session,
-    )
-from ..models import ApplicationSettings
-from ..models import Collection
-from ..models import CollectionBackup
-from ..models import Corpus
-from ..models import CorpusBackup
-from ..models import ElicitationMethod
-from ..models import File
-from ..models import Form
-from ..models import FormBackup
-from ..models import FormSearch
-from ..models import Keyboard
-from ..models import Language
-from ..models import MorphemeLanguageModel
-from ..models import MorphemeLanguageModelBackup
-from ..models import MorphologicalParser
-from ..models import MorphologicalParserBackup
-from ..models import Morphology
-from ..models import MorphologyBackup
-from ..models import Orthography
-from ..models import Page
-from ..models import Phonology
-from ..models import PhonologyBackup
-from ..models import Source
-from ..models import Speaker
-from ..models import SyntacticCategory
-from ..models import Tag
-from ..models import Translation
-from ..models import User
-import old.lib.helpers as h
-import old.models.modelbuilders as omb
+)
 
-log = logging.getLogger(__name__)
+
+LOGGER = logging.getLogger(__name__)
 
 
 def usage(argv):
@@ -58,59 +46,50 @@ def usage(argv):
     sys.exit(1)
 
 
-def main(argv=sys.argv):
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
     if len(argv) < 2:
         usage(argv)
     config_uri = argv[1]
     options = parse_vars(argv[2:])
     setup_logging(config_uri)
     settings = get_appsettings(config_uri, options=options)
-
-    pprint.pprint(settings)
-
     engine = get_engine(settings)
     Base.metadata.create_all(engine)
-
     session_factory = get_session_factory(engine)
 
     with transaction.manager:
         dbsession = get_tm_session(session_factory, transaction.manager)
-
         filename = os.path.basename(settings['__file__'])
-
         # Create the ``store`` directory and those for file, analysis and
         # corpora objects and their subdirectories.  See ``lib.utils.py`` for
         # details.
         h.create_OLD_directories(settings)
-
         # ISO-639-3 Language data for the languages table
-        log.info('Retrieving ISO-639-3 languages data.')
+        LOGGER.info('Retrieving ISO-639-3 languages data.')
         languages = omb.get_language_objects(settings['here'])
-
         # Get default users.
-        log.info('Creating a default administrator, contributor and viewer.')
+        LOGGER.info('Creating a default administrator, contributor and viewer.')
         administrator = omb.generate_default_administrator(
             settings=settings)
         contributor = omb.generate_default_contributor(
             settings=settings)
         viewer = omb.generate_default_viewer(settings=settings)
-
         # If we are running tests, make sure the test db contains only language
         # data.
+
         if filename == 'test.ini':
             # Permanently drop any existing tables
             Base.metadata.drop_all(bind=dbsession.bind, checkfirst=True)
-            log.info("Existing tables dropped.")
-
+            LOGGER.info("Existing tables dropped.")
             # Create the tables if they don't already exist
             Base.metadata.create_all(bind=dbsession.bind, checkfirst=True)
-            log.info('Tables created.')
-
+            LOGGER.info('Tables created.')
             dbsession.add_all(languages + [administrator, contributor, viewer])
 
         # Not a test: add a bunch of nice defaults.
         else:
-
             # Create the _requests_tests.py script
             # requests_tests_path = os.path.join(
             #     settings['here'], 'old', 'tests', 'scripts',
@@ -122,31 +101,24 @@ def main(argv=sys.argv):
 
             # Create the tables if they don't already exist
             Base.metadata.create_all(bind=dbsession.bind, checkfirst=True)
-            log.info('Tables created.')
-
+            LOGGER.info('Tables created.')
             # Get default home & help pages.
-            log.info("Creating default home and help pages.")
+            LOGGER.info("Creating default home and help pages.")
             homepage = omb.generate_default_home_page()
             helppage = omb.generate_default_help_page()
-
             # Get default application settings.
-            log.info("Generating default application settings.")
+            LOGGER.info("Generating default application settings.")
             application_settings = omb.generate_default_application_settings()
-
             # Get default tags and categories
-            log.info("Creating some useful tags and categories.")
+            LOGGER.info("Creating some useful tags and categories.")
             restricted_tag = omb.generate_restricted_tag()
             foreign_word_tag = omb.generate_foreign_word_tag()
-            S = omb.generate_s_syntactic_category()
-            N = omb.generate_n_syntactic_category()
-            V = omb.generate_v_syntactic_category()
-
             # Initialize the database
-            log.info("Adding defaults.")
+            LOGGER.info("Adding defaults.")
             data = [administrator, contributor, viewer, homepage, helppage,
                     application_settings, restricted_tag, foreign_word_tag]
             if settings['add_language_data'] != '0':
                 data += languages
             if settings['empty_database'] == '0':
                 dbsession.add_all(data)
-            log.info("OLD successfully set up.")
+            LOGGER.info("OLD successfully set up.")

@@ -26,6 +26,7 @@ Done
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ├── __init__.py
+├── websetup.py => scripts/initializedb.py
 ├── config
 │   ├── environment.py
 │   ├── middleware.py
@@ -225,7 +226,6 @@ TODO
 │   ├── sync
 │   ├── test_models.py
 
-
 │   ├── scripts
 │   │   └── _requests_tests.py
 
@@ -251,6 +251,3 @@ TODO
 │   │   ├── 1.2.4_1.2.5
 │   │   │   └── old_update_db_1.2.4_1.2.5.py
 │   │   └── makemigrations.py
-
-├── websetup.py
-
