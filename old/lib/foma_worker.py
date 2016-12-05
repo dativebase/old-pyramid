@@ -75,7 +75,6 @@ LOGGER.addHandler(HANDLER)
 LOGGER.setLevel(logging.DEBUG)
 
 
-
 ################################################################################
 # WORKER THREAD & QUEUE
 ################################################################################
@@ -96,7 +95,7 @@ class FomaWorkerThread(threading.Thread):
                 globals()[msg.get('func')](**msg.get('args'))
             except Exception as error:
                 LOGGER.warning('Unable to process in worker thread: %s %s',
-                    error.__class__.__name__, error)
+                               error.__class__.__name__, error)
             FOMA_WORKER_Q.task_done()
 
 
@@ -123,10 +122,6 @@ def get_dbsession(config_path):
     return get_dbsession_from_settings(settings)
 
 
-################################################################################
-# PHONOLOGY
-################################################################################
-
 def get_local_logger():
     local_logger = logging.getLogger(__name__)
     local_logger.addHandler(HANDLER)
@@ -134,11 +129,15 @@ def get_local_logger():
     return local_logger
 
 
+################################################################################
+# PHONOLOGY
+################################################################################
+
+
 def compile_phonology(**kwargs):
     """Compile the foma script of a phonology and save it to the db with values
     that indicate compilation success.
     """
-    mylogger = get_local_logger()
     with transaction.manager:
         dbsession = get_dbsession(kwargs['config_path'])
         phonology = dbsession.query(
@@ -164,7 +163,6 @@ def generate_and_compile_morphology(**kwargs):
     :param float kwargs['timeout']: how many seconds to wait before killing the
         foma compile process.
     """
-    mylogger = get_local_logger()
     with transaction.manager:
         dbsession = get_dbsession(kwargs['config_path'])
         morphology = dbsession.query(
@@ -172,12 +170,14 @@ def generate_and_compile_morphology(**kwargs):
         try:
             morphology.write(oldc.UNKNOWN_CATEGORY)
         except Exception as error:
-            LOGGER.warning('%s %s', error.__class__.__name__, error)
+            LOGGER.error('Exception when calling `write` on morphology: %s %s',
+                         error.__class__.__name__, error)
         if kwargs.get('compile', True):
             try:
                 morphology.compile(kwargs['timeout'])
             except Exception as error:
-                LOGGER.warning('%s %s', error.__class__.__name__, error)
+                LOGGER.error('Exception when calling `compile` on morphology:'
+                             ' %s %s', error.__class__.__name__, error)
         morphology.generate_attempt = str(uuid4())
         morphology.modifier_id = kwargs['user_id']
         morphology.datetime_modified = h.now()
@@ -210,18 +210,26 @@ def generate_language_model(**kwargs):
         try:
             langmod.write_corpus()
         except Exception as error:
+            LOGGER.error('Exception when calling `write_corpus` on language'
+                         ' model: %s %s', error.__class__.__name__, error)
             langmod.generate_message = 'Error writing the corpus file. %s' % error
         try:
             langmod.write_vocabulary()
         except Exception as error:
+            LOGGER.error('Exception when calling `write_vocabulary` on language'
+                         ' model: %s %s', error.__class__.__name__, error)
             langmod.generate_message = 'Error writing the vocabulary file. %s' % error
         try:
             langmod.write_arpa(kwargs['timeout'])
         except Exception as error:
+            LOGGER.error('Exception when calling `write_arpa` on language'
+                         ' model: %s %s', error.__class__.__name__, error)
             langmod.generate_message = 'Error writing the ARPA file. %s' % error
         try:
             langmod.generate_trie()
         except Exception as error:
+            LOGGER.error('Exception when calling `generate_trie` on language'
+                         ' model: %s %s', error.__class__.__name__, error)
             langmod.generate_message = 'Error generating the LMTrie instance. %s' % error
         else:
             if langmod.get_modification_time(trie_path) != trie_mod_time:
@@ -248,7 +256,10 @@ def compute_perplexity(**kwargs):
         iterations = 5
         try:
             langmod.perplexity = langmod.compute_perplexity(timeout, iterations)
-        except Exception:
+        except Exception as error:
+            LOGGER.error('Exception when calling `comput_perplexity` on'
+                         ' language model: %s %s', error.__class__.__name__,
+                         error)
             langmod.perplexity = None
         if langmod.perplexity is None:
             langmod.perplexity_computed = False
@@ -272,8 +283,7 @@ def generate_and_compile_parser(**kwargs):
     settings = appconfig('config:{}'.format(config_file),
                          relative_to=config_dir)
     engine = create_engine(settings['sqlalchemy.url'])
-    Session = sessionmaker(bind=engine)
-    dbsession = Session()
+    dbsession = sessionmaker(bind=engine)()
     parser = dbsession.query(old_models.MorphologicalParser).get(
         kwargs['morphological_parser_id'])
     cache = Cache(parser, settings, get_dbsession_from_settings)

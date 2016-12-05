@@ -1,6 +1,44 @@
-old.egg-info/
 __pycache__/
 *.py[cod]
 .cache/
-data/
+*.egg
+*.egg-info
+*.pyc
+*.db
+*.sqlite
+*.sql
+*.cache
+*.lock
+*.log
+*.swp
+TODO.txt
+TODO_PARSER.txt
+
+old/model/db_update_scripts/**/*.sh
+
+# Some Pylons-generated directories that should be ignored
+/dist/
+/data/
+/build/
+.eggs/
+
+# Some OLD-specific directories that should be ignored
+/store/
+/old
+
+# Ignore a large file in test_files
+old/tests/data/files/old_test_long.wav
+old/tests/data/files/old_test_medium.wav
+
+# Ignore the Blackfoot MySQL dump file
+old/tests/data/datasets/blaold*
+
+# Ignore the morphology scripts and binaries
+old/tests/data/morphologies/
+
+# Ignore the special-purpose .ini files
 gmail.ini
+keyboards.ini
+
+# Ignore _requests_tests.py since it is copied from tests/ when setup-app is run
+/_requests_tests.py

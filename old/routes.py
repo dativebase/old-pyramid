@@ -8,15 +8,15 @@ from old.lib.constants import (
     UNAUTHORIZED_MSG,
     UNAUTHENTICATED_MSG,
 )
-import old.lib.pyramid_routehelper as pyrh
 from old.models import User
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-p = inflect.engine()
-p.classical()
+INFLP = inflect.engine()
+INFLP.classical()
+
 
 # This dict is configuration for the resources that the OLD exposes. All of the
 # keys correspond to resources that will receive the standard REST Atom
@@ -75,11 +75,77 @@ RESOURCES = {
 }
 
 
-def fix_for_tests(request):
-    """Modifies the request if certain environment variables are present;
-    purpose is to simulate different login states for testing.
+def add_resource(config, member_name, rsrc_config=None):
+    """Add route/view configuration to ``config`` that exposes ``member_name``
+    as a RESTful resource. The ``rsrc_config`` dict provides additional
+    configuration of the resource; e.g., setting 'searchable' to ``True`` will
+    set up search-related routes. Configuration should be centralized in the
+    ``RESOURCES`` constant.
     """
-    if os.path.basename(request.registry.settings.get('__file__', '')) == 'test.ini':
+    if not rsrc_config:
+        rsrc_config = {}
+    collection_name = INFLP.plural(member_name)
+    class_name = collection_name.capitalize()
+    view_callable = 'old.views.{}.{}'.format(collection_name, class_name)
+
+    # Search-related routes
+    if rsrc_config.get('searchable', False):
+        for route_name, path, request_method, attr in get_search_config(
+                collection_name):
+            config.add_route(route_name, path, request_method=request_method)
+            config.add_view(view_callable,
+                            attr=attr,
+                            route_name=route_name,
+                            request_method=request_method,
+                            renderer='json',
+                            decorator=get_auth_decorators(member_name, attr))
+
+    # History route
+    if rsrc_config.get('history', False):
+        route_name, path, request_method, attr = (
+            '{}_history'.format(member_name),
+            '/{}/{{id}}/history'.format(collection_name),
+            'GET',
+            'history'
+        )
+        config.add_route(route_name, path, request_method=request_method)
+        config.add_view(view_callable,
+                        attr=attr,
+                        route_name=route_name,
+                        request_method=request_method,
+                        renderer='json',
+                        decorator=get_auth_decorators(member_name, attr))
+
+    # Standard CRUD routes
+    for action in ('create', 'index', 'new', 'edit', 'delete', 'update',
+                   'show'):
+        route_name = '{}_{}'.format(action, member_name)
+        if action == 'index':
+            route_name = '{}_{}'.format(action, collection_name)
+        path = '/{}'.format(collection_name)
+        if action == 'new':
+            path = '{}/new'.format(path)
+        elif action == 'edit':
+            path = '{}/{{id}}/edit'.format(path)
+        elif action in ('delete', 'update', 'show'):
+            path = '{}/{{id}}'.format(path)
+        request_method = {'create': 'POST', 'delete': 'DELETE',
+                          'update': 'PUT'}.get(action, 'GET')
+        config.add_route(route_name, path, request_method=request_method)
+        config.add_view(view_callable,
+                        attr=action,
+                        route_name=route_name,
+                        request_method=request_method,
+                        renderer='json',
+                        decorator=get_auth_decorators(member_name, action))
+
+
+def fix_for_tests(request):
+    """Modifies the request if certain environment variables are present.
+    Purpose is to simulate different login states for testing.
+    """
+    if (    os.path.basename(request.registry.settings.get('__file__', '')) ==
+            'test.ini'):
         if 'test.authentication.role' in request.environ:
             role = request.environ['test.authentication.role']
             user = request.dbsession.query(User).filter(User.role==role).first()
@@ -102,6 +168,7 @@ UNAUTHENTICATED_RESP = Response(
     status_code=401
 )
 
+
 UNAUTHORIZED_RESP = Response(
     json=UNAUTHORIZED_MSG,
     content_type='application/json',
@@ -110,6 +177,7 @@ UNAUTHORIZED_RESP = Response(
 
 
 def authenticate(func):
+    """Authentication decorator."""
     def wrapper(context, request):
         LOGGER.info('Authenticate decorator on %s', request.current_route_url())
         request = fix_for_tests(request)
@@ -125,10 +193,11 @@ def authenticate(func):
 
 
 def authorize(roles, users=None, user_id_is_args1=False):
-    """Authorization decorator.  If user tries to request a resource action
-    but has insufficient authorization, this decorator will respond with a
-    header status of '403 Forbidden' and a JSON object explanation. The user is
-    unauthorized if *any* of the following are true:
+    """Function that returns an authorization decorator. If user tries to
+    request a resource action but has insufficient authorization, this
+    decorator will respond with a header status of '403 Forbidden' and a JSON
+    object explanation. The user is unauthorized if *any* of the following are
+    true:
 
     - the user does not have one of the roles in ``roles``
     - the user's id does not match one of the ids in ``users``
@@ -148,7 +217,7 @@ def authorize(roles, users=None, user_id_is_args1=False):
     affect)::
 
         >>> authorize(['administrator', 'contributor', 'viewer'],
-                      user_id_is_args1=True)
+        >>>           user_id_is_args1=True)
     """
     def _authorize(func):
         def wrapper(context, request):
@@ -182,7 +251,9 @@ def authorize(roles, users=None, user_id_is_args1=False):
 
 
 def get_auth_decorators(resource, action):
-    """TODO: there are resource-specific authorization controls."""
+    """Convenience for returning the appropriate authorization decorator, given
+    a specific resource and action on that resource.
+    """
     if action in ('create', 'new', 'update', 'edit', 'delete'):
         if resource == 'user':
             if action in ('update', 'edit'):
@@ -198,30 +269,33 @@ def get_auth_decorators(resource, action):
     return authenticate
 
 
+CORPORA_SEARCH_CONFIG = (
+    (
+        'search_corpus_forms',
+        '/corpora/{id}',
+        'SEARCH',
+        'search'
+    ), (
+        'search_corpus_forms_post',
+        '/corpora/{id}/search',
+        'POST',
+        'search'
+    ), (
+        'new_search_corpus_forms',
+        '/corpora/new_search',
+        'GET',
+        'new_searchx'
+    )
+)
+
+
 def get_search_config(collection_name):
     """Return the route name, path, request method, and class attribute for
     configuring search across the resource with collection name
     ``collection_name``.
     """
     if collection_name == 'corpora':
-        return (
-            (
-                'search_corpus_forms',
-                '/corpora/{id}',
-                'SEARCH',
-                'search'
-            ), (
-                'search_corpus_forms_post',
-                '/corpora/{id}/search',
-                'POST',
-                'search'
-            ), (
-                'new_search_corpus_forms',
-                '/corpora/new_search',
-                'GET',
-                'new_searchx'
-            )
-        )
+        return CORPORA_SEARCH_CONFIG
     return (
         (
             'search_{}'.format(collection_name),
@@ -242,77 +316,12 @@ def get_search_config(collection_name):
     )
 
 
-def add_resource(config, member_name, rsrc_config=None):
-    """Add route/view configuration to ``config`` that exposes ``member_name``
-    as a RESTful resource. The ``rsrc_config`` dict provides additional
-    configuration of the resource; e.g., setting 'searchable' to ``True`` will
-    set up search-related routes. Configuration should be centralized in the
-    ``RESOURCES`` constant.
-    authentication GET-only
-    """
-    if not rsrc_config:
-        rsrc_config = {}
-    collection_name = p.plural(member_name)
-    class_name = collection_name.capitalize()
-    view_callable = 'old.views.{}.{}'.format(collection_name, class_name)
+def cors(request):
+    request.response.status_int = 204
+    return request.response
 
-    if rsrc_config.get('searchable', False):
-        for route_name, path, request_method, attr in get_search_config(
-                collection_name):
-            config.add_route(route_name, path, request_method=request_method)
-            config.add_view(view_callable,
-                            attr=attr,
-                            route_name=route_name,
-                            request_method=request_method,
-                            renderer='json',
-                            decorator=get_auth_decorators(member_name, attr))
-
-    if rsrc_config.get('history', False):
-        route_name, path, request_method, attr = (
-            '{}_history'.format(member_name),
-            '/{}/{{id}}/history'.format(collection_name),
-            'GET',
-            'history'
-        )
-        config.add_route(route_name, path, request_method=request_method)
-        config.add_view(view_callable,
-                        attr=attr,
-                        route_name=route_name,
-                        request_method=request_method,
-                        renderer='json',
-                        decorator=get_auth_decorators(member_name, attr))
-
-    for action in ('create', 'index', 'new', 'edit', 'delete', 'update',
-                   'show'):
-        route_name = '{}_{}'.format(action, member_name)
-        if action == 'index':
-            route_name = '{}_{}'.format(action, collection_name)
-        path = '/{}'.format(collection_name)
-        if action == 'new':
-            path = '{}/new'.format(path)
-        elif action == 'edit':
-            path = '{}/{{id}}/edit'.format(path)
-        elif action in ('delete', 'update', 'show'):
-            path = '{}/{{id}}'.format(path)
-        request_method = {'create': 'POST', 'delete': 'DELETE',
-                          'update': 'PUT'}.get(action, 'GET')
-        config.add_route(route_name, path, request_method=request_method)
-        config.add_view(view_callable,
-                        attr=action,
-                        route_name=route_name,
-                        request_method=request_method,
-                        renderer='json',
-                        decorator=get_auth_decorators(member_name, action))
 
 def includeme(config):
-    # Pyramid boilerplate
-    # config.add_static_view('static', 'static', cache_max_age=3600)
-    # config.add_route('home', '/')
-
-    # The ErrorController route (handles 404/500 error pages); it should
-    # likely stay at the top, ensuring it can always be resolved
-    config.add_route('error_action', '/error/{action}')
-    config.add_route('error_id_action', '/error/{id}/{action}')
 
     config.add_route('info', '/', request_method='GET')
     config.add_view('old.views.info.Info',
@@ -321,20 +330,22 @@ def includeme(config):
                     request_method='GET',
                     renderer='json')
 
-    # CORS preflight OPTIONS requests---don't interfere with them
+    # CORS preflight OPTIONS requests: don't interfere with them
     # TODO: test if this works.
-    def cors(request):
-        request.response.status_int = 204
-        return request.response
     config.add_route('cors_proceed', '/*garbage', request_method='OPTIONS')
     config.add_view(cors,
                     route_name='cors_proceed',
                     request_method='OPTIONS')
 
+
+    ###########################################################################
+    # Corpora Special Routing
+    ###########################################################################
+
     # To search across corpora, you need to issue a SEARCH/POST
-    # /corpora/searchcorpora request. Corpora.search_corpora should handle
-    # this.
-    config.add_route('search_corpora', '/corpora/searchcorpora',
+    # /corpora/searchcorpora request.
+    config.add_route('search_corpora',
+                     '/corpora/searchcorpora',
                      request_method=('POST', 'SEARCH'))
     config.add_view('old.views.corpora.Corpora',
                     attr='search_corpora',
@@ -362,12 +373,6 @@ def includeme(config):
                     request_method='GET',
                     renderer='json',
                     decorator=authenticate)
-
-    # To search within the forms of a corpus, use one of the following two:
-    # Pylons: controller='corpora', action='search',
-    # config.add_route('search_corpus', '/corpora/{id}', request_method='SEARCH')
-    # config.add_route('search_corpus_post', '/corpora/{id}/search',
-    #                  request_method='POST')
 
     config.add_route('corpus_serve_file',
                      '/corpora/{id}/servefile/{file_id}',
@@ -400,7 +405,13 @@ def includeme(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
 
-    config.add_route('serve_file', '/files/{id}/serve', request_method='GET')
+    ###########################################################################
+    # Files Special Routing
+    ###########################################################################
+
+    config.add_route('serve_file',
+                     '/files/{id}/serve',
+                     request_method='GET')
     config.add_view('old.views.files.Files',
                     attr='serve',
                     route_name='serve_file',
@@ -408,7 +419,8 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
-    config.add_route('serve_reduced_file', '/files/{id}/serve_reduced',
+    config.add_route('serve_reduced_file',
+                     '/files/{id}/serve_reduced',
                      request_method='GET')
     config.add_view('old.views.files.Files',
                     attr='serve_reduced',
@@ -417,8 +429,13 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
+    ###########################################################################
+    # Forms Special Routing
+    ###########################################################################
 
-    config.add_route('remember_forms', '/forms/remember', request_method='POST')
+    config.add_route('remember_forms',
+                     '/forms/remember',
+                     request_method='POST')
     config.add_view('old.views.forms.Forms',
                     attr='remember',
                     route_name='remember_forms',
@@ -436,6 +453,10 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate, authorize(['administrator'])))
 
+    ###########################################################################
+    # Authentication Routing
+    ###########################################################################
+
     config.add_route('authenticate', '/login/authenticate')
     config.add_route('logout', '/login/logout')
     config.add_route('email_reset_password', '/login/email_reset_password',
@@ -445,7 +466,6 @@ def includeme(config):
     # Morpheme Language Model Special Routing
     ###########################################################################
 
-    # Pylons: controller='morphemelanguagemodels', action='compute_perplexity'
     config.add_route('morpheme_lm_compute_perplexity',
                      '/morphemelanguagemodels/{id}/compute_perplexity',
                      request_method='PUT')
@@ -600,7 +620,8 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
-    config.add_route('morphology_generate', '/morphologies/{id}/generate',
+    config.add_route('morphology_generate',
+                     '/morphologies/{id}/generate',
                      request_method='PUT')
     config.add_view('old.views.morphologies.Morphologies',
                     attr='generate',
@@ -647,7 +668,7 @@ def includeme(config):
 
     config.add_route('phonology_compile',
                      '/phonologies/{id}/compile',
-                      request_method='PUT')
+                     request_method='PUT')
     config.add_view('old.views.phonologies.Phonologies',
                     attr='compile',
                     route_name='phonology_compile',

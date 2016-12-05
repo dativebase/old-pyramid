@@ -49,8 +49,8 @@ from old.models import (
 )
 import old.models as old_models
 
-__all__ = ['TestView', 'add_SEARCH_to_web_test_valid_methods', 'poll',
-           'get_file_size']
+
+__all__ = ['TestView', 'add_SEARCH_to_web_test_valid_methods', 'get_file_size']
 
 
 # TODO: how to initialize the test database?
@@ -134,9 +134,10 @@ class TestView(TestCase):
             dbsession.add_all(languages + [administrator, contributor, viewer])
             transaction.commit()
 
-    def clear_all_models(self, dbsession, retain=['Language']):
+    def clear_all_models(self, dbsession, retain=('Language',)):
         """Convenience function for removing all OLD models from the database.
-        The retain parameter is a list of model names that should not be cleared.
+        The retain parameter is a list of model names that should not be
+        cleared.
         """
         for model_name in get_model_names():
             if model_name not in retain:
@@ -160,21 +161,11 @@ class TestView(TestCase):
             else:
                 self.clear_all_models(dbsession)
             transaction.commit()
-            #administrator = h.generate_default_administrator(
-            #    settings=self.settings)
-            #contributor = h.generate_default_contributor(
-            #    settings=self.settings)
-            #viewer = h.generate_default_viewer(
-            #    settings=self.settings)
-            #with transaction.manager:
-            #    dbsession = self.get_dbsession()
-            #    dbsession.add_all([administrator, contributor, viewer])
-            #    transaction.commit()
             for dir_path in dirs_to_clear:
                 h.clear_directory_of_files(getattr(self, dir_path))
             for dir_name in dirs_to_destroy:
                 h.destroy_all_directories(self.inflect_p.plural(dir_name),
-                                        self.settings)
+                                          self.settings)
             testing.tearDown()
 
     def _setattrs(self):
@@ -193,7 +184,6 @@ class TestView(TestCase):
             'test.authentication.role': 'administrator',
             'test.application_settings': True}
         self.json_headers = {'Content-Type': 'application/json'}
-
         self.here = self.settings['here']
         self.files_path = h.get_old_directory_path(
             'files', settings=self.settings)
