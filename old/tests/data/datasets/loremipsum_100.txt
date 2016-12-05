@@ -1,0 +1,525 @@
+S				sentential	
+PRP$				phrasal	
+VBG				phrasal	
+VBD				phrasal	
+VBN				phrasal	
+VBP				phrasal	
+JJ				phrasal	
+VBZ				phrasal	
+DT				phrasal	
+NN				phrasal	
+POS				phrasal	
+.				phrasal	
+TO				phrasal	
+PRP				phrasal	
+RB				phrasal	
+NNS				phrasal	
+NNP				phrasal	
+VB				phrasal	
+WRB				phrasal	
+CC				phrasal	
+RBS				phrasal	
+RBR				phrasal	
+CD				phrasal	
+EX				phrasal	
+IN				phrasal	
+MD				phrasal	
+NNPS				phrasal	
+JJR				phrasal	
+N				lexical	
+V				lexical	
+Adv				lexical	
+A				lexical	
+Agr				lexical	
+Num				lexical	
+D				lexical	
+P				lexical	
+Pnct				lexical	
+a	a	e	e	D	
+a	a	e	e	V	
+c	c	g	g	Num	
+a	a	egganze	egganze	N	
+ccumsan	ccumsan	m	m	P	
+ad	ad	et	et	V	
+adip	adip	etob	etob	Adv	
+is	is	ozg	ozg	D	
+c	c	om	om	P	
+ing	ing	k	k	Num	
+a	a	ei	ei	Adv	
+en	en	mi	mi	N	
+ean	ean	em	em	A	
+aliqua	aliqua	e	e	Agr	
+m	m	rokaen	rokaen	V	
+a	a	erokai	erokai	N	
+liquet	liquet	d	d	P	
+amet	amet	enid	enid	N	
+a	a	emd	emd	D	
+nte	nte	i	i	P	
+ap	ap	eb	eb	Adv	
+t	t	dim	dim	N	
+ent	ent	d	d	D	
+arcu	arcu	elga	elga	V	
+at	at	ed	ed	A	
+auc	auc	ea	ea	Agr	
+t	t	gd	gd	V	
+or	or	ul	ul	N	
+a	a	eak	eak	V	
+u	u	a	a	Adv	
+gue	gue	i	i	Adv	
+bib	bib	pop	pop	A	
+endu	endu	i	i	A	
+m	m	mtan	mtan	D	
+blan	blan	prem	prem	Agr	
+dit	dit	tod	tod	Agr	
+clas	clas	gr	gr	Adv	
+s	s	ezz	ezz	D	
+comm	comm	gunn	gunn	Adv	
+odo	odo	utu	utu	V	
+co	co	g	g	Agr	
+ndiment	ndiment	umtonimd	umtonimd	P	
+u	u	a	a	Num	
+m	m	n	n	A	
+c	c	gumk	gumk	D	
+ong	ong	a	a	P	
+ue	ue	i	i	Num	
+cons	cons	gu	gu	Adv	
+ectetue	ectetue	mzig	mzig	N	
+r	r	didail	didail	Num	
+co	co	gum	gum	V	
+nubia	nubia	apoe	apoe	P	
+c	c	g	g	Adv	
+o	o	um	um	D	
+nva	nva	ferr	ferr	Agr	
+llis	llis	oz	oz	N	
+cras	cras	glez	glez	Adv	
+c	c	ga	ga	V	
+um	um	n	n	Adv	
+cura	cura	gale	gale	Agr	
+e	e	i	i	P	
+curs	curs	ga	ga	A	
+us	us	lzaz	lzaz	A	
+d	d	t	t	V	
+ap	ap	eb	eb	Num	
+ibus	ibus	opaz	opaz	D	
+diam	diam	toen	toen	Num	
+d	d	t	t	A	
+i	i	ogd	ogd	Num	
+ctum	ctum	an	an	D	
+dictu	dictu	to	to	D	
+m	m	gda	gda	D	
+st	st	nzd	nzd	V	
+dig	dig	to	to	N	
+niss	niss	kmozz	kmozz	P	
+im	im	on	on	Num	
+d	d	t	t	Num	
+is	is	oz	oz	Adv	
+do	do	tu	tu	Adv	
+lo	lo	r	r	Adv	
+r	r	ul	ul	Adv	
+d	d	t	t	Adv	
+on	on	u	u	V	
+ec	ec	mig	mig	Agr	
+dui	dui	tao	tao	Agr	
+duis	duis	taoz	taoz	N	
+egesta	egesta	i	i	D	
+s	s	kizdez	kizdez	V	
+eget	eget	ikid	ikid	Adv	
+ele	ele	irini	irini	A	
+ment	ment	m	m	D	
+u	u	da	da	A	
+m	m	n	n	Num	
+eni	eni	imo	imo	Agr	
+enim	enim	imon	imon	Num	
+e	e	i	i	D	
+rat	rat	led	led	P	
+eros	eros	iluz	iluz	V	
+est	est	izd	izd	N	
+et	et	id	id	Num	
+e	e	id	id	N	
+tiam	tiam	oen	oen	D	
+e	e	i	i	P	
+u	u	a	a	N	
+euism	euism	ia	ia	Num	
+o	o	ozn	ozn	A	
+d	d	ut	ut	P	
+faci	faci	v	v	D	
+lisi	lisi	egorozo	egorozo	P	
+f	f	vegor	vegor	A	
+a	a	oz	oz	V	
+c	c	o	o	A	
+ilisis	ilisis	z	z	Adv	
+fa	fa	ven	ven	Num	
+mes	mes	iz	iz	A	
+f	f	vir	vir	Num	
+eli	eli	o	o	P	
+s	s	z	z	A	
+fe	fe	vi	vi	Adv	
+r	r	ln	ln	P	
+mentum	mentum	imdan	imdan	Num	
+feugi	feugi	via	via	A	
+at	at	koed	koed	A	
+frin	frin	vlomko	vlomko	A	
+gilla	gilla	rre	rre	V	
+fus	fus	va	va	V	
+ce	ce	zgi	zgi	Num	
+gravid	gravid	kle	kle	Agr	
+a	a	fote	fote	D	
+hab	hab	hepo	hepo	Adv	
+itass	itass	de	de	Agr	
+e	e	zzi	zzi	A	
+hac	hac	heg	heg	A	
+iacu	iacu	oega	oega	Num	
+l	l	r	r	A	
+is	is	oz	oz	D	
+id	id	ot	ot	P	
+i	i	o	o	P	
+n	n	m	m	D	
+i	i	omgib	omgib	Agr	
+n	n	du	du	Agr	
+ceptos	ceptos	z	z	Num	
+inte	inte	o	o	A	
+ger	ger	mdikil	mdikil	N	
+int	int	om	om	A	
+erdum	erdum	diltan	diltan	D	
+ipsu	ipsu	obz	obz	P	
+m	m	an	an	A	
+jus	jus	c	c	N	
+to	to	hazdu	hazdu	D	
+la	la	r	r	V	
+cini	cini	eg	eg	N	
+a	a	omoe	omoe	N	
+lac	lac	r	r	D	
+u	u	eg	eg	Agr	
+s	s	az	az	D	
+la	la	r	r	A	
+or	or	eul	eul	D	
+eet	eet	iid	iid	A	
+le	le	r	r	N	
+ctus	ctus	igdaz	igdaz	Num	
+leo	leo	riu	riu	A	
+liber	liber	ro	ro	Adv	
+o	o	pilu	pilu	Agr	
+ligu	ligu	ro	ro	Agr	
+la	la	kare	kare	Agr	
+li	li	ro	ro	A	
+tora	tora	dule	dule	Adv	
+lobo	lobo	r	r	Agr	
+rti	rti	up	up	Num	
+s	s	uldoz	uldoz	A	
+l	l	ru	ru	Adv	
+or	or	li	li	Num	
+em	em	n	n	V	
+luctu	luctu	ragda	ragda	N	
+s	s	z	z	Agr	
+m	m	n	n	Adv	
+a	a	ek	ek	V	
+gna	gna	me	me	N	
+mag	mag	ne	ne	P	
+nis	nis	kmoz	kmoz	V	
+m	m	n	n	V	
+alesuada	alesuada	erizaete	erizaete	A	
+mas	mas	nez	nez	Agr	
+s	s	z	z	D	
+a	a	e	e	D	
+mat	mat	ne	ne	Adv	
+t	t	ddo	ddo	D	
+is	is	z	z	Agr	
+m	m	n	n	Num	
+aur	aur	ea	ea	V	
+is	is	loz	loz	P	
+me	me	nid	nid	Num	
+tus	tus	az	az	V	
+mi	mi	no	no	Num	
+moles	moles	nu	nu	P	
+ti	ti	rizdo	rizdo	Agr	
+e	e	i	i	D	
+m	m	n	n	Num	
+oll	oll	ur	ur	Adv	
+is	is	roz	roz	P	
+mon	mon	n	n	A	
+te	te	umd	umd	Num	
+s	s	iz	iz	Adv	
+m	m	n	n	Num	
+orb	orb	u	u	Adv	
+i	i	lpo	lpo	N	
+mu	mu	n	n	Agr	
+s	s	az	az	V	
+n	n	m	m	Agr	
+am	am	en	en	N	
+na	na	mezgida	mezgida	A	
+scetur	scetur	l	l	P	
+nato	nato	m	m	Adv	
+que	que	edukai	edukai	Adv	
+ne	ne	m	m	Adv	
+c	c	ig	ig	Adv	
+neq	neq	mik	mik	P	
+ue	ue	ai	ai	P	
+net	net	m	m	V	
+u	u	id	id	Adv	
+s	s	az	az	Adv	
+nibh	nibh	moph	moph	Num	
+ni	ni	m	m	P	
+si	si	ozo	ozo	D	
+n	n	m	m	V	
+isl	isl	ozr	ozr	Agr	
+n	n	mu	mu	Adv	
+on	on	m	m	V	
+non	non	mu	mu	Num	
+um	um	man	man	P	
+my	my	nw	nw	A	
+nos	nos	m	m	A	
+tr	tr	uz	uz	P	
+a	a	dle	dle	D	
+nul	nul	mar	mar	V	
+la	la	re	re	V	
+nul	nul	ma	ma	N	
+lam	lam	rren	rren	Num	
+nunc	nunc	mamg	mamg	A	
+odio	odio	utou	utou	V	
+orci	orci	ulgo	ulgo	Num	
+ornar	ornar	ulme	ulme	D	
+e	e	li	li	P	
+partu	partu	be	be	A	
+rie	rie	ldalo	ldalo	D	
+nt	nt	imd	imd	V	
+p	p	bi	bi	Agr	
+ede	ede	ti	ti	N	
+pellente	pellente	bi	bi	Adv	
+s	s	rrim	rrim	Adv	
+que	que	dizkai	dizkai	V	
+penat	penat	bi	bi	Num	
+i	i	me	me	P	
+bus	bus	dopaz	dopaz	Agr	
+pe	pe	bi	bi	Num	
+r	r	l	l	Agr	
+p	p	bhe	bhe	N	
+ha	ha	lid	lid	D	
+retra	retra	le	le	Num	
+phasell	phasell	bhezirra	bhezirra	Num	
+us	us	z	z	N	
+p	p	br	br	P	
+latea	latea	edie	edie	Agr	
+po	po	b	b	V	
+rt	rt	ul	ul	Adv	
+a	a	de	de	V	
+pot	pot	bu	bu	Agr	
+enti	enti	dimdo	dimdo	Num	
+praese	praese	bl	bl	P	
+n	n	e	e	D	
+t	t	izimd	izimd	N	
+preti	preti	b	b	V	
+u	u	li	li	Adv	
+m	m	doan	doan	Num	
+p	p	blon	blon	N	
+rimis	rimis	oz	oz	N	
+pr	pr	blu	blu	Adv	
+oin	oin	om	om	D	
+p	p	ba	ba	Adv	
+ulv	ulv	r	r	V	
+inar	inar	fomel	fomel	D	
+p	p	b	b	V	
+uru	uru	ala	ala	D	
+s	s	z	z	P	
+q	q	kae	kae	P	
+uam	uam	n	n	A	
+quis	quis	kaoz	kaoz	A	
+quis	quis	ka	ka	Adv	
+q	q	o	o	N	
+ue	ue	zkai	zkai	Agr	
+rid	rid	l	l	A	
+icul	icul	ot	ot	N	
+us	us	ogaraz	ogaraz	A	
+ris	ris	l	l	V	
+us	us	ozaz	ozaz	Agr	
+rutr	rutr	ladla	ladla	Adv	
+um	um	n	n	D	
+sagi	sagi	ze	ze	P	
+ttis	ttis	koddoz	koddoz	N	
+sapie	sapie	ze	ze	N	
+n	n	boim	boim	Adv	
+scelerisq	scelerisq	zgir	zgir	Adv	
+ue	ue	ilozkai	ilozkai	Num	
+sed	sed	zit	zit	V	
+se	se	zi	zi	N	
+m	m	n	n	D	
+si	si	z	z	Num	
+t	t	od	od	Agr	
+soci	soci	zug	zug	P	
+is	is	ooz	ooz	A	
+socio	socio	zugo	zugo	D	
+squ	squ	uzka	uzka	Num	
+sod	sod	z	z	Agr	
+a	a	ute	ute	V	
+les	les	riz	riz	P	
+sol	sol	z	z	P	
+l	l	urrog	urrog	P	
+icit	icit	odato	odato	Agr	
+udin	udin	m	m	Num	
+su	su	zazg	zazg	A	
+scip	scip	obo	obo	P	
+it	it	d	d	D	
+suspen	suspen	zazbi	zazbi	Adv	
+di	di	mtoz	mtoz	V	
+sse	sse	zi	zi	P	
+ta	ta	dego	dego	V	
+citi	citi	do	do	A	
+tellu	tellu	dirr	dirr	N	
+s	s	az	az	Adv	
+tempo	tempo	dinb	dinb	Num	
+r	r	ul	ul	V	
+t	t	d	d	Agr	
+empu	empu	inb	inb	D	
+s	s	az	az	Num	
+ti	ti	domgo	domgo	P	
+ncidu	ncidu	t	t	V	
+n	n	a	a	A	
+t	t	md	md	Num	
+to	to	dulka	dulka	Adv	
+rq	rq	im	im	Agr	
+uent	uent	d	d	Adv	
+tor	tor	duldu	duldu	Agr	
+tor	tor	l	l	A	
+tr	tr	dloz	dloz	Adv	
+i	i	do	do	P	
+st	st	k	k	Adv	
+ique	ique	ai	ai	A	
+tu	tu	dal	dal	P	
+rpis	rpis	boz	boz	Adv	
+ull	ull	arre	arre	P	
+amcorper	amcorper	ngulbil	ngulbil	Adv	
+ul	ul	ardlo	ardlo	Adv	
+trices	trices	giz	giz	Num	
+ultricie	ultricie	ard	ard	Agr	
+s	s	logoiz	logoiz	V	
+urn	urn	a	a	Agr	
+a	a	lme	lme	D	
+u	u	a	a	Agr	
+t	t	d	d	Adv	
+v	v	fe	fe	Num	
+ariu	ariu	l	l	P	
+s	s	oaz	oaz	Agr	
+ve	ve	fi	fi	Adv	
+veh	veh	f	f	D	
+i	i	ihogar	ihogar	N	
+cula	cula	e	e	Agr	
+ve	ve	fi	fi	Agr	
+l	l	r	r	Num	
+veli	veli	firo	firo	P	
+t	t	d	d	N	
+venenat	venenat	fimimed	fimimed	Agr	
+is	is	oz	oz	N	
+vest	vest	fiz	fiz	N	
+ibu	ibu	do	do	Num	
+lum	lum	paran	paran	V	
+vita	vita	fo	fo	Agr	
+e	e	dei	dei	N	
+vivamu	vivamu	fo	fo	V	
+s	s	fenaz	fenaz	N	
+v	v	fofi	fofi	P	
+iverr	iverr	l	l	Num	
+a	a	le	le	V	
+vol	vol	f	f	Num	
+utp	utp	u	u	Num	
+at	at	radbed	radbed	V	
+vulputat	vulputat	f	f	D	
+e	e	arbadedi	arbadedi	Adv	
+Vitae curae aliquet platea non cum ac accumsan.	vita-e cura-e a-liquet p-latea n-on c-um a-c a-ccumsan	fo-dei gale-i erokai-d br-edie mu-m ga-n e-g egganze-m	Fodei galei erokaid bredie mum gan eg egganzem.	S	(S (NP-SBJ (DT Vitae) (NN curae)) (VP (VBZ aliquet) (NP (NP (NNS platea)) (PP (IN non) (NP (QP (CD cum) (CD ac)) (NNS accumsan))))) (. .))
+Dolor velit platea odio condimentum gravida scelerisque.	do-lo-r veli-t p-latea odio co-ndiment-u-m gravid-a scelerisq-ue	tu-r-ul firo-d br-edie utou g-umtonimd-a-n kle-fote zgir-ilozkai	Turul firod bredie utou gumtonimdan klefote zgirilozkai.	S	(S (NP-SBJ (NNP Dolor) (NNP velit)) (VP (MD platea) (ADVP (RB odio)) (VP (VB condimentum) (NP (PRP$ gravida) (NNS scelerisque)))) (. .))
+Morbi porta.	m-orb-i po-rt-a	n-u-lpo b-ul-de	Nulpo bulde.	S	(S (NP-SBJ (NN Morbi)) (VP (VBZ porta)) (. .))
+Metus risus mollis neque nonummy rutrum mauris odio.	me-tus ris-us m-oll-is neq-ue non-um-my rutr-um m-aur-is odio	nid-az l-ozaz n-ur-roz mik-ai mu-man-nw ladla-n n-ea-loz utou	Nidaz lozaz nurroz mikai mumannw ladlan nealoz utou.	S	(S (NP-SBJ (DT Metus) (NN risus)) (VP (VBZ mollis) (NP (DT neque) (JJ nonummy) (JJ rutrum) (JJ mauris) (NN odio))) (. .))
+Nulla curae suspendisse leo erat.	nul-la cura-e suspen-di-sse leo e-rat	mar-re gale-i zazbi-mtoz-zi riu i-led	Marre galei zazbimtozzi riu iled.	S	(S (NP-SBJ (PRP Nulla)) (VP (VBZ curae) (NP-PRD (PRP$ suspendisse) (JJ leo) (NN erat))) (. .))
+Risus massa sodales nullam quam.	ris-us mas-s-a sod-a-les nul-lam q-uam	l-ozaz nez-z-e z-ute-riz ma-rren kae-n	Lozaz nezze zuteriz marren kaen.	S	(S (NP-SBJ (NN Risus) (NNS massa)) (VP (VBD sodales) (PP-TMP (IN nullam) (NP (NNP quam)))) (. .))
+Purus fusce.	p-uru-s fus-ce	b-ala-z va-zgi	Balaz vazgi.	S	(S (NP-SBJ (NNS Purus)) (VP (VBD fusce)) (. .))
+Dolor donec.	do-lo-r d-on-ec	tu-r-ul t-u-mig	Turul tumig.	S	(S (NP-SBJ (NN Dolor)) (VP (VBD donec)) (. .))
+Justo class.	jus-to clas-s	c-hazdu gr-ezz	CHazdu grezz.	S	(S (NP-SBJ (PRP Justo)) (VP (VBZ class)) (. .))
+Lacus porta fringilla vivamus proin est arcu.	lac-u-s po-rt-a frin-gilla vivamu-s pr-oin est arcu	r-eg-az b-ul-de vlomko-rre fo-fenaz blu-om izd elga	Regaz bulde vlomkorre fofenaz bluom izd elga.	S	(S (NP-SBJ (PRP$ Lacus) (JJ porta) (NN fringilla)) (VP (VBD vivamus) (NP (DT proin) (JJ est) (NN arcu))) (. .))
+Vitae etiam nullam parturient fames gravida cum at dapibus at habitasse a augue ad penatibus erat.	vita-e e-tiam nul-lam partu-rie-nt fa-mes gravid-a c-um at d-ap-ibus at hab-itass-e a a-u-gue ad penat-i-bus e-rat	fo-dei id-oen ma-rren be-ldalo-imd ven-iz kle-fote ga-n ed t-eb-opaz ed hepo-de-zzi e eak-a-i et bi-me-dopaz i-led	Fodei idoen marren beldaloimd veniz klefote gan ed tebopaz ed hepodezzi e eakai et bimedopaz iled.	S	(S (NP-SBJ (NNP Vitae)) (VP (VBD etiam) (VP (VP (VBN nullam) (PP (IN parturient) (NP (NP (DT fames) (NN gravida)) (PP (TO cum) (NP (JJ at) (NN dapibus))))) (PP-TMP (IN at) (NP (NNS habitasse)))) (CC a) (VP (ADVP-TMP (RB augue)) (VBN ad) (NP (DT penatibus) (NN erat))))) (. .))
+Massa fames orci est egestas vitae est dis est potenti magna vel.	mas-s-a fa-mes orci est egesta-s vita-e est d-is est pot-enti m-a-gna ve-l	nez-z-e ven-iz ulgo izd i-kizdez fo-dei izd t-oz izd bu-dimdo n-ek-me fi-r	Nezze veniz ulgo izd ikizdez fodei izd toz izd budimdo nekme fir.	S	(S (NP-SBJ (NP (DT Massa)) (PP (IN fames) (NP (NP (PRP$ orci) (NNS est)) (PP (IN egestas) (NP (JJ vitae) (NN est) (NN dis)))))) (VP (VBP est) (PP-PRD-LOC (IN potenti) (NP (DT magna) (NN vel)))) (. .))
+Proin vitae mattis in duis inceptos eni potenti ve.	pr-oin vita-e mat-t-is i-n duis i-n-ceptos eni pot-enti ve	blu-om fo-dei ne-ddo-z o-m taoz omgib-du-z imo bu-dimdo fi	Bluom fodei neddoz om taoz omgibduz imo budimdo fi.	S	(S (CC Proin) (NP-TTL-SBJ (NNP vitae) (NNPS mattis)) (VP (VBD in) (PP-LOC (IN duis) (NP (QP (CD inceptos) (IN eni) (CD potenti)) (NNS ve)))) (. .))
+Augue felis vitae tempus praesent eu suspendisse nibh.	a-u-gue f-eli-s vita-e t-empu-s praese-n-t e-u suspen-di-sse nibh	eak-a-i vir-o-z fo-dei d-inb-az bl-e-izimd i-a zazbi-mtoz-zi moph	Eakai viroz fodei dinbaz bleizimd ia zazbimtozzi moph.	S	(S (NP-SBJ (DT Augue) (NN felis)) (VP (VBD vitae) (ADJP-PRD (ADJP (RB tempus) (JJR praesent)) (PP (IN eu) (PP-TMP (IN suspendisse) (NP (NNP nibh)))))) (. .))
+Ipsum lorem auctor nostra leo tellus mus urna id mollis fermentum purus id.	ipsu-m l-or-em auc-t-or nos-tr-a leo tellu-s mu-s urn-a id m-oll-is fe-r-mentum p-uru-s id	obz-an ru-li-n ea-gd-ul m-uz-dle riu dirr-az n-az a-lme ot n-ur-roz vi-ln-imdan b-ala-z ot	Obzan rulin eagdul muzdle riu dirraz naz alme ot nurroz vilnimdan balaz ot.	S	(S (CC Ipsum) (NP-SBJ (NP (NP (DT lorem) (NN auctor) (POS nostra)) (NN leo)) (PP (IN tellus) (NP (DT mus) (JJ urna) (NN id) (NN mollis)))) (VP (VBZ fermentum) (NP (JJ purus) (NNS id))) (. .))
+Velit justo proin tellus sollicitudin.	veli-t jus-to pr-oin tellu-s sol-l-icit-udin	firo-d c-hazdu blu-om dirr-az z-urrog-odato-m	Firod chazdu bluom dirraz zurrogodatom.	S	(S (NP-SBJ (PRP Velit)) (VP (VBP justo) (NP (NNS proin) (CC tellus) (NNS sollicitudin))) (. .))
+Velit magna etiam.	veli-t m-a-gna e-tiam	firo-d n-ek-me id-oen	Firod nekme idoen.	S	(S (NP-SBJ (PRP Velit)) (VP (VBD magna) (ADJP-PRD (JJ etiam))) (. .))
+Lorem netus non platea et nulla mi justo.	l-or-em net-u-s n-on p-latea et nul-la mi jus-to	ru-li-n m-id-az mu-m br-edie id mar-re no c-hazdu	Rulin midaz mum bredie id marre no chazdu.	S	(S (NP-SBJ (PRP$ Lorem) (NN netus)) (VP (VBZ non) (ADVP (RB platea)) (NP-PRD (NP (NN et)) (PP (IN nulla) (NP (JJ mi) (NN justo))))) (. .))
+Etiam porta etiam nostra luctus sed vestibulum.	e-tiam po-rt-a e-tiam nos-tr-a luctu-s sed vest-ibu-lum	id-oen b-ul-de id-oen m-uz-dle ragda-z zit fiz-do-paran	Idoen bulde idoen muzdle ragdaz zit fizdoparan.	S	(S (NP-SBJ (DT Etiam) (NN porta) (NN etiam)) (VP (VBZ nostra) (NP (CD luctus) (JJ sed) (NNS vestibulum))) (. .))
+Vitae porta blandit ac pede nisl gravida nisl orci sodales eu.	vita-e po-rt-a blan-dit a-c p-ede n-isl gravid-a n-isl orci sod-a-les e-u	fo-dei b-ul-de prem-tod e-g bi-ti m-ozr kle-fote m-ozr ulgo z-ute-riz i-a	Fodei bulde premtod eg biti mozr klefote mozr ulgo zuteriz ia.	S	(S (NP-SBJ (NP (DT Vitae) (NN porta)) (PP (IN blandit) (NP (NNP ac) (NNP pede)))) (VP (VBZ nisl) (NP-PRD (NP (DT gravida) (NN nisl)) (PP (IN orci) (NP (DT sodales) (NN eu))))) (. .))
+Felis ipsum amet suspendisse lacinia suspendisse.	f-eli-s ipsu-m amet suspen-di-sse la-cini-a suspen-di-sse	vir-o-z obz-an enid zazbi-mtoz-zi r-eg-omoe zazbi-mtoz-zi	Viroz obzan enid zazbimtozzi regomoe zazbimtozzi.	S	(S (NP-SBJ (DT Felis) (CD ipsum) (NNS amet)) (VP (VBD suspendisse) (PP-TMP (IN lacinia) (NP (CD suspendisse)))) (. .))
+Purus magna metus interdum dignissim justo ultricies vestibulum.	p-uru-s m-a-gna me-tus int-erdum dig-niss-im jus-to ultricie-s vest-ibu-lum	b-ala-z n-ek-me nid-az om-diltan to-kmozz-on c-hazdu ard-logoiz fiz-do-paran	Balaz nekme nidaz omdiltan tokmozzon chazdu ardlogoiz fizdoparan.	S	(S (ADVP-TMP (RB Purus)) (NP-SBJ (PRP magna)) (VP (VBD metus) (NP-PRD (NP (RB interdum) (NN dignissim)) (PP (IN justo) (NP (NNP ultricies) (NNP vestibulum))))) (. .))
+Metus morbi accumsan dis potenti pharetra.	me-tus m-orb-i a-ccumsan d-is pot-enti p-ha-retra	nid-az n-u-lpo egganze-m t-oz bu-dimdo bhe-lid-le	Nidaz nulpo egganzem toz budimdo bhelidle.	S	(S (NP-SBJ (DT Metus) (CD morbi) (NNS accumsan)) (VP (VBD dis) (PP-TMP (IN potenti) (NP (CD pharetra)))) (. .))
+Fusce dolor.	fus-ce do-lo-r	va-zgi tu-r-ul	Vazgi turul.	S	(S (NP-SBJ (NNS Fusce)) (VP (VBD dolor)) (. .))
+Proin felis auctor luctus convallis vehicula torquent.	pr-oin f-eli-s auc-t-or luctu-s c-o-nva-llis veh-i-cula to-rq-uent	blu-om vir-o-z ea-gd-ul ragda-z g-um-ferr-oz f-ihogar-e dulka-im-d	Bluom viroz eagdul ragdaz gumferroz fihogare dulkaimd.	S	(S (NP-SBJ (PRP$ Proin) (JJ felis) (NN auctor)) (VP (VBD luctus) (NP (DT convallis) (JJ vehicula) (NN torquent))) (. .))
+Class justo quam urna vestibulum ut ultricies nonummy varius eget ultricies.	clas-s jus-to q-uam urn-a vest-ibu-lum u-t ultricie-s non-um-my v-ariu-s eget ultricie-s	gr-ezz c-hazdu kae-n a-lme fiz-do-paran a-d ard-logoiz mu-man-nw fe-l-oaz ikid ard-logoiz	Grezz chazdu kaen alme fizdoparan ad ardlogoiz mumannw feloaz ikid ardlogoiz.	S	(S (NP-SBJ (DT Class) (JJ justo) (CD quam) (NNP urna) (NNS vestibulum)) (VP (VBD ut) (PP-CLR (IN ultricies) (NP (NNS nonummy))) (NP-TMP (RBR varius) (DT eget) (NN ultricies))) (. .))
+Lorem lacus hac diam nisi.	l-or-em lac-u-s hac diam ni-si	ru-li-n r-eg-az heg toen m-ozo	Rulin regaz heg toen mozo.	S	(S (NP-SBJ (PRP Lorem)) (VP (VBP lacus) (NP (NNS hac) (CC diam) (NNS nisi))) (. .))
+Velit proin magnis tortor fames augue proin tortor.	veli-t pr-oin mag-nis tor-tor fa-mes a-u-gue pr-oin tor-tor	firo-d blu-om ne-kmoz duldu-l ven-iz eak-a-i blu-om duldu-l	Firod bluom nekmoz duldul veniz eakai bluom duldul.	S	(S (NP-SBJ (DT Velit) (NN proin)) (VP (VBZ magnis) (NP (NP (NNS tortor)) (PP (IN fames) (NP (QP (CD augue) (CD proin)) (NNS tortor))))) (. .))
+Netus donec a aliquam eu.	net-u-s d-on-ec a aliqua-m e-u	m-id-az t-u-mig e e-rokaen i-a	Midaz tumig e erokaen ia.	S	(S (NP-SBJ (DT Netus)) (VP (VBD donec) (PP-DIR (IN a) (NP (NNP aliquam) (NNP eu)))) (. .))
+Netus purus sed metus varius.	net-u-s p-uru-s sed me-tus v-ariu-s	m-id-az b-ala-z zit nid-az fe-l-oaz	Midaz balaz zit nidaz feloaz.	S	(S (NP-TTL-SBJ (NNP Netus) (NNP purus)) (VP (VBD sed) (PP-LOC (IN metus) (NP (CD varius)))) (. .))
+Proin morbi condimentum ad.	pr-oin m-orb-i co-ndiment-u-m ad	blu-om n-u-lpo g-umtonimd-a-n et	Bluom nulpo gumtonimdan et.	S	(S (CC Proin) (NP-SBJ (DT morbi) (NN condimentum)) (VP (VBD ad)) (. .))
+Lacus curae pretium hac sociosqu viverra neque cum vitae sem fermentum amet libero ac.	lac-u-s cura-e preti-u-m hac socio-squ v-iverr-a neq-ue c-um vita-e se-m fe-r-mentum amet liber-o a-c	r-eg-az gale-i b-li-doan heg zugo-uzka fofi-l-le mik-ai ga-n fo-dei zi-n vi-ln-imdan enid ro-pilu e-g	Regaz galei blidoan heg zugouzka fofille mikai gan fodei zin vilnimdan enid ropilu eg.	S	(S (NP-SBJ (NP (NNS Lacus)) (PP (IN curae) (NP (NN pretium) (NNS hac)))) (VP (VBD sociosqu) (NP-EXT (CD viverra) (NN neque)) (PP-DIR (IN cum) (ADVP-TMP (NP (DT vitae) (NN sem)) (JJR fermentum))) (PP-DIR (TO amet) (NP (CD libero) (NNS ac)))) (. .))
+Curae metus sit nostra erat mus.	cura-e me-tus si-t nos-tr-a e-rat mu-s	gale-i nid-az z-od m-uz-dle i-led n-az	Galei nidaz zod muzdle iled naz.	S	(S (NP-SBJ (EX Curae)) (VP (VBD metus) (NP-PRD (JJ sit) (NN nostra) (NN erat) (NNS mus))) (. .))
+Donec proin a vivamus aptent vitae venenatis.	d-on-ec pr-oin a vivamu-s ap-t-ent vita-e venenat-is	t-u-mig blu-om e fo-fenaz eb-dim-d fo-dei fimimed-oz	Tumig bluom e fofenaz ebdimd fodei fimimedoz.	S	(S (NP-SBJ (JJ Donec) (NNS proin)) (VP (VBP a) (ADJP-PRD (JJ vivamus) (PP (IN aptent) (NP (NNP vitae) (NNP venenatis))))) (. .))
+Velit dolor.	veli-t do-lo-r	firo-d tu-r-ul	Firod turul.	S	(S (NP-SBJ (NN Velit)) (VP (VBZ dolor)) (. .))
+Fusce lacus.	fus-ce lac-u-s	va-zgi r-eg-az	Vazgi regaz.	S	(S (NP-SBJ (NN Fusce)) (VP (VBD lacus)) (. .))
+Dolor fames.	do-lo-r fa-mes	tu-r-ul ven-iz	Turul veniz.	S	(SBARQ (WHADVP (WRB Dolor)) (FRAG (ADJP (JJ fames))) (. .))
+Massa vitae est magna curae.	mas-s-a vita-e est m-a-gna cura-e	nez-z-e fo-dei izd n-ek-me gale-i	Nezze fodei izd nekme galei.	S	(S (NP-SBJ (NN Massa) (NNS vitae)) (VP (VBD est) (PP-TMP (IN magna) (NP (NNP curae)))) (. .))
+Lacus etiam sit nisi nascetur dignissim eget est class est.	lac-u-s e-tiam si-t ni-si na-scetur dig-niss-im eget est clas-s est	r-eg-az id-oen z-od m-ozo mezgida-l to-kmozz-on ikid izd gr-ezz izd	Regaz idoen zod mozo mezgidal tokmozzon ikid izd grezz izd.	S	(S (NP-SBJ (DT Lacus) (JJ etiam) (NNP sit) (NNP nisi)) (VP (VBZ nascetur) (NP-PRD (DT dignissim) (NN eget) (NN est)) (PP-LOC (IN class) (NP (NNP est)))) (. .))
+Metus neque phasellus tincidunt lorem quisque viverra diam pellentesque volutpat.	me-tus neq-ue phasell-us ti-ncidu-n-t l-or-em quis-q-ue v-iverr-a diam pellente-s-que vol-utp-at	nid-az mik-ai bhezirra-z domgo-t-a-md ru-li-n ka-o-zkai fofi-l-le toen bi-rrim-dizkai f-u-radbed	Nidaz mikai bhezirraz domgotamd rulin kaozkai fofille toen birrimdizkai furadbed.	S	(S (NP-SBJ (NP (ADJP (NNP Metus) (JJ neque)) (NNP phasellus))) (VP (VBZ tincidunt) (NP-PRD (DT lorem) (NN quisque) (CC viverra) (JJ diam) (NNS pellentesque) (NN volutpat))) (. .))
+Augue etiam netus nam adipiscing donec ante lobortis purus.	a-u-gue e-tiam net-u-s n-am adip-is-c-ing d-on-ec a-nte lobo-rti-s p-uru-s	eak-a-i id-oen m-id-az m-en etob-ozg-om-k t-u-mig emd-i r-up-uldoz b-ala-z	Eakai idoen midaz men etobozgomk tumig emdi rupuldoz balaz.	S	(S (NP-SBJ (PRP Augue)) (VP (VBP etiam) (S (NP-SBJ (PRP netus)) (VP (TO nam) (VP (VB adipiscing) (NP (NNS donec)) (PP-LOC (IN ante) (NP (DT lobortis) (NN purus))))))) (. .))
+Lacus nulla molestie dis feugiat dis.	lac-u-s nul-la moles-ti-e d-is feugi-at d-is	r-eg-az mar-re nu-rizdo-i t-oz via-koed t-oz	Regaz marre nurizdoi toz viakoed toz.	S	(S-HLN (NP-SBJ (NNP Lacus) (NN nulla)) (VP (VBZ molestie) (PP-DIR (TO dis) (NP (NN feugiat) (CD dis)))) (. .))
+Morbi lacus litora volutpat adipiscing libero curae aliquet.	m-orb-i lac-u-s li-tora vol-utp-at adip-is-c-ing liber-o cura-e a-liquet	n-u-lpo r-eg-az ro-dule f-u-radbed etob-ozg-om-k ro-pilu gale-i erokai-d	Nulpo regaz rodule furadbed etobozgomk ropilu galei erokaid.	S	(S (NP-SBJ (JJ Morbi) (CC lacus) (NN litora) (NNS volutpat)) (VP (MD adipiscing) (VP (VB libero) (NP (DT curae) (NNS aliquet)))) (. .))
+Ipsum justo lectus luctus euismod.	ipsu-m jus-to le-ctus luctu-s euism-o-d	obz-an c-hazdu r-igdaz ragda-z ia-ozn-ut	Obzan chazdu rigdaz ragdaz iaoznut.	S	(S (NP-SBJ (PRP Ipsum)) (VP (VBZ justo) (NP-PRD (PRP$ lectus) (JJ luctus) (NN euismod))) (. .))
+Lacus fames eros ut facilisis suspendisse sit nisl.	lac-u-s fa-mes eros u-t f-a-c-ilisis suspen-di-sse si-t n-isl	r-eg-az ven-iz iluz a-d vegor-oz-o-z zazbi-mtoz-zi z-od m-ozr	Regaz veniz iluz ad vegorozoz zazbimtozzi zod mozr.	S	(S (NP-SBJ (PRP$ Lacus) (NN fames)) (VP (VBZ eros) (ADVP (RB ut)) (NP-PRD (NP (NN facilisis)) (PP (IN suspendisse) (NP (JJ sit) (NN nisl))))) (. .))
+Ipsum neque nunc non nulla integer dapibus ante eu metus litora egestas per pharetra.	ipsu-m neq-ue nunc n-on nul-la inte-ger d-ap-ibus a-nte e-u me-tus li-tora egesta-s pe-r p-ha-retra	obz-an mik-ai mamg mu-m mar-re o-mdikil t-eb-opaz emd-i i-a nid-az ro-dule i-kizdez bi-l bhe-lid-le	Obzan mikai mamg mum marre omdikil tebopaz emdi ia nidaz rodule ikizdez bil bhelidle.	S	(S (NP-SBJ (DT Ipsum) (NNS neque)) (VP (VBP nunc) (NP (NP (DT non) (ADJP (CD nulla) (NN integer)) (NN dapibus)) (PP (IN ante) (NP (DT eu) (NN metus) (NN litora))) (PP-DIR (TO egestas) (NP (CD per) (NN pharetra))))) (. .))
+Purus augue porta nunc per varius elementum.	p-uru-s a-u-gue po-rt-a nunc pe-r v-ariu-s ele-ment-u-m	b-ala-z eak-a-i b-ul-de mamg bi-l fe-l-oaz irini-m-da-n	Balaz eakai bulde mamg bil feloaz irinimdan.	S	(S (NP-SBJ (PRP$ Purus) (JJ augue) (NN porta)) (VP (VBD nunc) (NP (DT per) (JJ varius) (NN elementum))) (. .))
+Curae risus.	cura-e ris-us	gale-i l-ozaz	Galei lozaz.	S	(S (NP-SBJ (NN Curae)) (VP (VBZ risus)) (. .))
+Etiam massa nibh ipsum dignissim pretium tellus.	e-tiam mas-s-a nibh ipsu-m dig-niss-im preti-u-m tellu-s	id-oen nez-z-e moph obz-an to-kmozz-on b-li-doan dirr-az	Idoen nezze moph obzan tokmozzon blidoan dirraz.	S	(S (NP-SBJ (DT Etiam) (NN massa)) (ADVP (RB nibh)) (VP (VBD ipsum) (NP (DT dignissim) (JJ pretium) (NN tellus))) (. .))
+Porta velit ultricies felis ad.	po-rt-a veli-t ultricie-s f-eli-s ad	b-ul-de firo-d ard-logoiz vir-o-z et	Bulde firod ardlogoiz viroz et.	S	(S (NP-SBJ (NNP Porta) (NNP velit)) (VP (VBZ ultricies) (NP (JJ felis) (NNS ad))) (. .))
+Proin class montes suscipit.	pr-oin clas-s mon-te-s su-scip-it	blu-om gr-ezz n-umd-iz zazg-obo-d	Bluom grezz numdiz zazgobod.	S	(S (NP-SBJ (JJ Proin)) (VP (VBD class) (NP (PRP$ montes) (NNS suscipit))) (. .))
+Class neque laoreet ante lacus.	clas-s neq-ue la-or-eet a-nte lac-u-s	gr-ezz mik-ai r-eul-iid emd-i r-eg-az	Grezz mikai reuliid emdi regaz.	S	(S (NP-SBJ (PRP Class)) (VP (VBP neque) (PP-CLR (IN laoreet) (NP (DT ante) (NN lacus)))) (. .))
+Neque felis proin dictum mi sagittis.	neq-ue f-eli-s pr-oin d-i-ctum mi sagi-ttis	mik-ai vir-o-z blu-om t-ogd-an no ze-koddoz	Mikai viroz bluom togdan no zekoddoz.	S	(S (NP-SBJ (NNP Neque)) (VP (VBZ felis) (ADVP-MNR (RB proin)) (VP (VBG dictum) (NP (DT mi) (NN sagittis)))) (. .))
+Proin vitae augue lorem potenti eros et arcu.	pr-oin vita-e a-u-gue l-or-em pot-enti eros et arcu	blu-om fo-dei eak-a-i ru-li-n bu-dimdo iluz id elga	Bluom fodei eakai rulin budimdo iluz id elga.	S	(S (NP-SBJ (NNP Proin) (POS vitae)) (VP (VBN augue) (NP (QP (CD lorem) (CD potenti))) (PP-DIR (TO eros) (NP (QP (CD et) (CD arcu))))) (. .))
+Fames nulla ullamcorper nibh aenean fringilla.	fa-mes nul-la ull-amcorper nibh a-en-ean frin-gilla	ven-iz mar-re arre-ngulbil moph ei-mi-em vlomko-rre	Veniz marre arrengulbil moph eimiem vlomkorre.	S	(S (NP-SBJ (NNP Fames)) (VP (VBZ nulla) (ADVP-MNR (RB ullamcorper)) (VP (VBG nibh) (NP (DT aenean) (NN fringilla)))) (. .))
+Risus nulla potenti habitasse nunc enim id lacus.	ris-us nul-la pot-enti hab-itass-e nunc enim id lac-u-s	l-ozaz mar-re bu-dimdo hepo-de-zzi mamg imon ot r-eg-az	Lozaz marre budimdo hepodezzi mamg imon ot regaz.	S	(S (NP-SBJ (JJ Risus) (CC nulla) (NN potenti) (NNS habitasse)) (VP (MD nunc) (VP (VB enim) (NP (DT id) (NNS lacus)))) (. .))
+Justo massa varius ve ipsum metus bibendum.	jus-to mas-s-a v-ariu-s ve ipsu-m me-tus bib-endu-m	c-hazdu nez-z-e fe-l-oaz fi obz-an nid-az pop-i-mtan	CHazdu nezze feloaz fi obzan nidaz popimtan.	S	(S (NP-SBJ (PRP$ Justo) (JJ massa) (NN varius)) (VP (VBD ve) (NP (DT ipsum) (JJ metus) (NN bibendum))) (. .))
+Porta nulla.	po-rt-a nul-la	b-ul-de mar-re	Bulde marre.	S	(S (NP-SBJ (NN Porta)) (VP (VBD nulla)) (. .))
+Magna ipsum diam conubia.	m-a-gna ipsu-m diam co-nubia	n-ek-me obz-an toen gum-apoe	Nekme obzan toen gumapoe.	S	(S (NP-SBJ (NN Magna)) (VP (VBZ ipsum) (NP (DT diam) (NNS conubia))) (. .))
+Etiam metus massa suscipit velit commodo cursus urna dolor suspendisse est eget.	e-tiam me-tus mas-s-a su-scip-it veli-t comm-odo curs-us urn-a do-lo-r suspen-di-sse est eget	id-oen nid-az nez-z-e zazg-obo-d firo-d gunn-utu ga-lzaz a-lme tu-r-ul zazbi-mtoz-zi izd ikid	Idoen nidaz nezze zazgobod firod gunnutu galzaz alme turul zazbimtozzi izd ikid.	S	(S (NP-SBJ (NNP Etiam) (NNP metus)) (ADVP (RB massa)) (VP (VBD suscipit) (SBAR (IN velit) (S (NP-SBJ (JJ commodo) (NNS cursus)) (ADVP (RB urna)) (VP (VBN dolor) (NP (NNP suspendisse) (NNP est) (NNP eget)))))) (. .))
+Porta etiam.	po-rt-a e-tiam	b-ul-de id-oen	Bulde idoen.	S	(S (NP-SBJ (NN Porta)) (VP (VBZ etiam)) (. .))
+Vitae ipsum.	vita-e ipsu-m	fo-dei obz-an	Fodei obzan.	S	(S (NP-SBJ (PRP Vitae)) (VP (VBZ ipsum)) (. .))
+Fames etiam justo tempor adipiscing proin nisl class ridiculus vel sollicitudin risus amet.	fa-mes e-tiam jus-to tempo-r adip-is-c-ing pr-oin n-isl clas-s rid-icul-us ve-l sol-l-icit-udin ris-us amet	ven-iz id-oen c-hazdu dinb-ul etob-ozg-om-k blu-om m-ozr gr-ezz l-ot-ogaraz fi-r z-urrog-odato-m l-ozaz enid	Veniz idoen chazdu dinbul etobozgomk bluom mozr grezz lotogaraz fir zurrogodatom lozaz enid.	S	(S (NP-SBJ (PRP Fames)) (VP (VBD etiam) (VP (VBN justo) (NP-PRD (NP (DT tempor) (NNS adipiscing) (CC proin) (NN nisl) (NN class)) (PP (IN ridiculus) (NP (NNP vel)))) (PP-TMP (IN sollicitudin) (NP (CD risus) (NNS amet))))) (. .))
+Fusce etiam.	fus-ce e-tiam	va-zgi id-oen	Vazgi idoen.	S	(SBARQ (WHADVP (WRB Fusce)) (FRAG (ADJP (JJ etiam))) (. .))
+Velit felis scelerisque id luctus volutpat.	veli-t f-eli-s scelerisq-ue id luctu-s vol-utp-at	firo-d vir-o-z zgir-ilozkai ot ragda-z f-u-radbed	Firod viroz zgirilozkai ot ragdaz furadbed.	S	(S (NP-SBJ (PRP$ Velit) (NN felis)) (VP (VBD scelerisque) (ADJP-PRD (JJ id) (CC luctus) (JJ volutpat))) (. .))
+Augue vitae ullamcorper per ve etiam mi phasellus iaculis ornare orci aptent.	a-u-gue vita-e ull-amcorper pe-r ve e-tiam mi phasell-us iacu-l-is ornar-e orci ap-t-ent	eak-a-i fo-dei arre-ngulbil bi-l fi id-oen no bhezirra-z oega-r-oz ulme-li ulgo eb-dim-d	Eakai fodei arrengulbil bil fi idoen no bhezirraz oegaroz ulmeli ulgo ebdimd.	S	(S (CC Augue) (NP-SBJ (NP (DT vitae) (RBS ullamcorper) (JJ per) (NN ve)) (PP (IN etiam) (NP (NNS mi)))) (VP (VBD phasellus) (NP-PRD (NP (NN iaculis) (NN ornare)) (PP-LOC (IN orci) (NP (NNS aptent))))) (. .))
+Donec class taciti suspendisse.	d-on-ec clas-s ta-citi suspen-di-sse	t-u-mig gr-ezz dego-do zazbi-mtoz-zi	Tumig grezz degodo zazbimtozzi.	S	(S (NP-SBJ (NN Donec)) (VP (VBZ class) (NP (DT taciti) (NNS suspendisse))) (. .))
+Augue magna nec eni consectetuer curae ve convallis eros gravida et.	a-u-gue m-a-gna ne-c eni cons-ectetue-r cura-e ve c-o-nva-llis eros gravid-a et	eak-a-i n-ek-me m-ig imo gu-mzig-didail gale-i fi g-um-ferr-oz iluz kle-fote id	Eakai nekme mig imo gumzigdidail galei fi gumferroz iluz klefote id.	S	(S (NP-SBJ (NP (NNP Augue) (NNP magna) (POS nec)) (JJ eni) (NN consectetuer)) (VP (VBZ curae) (SBAR-TMP (IN ve) (S (NP-SBJ (NNP convallis) (NNP eros) (POS gravida)) (VP (VBZ et))))) (. .))
+Class netus erat montes nostra cum.	clas-s net-u-s e-rat mon-te-s nos-tr-a c-um	gr-ezz m-id-az i-led n-umd-iz m-uz-dle ga-n	Grezz midaz iled numdiz muzdle gan.	S	(S (NP-SBJ (NNP Class)) (VP (VBZ netus) (ADVP-MNR (RB erat)) (VP (VBG montes) (NP (DT nostra) (NN cum)))) (. .))
+Justo massa enim vel velit augue.	jus-to mas-s-a enim ve-l veli-t a-u-gue	c-hazdu nez-z-e imon fi-r firo-d eak-a-i	CHazdu nezze imon fir firod eakai.	S	(S (NP-SBJ (DT Justo) (NNP massa)) (VP (VBZ enim) (PP-CLR (TO vel) (NP (DT velit) (NN augue)))) (. .))
+Proin vitae facilisi non duis molestie at condimentum ut taciti hac.	pr-oin vita-e faci-lisi n-on duis moles-ti-e at co-ndiment-u-m u-t ta-citi hac	blu-om fo-dei v-egorozo mu-m taoz nu-rizdo-i ed g-umtonimd-a-n a-d dego-do heg	Bluom fodei vegorozo mum taoz nurizdoi ed gumtonimdan ad degodo heg.	S	(S (NP-SBJ (NP (NNP Proin) (NNP vitae) (POS facilisi)) (JJ non) (NN duis)) (VP (VBZ molestie) (SBAR-TMP (IN at) (S (NP-SBJ (NNP condimentum) (NNP ut) (POS taciti)) (VP (VBZ hac))))) (. .))
+Lorem magna risus quam potenti ac sociis et torquent conubia lobortis massa dignissim phasellus.	l-or-em m-a-gna ris-us q-uam pot-enti a-c soci-is et to-rq-uent co-nubia lobo-rti-s mas-s-a dig-niss-im phasell-us	ru-li-n n-ek-me l-ozaz kae-n bu-dimdo e-g zug-ooz id dulka-im-d gum-apoe r-up-uldoz nez-z-e to-kmozz-on bhezirra-z	Rulin nekme lozaz kaen budimdo eg zugooz id dulkaimd gumapoe rupuldoz nezze tokmozzon bhezirraz.	S	(S (NP-SBJ (NP (NNS Lorem)) (PP (IN magna) (NP (NN risus) (NNS quam)))) (VP (VBD potenti) (NP-EXT (CD ac) (NN sociis)) (PP-DIR (IN et) (ADVP-TMP (NP (DT torquent) (NN conubia)) (JJR lobortis))) (PP-DIR (TO massa) (NP (CD dignissim) (NNS phasellus)))) (. .))
+Fusce morbi leo nunc lorem.	fus-ce m-orb-i leo nunc l-or-em	va-zgi n-u-lpo riu mamg ru-li-n	Vazgi nulpo riu mamg rulin.	S	(S (NP-TTL-SBJ (NNP Fusce) (NNP morbi)) (VP (VBD leo) (PP-LOC (IN nunc) (NP (CD lorem)))) (. .))
+Vitae felis aptent pulvinar cras mollis in curae morbi a luctus massa nonummy arcu.	vita-e f-eli-s ap-t-ent p-ulv-inar cras m-oll-is i-n cura-e m-orb-i a luctu-s mas-s-a non-um-my arcu	fo-dei vir-o-z eb-dim-d ba-r-fomel glez n-ur-roz o-m gale-i n-u-lpo e ragda-z nez-z-e mu-man-nw elga	Fodei viroz ebdimd barfomel glez nurroz om galei nulpo e ragdaz nezze mumannw elga.	S	(S (NP-SBJ (NP (DT Vitae) (NN felis) (POS aptent)) (JJ pulvinar) (NN cras)) (VP (MD mollis) (VP (VB in) (PP-CLR (TO curae) (NP (NP (NNS morbi)) (VP (VBG a) (NP (CD luctus) (NNS massa) (QP (CC nonummy) (JJR arcu)))))))) (. .))
+Porta nulla nibh dapibus id ad curae in malesuada urna.	po-rt-a nul-la nibh d-ap-ibus id ad cura-e i-n m-alesuada urn-a	b-ul-de mar-re moph t-eb-opaz ot et gale-i o-m n-erizaete a-lme	Bulde marre moph tebopaz ot et galei om nerizaete alme.	S	(S (NP-SBJ (NP (JJ Porta) (NN nulla) (NNS nibh)) (PP (IN dapibus) (NP (NN id)))) (VP (VBD ad) (VP (VBN curae) (ADVP-PRD-LOC (IN in)) (PP-TMP (IN malesuada) (NP (NNS urna))))) (. .))
+Justo donec dui arcu eros tempus cum platea.	jus-to d-on-ec dui arcu eros t-empu-s c-um p-latea	c-hazdu t-u-mig tao elga iluz d-inb-az ga-n br-edie	CHazdu tumig tao elga iluz dinbaz gan bredie.	S	(S (NP-SBJ (NNP Justo) (POS donec)) (VP (VBN dui) (NP (QP (CD arcu) (CD eros))) (PP-DIR (TO tempus) (NP (QP (CD cum) (CD platea))))) (. .))
+Class magna etiam turpis lobortis aenean.	clas-s m-a-gna e-tiam tu-rpis lobo-rti-s a-en-ean	gr-ezz n-ek-me id-oen dal-boz r-up-uldoz ei-mi-em	Grezz nekme idoen dalboz rupuldoz eimiem.	S	(S (NP-SBJ (DT Class) (CD magna) (NNS etiam)) (VP (VBD turpis) (PP-TMP (IN lobortis) (NP (CD aenean)))) (. .))
+Metus justo magnis praesent.	me-tus jus-to mag-nis praese-n-t	nid-az c-hazdu ne-kmoz bl-e-izimd	Nidaz chazdu nekmoz bleizimd.	S	(S (NP-SBJ (NN Metus) (CC justo) (NN magnis)) (VP (VBD praesent)) (. .))
+Donec vitae natoque vel mi tristique parturient odio tempus.	d-on-ec vita-e nato-que ve-l mi tr-i-st-ique partu-rie-nt odio t-empu-s	t-u-mig fo-dei m-edukai fi-r no dloz-do-k-ai be-ldalo-imd utou d-inb-az	Tumig fodei medukai fir no dlozdokai beldaloimd utou dinbaz.	S	(S (CC Donec) (NP-SBJ (NP (DT vitae) (NN natoque)) (PP-LOC (IN vel) (NP (NP (NNP mi) (NNP tristique) (POS parturient)) (NN odio)))) (VP (VBZ tempus)) (. .))
+Massa dolor donec duis fermentum aptent netus adipiscing quis ipsum scelerisque dictumst.	mas-s-a do-lo-r d-on-ec duis fe-r-mentum ap-t-ent net-u-s adip-is-c-ing quis ipsu-m scelerisq-ue dictu-m-st	nez-z-e tu-r-ul t-u-mig taoz vi-ln-imdan eb-dim-d m-id-az etob-ozg-om-k kaoz obz-an zgir-ilozkai to-gda-nzd	Nezze turul tumig taoz vilnimdan ebdimd midaz etobozgomk kaoz obzan zgirilozkai togdanzd.	S	(S-HLN (NP-SBJ (NN Massa)) (VP (VBZ dolor) (NP (NNP donec) (NN duis)) (PP-CLR (IN fermentum) (NP (NN aptent))) (PP-LOC (IN netus) (NP (NP (NNS adipiscing)) (PP (IN quis) (NP (JJ ipsum) (NN scelerisque) (NNS dictumst)))))) (. .))
+Risus etiam risus per pede ultrices in curae.	ris-us e-tiam ris-us pe-r p-ede ul-trices i-n cura-e	l-ozaz id-oen l-ozaz bi-l bi-ti ardlo-giz o-m gale-i	Lozaz idoen lozaz bil biti ardlogiz om galei.	S	(S (ADVP-TMP (RB Risus)) (NP-SBJ (PRP etiam)) (VP (VBD risus) (NP-PRD (NP (RB per) (NN pede)) (PP (IN ultrices) (NP (NNP in) (NNP curae))))) (. .))
+Felis massa sem sed mus ut metus nam arcu.	f-eli-s mas-s-a se-m sed mu-s u-t me-tus n-am arcu	vir-o-z nez-z-e zi-n zit n-az a-d nid-az m-en elga	Viroz nezze zin zit naz ad nidaz men elga.	S	(S (NP-SBJ (PRP Felis)) (VP (VBZ massa) (NP (NP (DT sem) (NN sed)) (PP-DIR (IN mus) (NP (NP (PRP$ ut) (NN metus) (NN nam)) (NP-TMP (NN arcu)))))) (. .))
+Ipsum vitae pulvinar.	ipsu-m vita-e p-ulv-inar	obz-an fo-dei ba-r-fomel	Obzan fodei barfomel.	S	(S (NP-SBJ (DT Ipsum)) (VP (VBZ vitae) (NP-PRD (NNP pulvinar))) (. .))
+Lorem neque.	l-or-em neq-ue	ru-li-n mik-ai	Rulin mikai.	S	(S (NP-SBJ (NN Lorem)) (VP (VBD neque)) (. .))
+Morbi lacus eget suspendisse aliquet.	m-orb-i lac-u-s eget suspen-di-sse a-liquet	n-u-lpo r-eg-az ikid zazbi-mtoz-zi erokai-d	Nulpo regaz ikid zazbimtozzi erokaid.	S	(S (NP-SBJ (PRP Morbi)) (VP (VBP lacus) (PP-CLR (IN eget) (NP (DT suspendisse) (NN aliquet)))) (. .))
+Class justo dictumst parturient rutrum in velit ullamcorper.	clas-s jus-to dictu-m-st partu-rie-nt rutr-um i-n veli-t ull-amcorper	gr-ezz c-hazdu to-gda-nzd be-ldalo-imd ladla-n o-m firo-d arre-ngulbil	Grezz chazdu togdanzd beldaloimd ladlan om firod arrengulbil.	S	(S (NP-SBJ (DT Class) (NNS justo)) (VP (VBD dictumst) (ADJP-PRD (JJ parturient)) (PP (IN rutrum) (NP (NP (NN in) (POS velit)) (NNS ullamcorper)))) (. .))
+Donec vitae.	d-on-ec vita-e	t-u-mig fo-dei	Tumig fodei.	S	(SBARQ (WHADVP (WRB Donec)) (FRAG (ADJP (JJ vitae))) (. .))
+Metus donec.	me-tus d-on-ec	nid-az t-u-mig	Nidaz tumig.	S	(S (NP-SBJ (NNS Metus)) (VP (VBD donec)) (. .))
+Felis neque montes nec vestibulum justo.	f-eli-s neq-ue mon-te-s ne-c vest-ibu-lum jus-to	vir-o-z mik-ai n-umd-iz m-ig fiz-do-paran c-hazdu	Viroz mikai numdiz mig fizdoparan chazdu.	S	(S-HLN (NP-SBJ (NNP Felis) (NN neque)) (VP (VBZ montes) (PP-DIR (TO nec) (NP (NN vestibulum) (CD justo)))) (. .))
+Morbi purus dictum ridiculus augue cursus.	m-orb-i p-uru-s d-i-ctum rid-icul-us a-u-gue curs-us	n-u-lpo b-ala-z t-ogd-an l-ot-ogaraz eak-a-i ga-lzaz	Nulpo balaz togdan lotogaraz eakai galzaz.	S	(S (NP-SBJ (NNP Morbi)) (VP (VBZ purus) (ADVP-MNR (RB dictum)) (VP (VBG ridiculus) (NP (DT augue) (NN cursus)))) (. .))
+Metus massa.	me-tus mas-s-a	nid-az nez-z-e	Nidaz nezze.	S	(S (NP-SBJ (NNS Metus)) (VP (VBD massa)) (. .))
+Metus neque.	me-tus neq-ue	nid-az mik-ai	Nidaz mikai.	S	(S (NP-SBJ (NNS Metus)) (VP (VBD neque)) (. .))
+Etiam porta cursus vitae mi ultricies porta.	e-tiam po-rt-a curs-us vita-e mi ultricie-s po-rt-a	id-oen b-ul-de ga-lzaz fo-dei no ard-logoiz b-ul-de	Idoen bulde galzaz fodei no ardlogoiz bulde.	S	(S (NP-SBJ (DT Etiam) (NN porta)) (ADVP (RB cursus)) (VP (VBD vitae) (NP (DT mi) (JJ ultricies) (NN porta))) (. .))
+Metus augue suspendisse id tempus in nullam in class mus viverra ac in purus dis.	me-tus a-u-gue suspen-di-sse id t-empu-s i-n nul-lam i-n clas-s mu-s v-iverr-a a-c i-n p-uru-s d-is	nid-az eak-a-i zazbi-mtoz-zi ot d-inb-az o-m ma-rren o-m gr-ezz n-az fofi-l-le e-g o-m b-ala-z t-oz	Nidaz eakai zazbimtozzi ot dinbaz om marren om grezz naz fofille eg om balaz toz.	S	(S (NP-SBJ (DT Metus) (NNP augue) (JJ suspendisse) (NN id)) (VP (VBD tempus) (NP (CD in)) (PP-DIR (TO nullam) (NP (CD in))) (PP-LOC (IN class) (NP (NP (JJ mus) (NN viverra)) (PP (IN ac) (NP (QP (CD in) (CD purus)) (NNS dis)))))) (. .))
+Morbi risus nam amet sem dignissim ligula morbi condimentum ve libero massa conubia.	m-orb-i ris-us n-am amet se-m dig-niss-im ligu-la m-orb-i co-ndiment-u-m ve liber-o mas-s-a co-nubia	n-u-lpo l-ozaz m-en enid zi-n to-kmozz-on ro-kare n-u-lpo g-umtonimd-a-n fi ro-pilu nez-z-e gum-apoe	Nulpo lozaz men enid zin tokmozzon rokare nulpo gumtonimdan fi ropilu nezze gumapoe.	S	(S (NP-SBJ (NP (ADJP (JJR Morbi) (CC risus) (JJR nam)) (NNS amet)) (PP (IN sem) (NP (DT dignissim) (NN ligula)))) (VP (VBP morbi) (VP (VBG condimentum) (ADJP-PRD (JJ ve) (PP (IN libero) (NP (NN massa) (NN conubia)))))) (. .))
+Augue curae.	a-u-gue cura-e	eak-a-i gale-i	Eakai galei.	S	(S (NP-SBJ (PRP Augue)) (VP (VBD curae)) (. .))
+Ipsum class aptent nulla adipiscing nisl vulputate mattis taciti nam cum.	ipsu-m clas-s ap-t-ent nul-la adip-is-c-ing n-isl vulputat-e mat-t-is ta-citi n-am c-um	obz-an gr-ezz eb-dim-d mar-re etob-ozg-om-k m-ozr f-arbadedi ne-ddo-z dego-do m-en ga-n	Obzan grezz ebdimd marre etobozgomk mozr farbadedi neddoz degodo men gan.	S	(S (NP-SBJ (DT Ipsum) (JJ class) (NNS aptent)) (VP (VBP nulla) (VP (VBN adipiscing) (VP (VBG nisl) (NP (NNS vulputate)) (NP-TMP (NP (DT mattis) (NN taciti)) (PP (IN nam) (NP (NNP cum))))))) (. .))
+Etiam purus nostra congue augue scelerisque.	e-tiam p-uru-s nos-tr-a c-ong-ue a-u-gue scelerisq-ue	id-oen b-ala-z m-uz-dle gumk-a-i eak-a-i zgir-ilozkai	Idoen balaz muzdle gumkai eakai zgirilozkai.	S	(S (NP-SBJ (DT Etiam) (NN purus)) (VP (VBD nostra) (PP-DIR (TO congue) (NP (CD augue) (NN scelerisque)))) (. .))
+Lacus proin metus vivamus pharetra primis natoque sapien aenean.	lac-u-s pr-oin me-tus vivamu-s p-ha-retra p-rimis nato-que sapie-n a-en-ean	r-eg-az blu-om nid-az fo-fenaz bhe-lid-le blon-oz m-edukai ze-boim ei-mi-em	Regaz bluom nidaz fofenaz bhelidle blonoz medukai zeboim eimiem.	S	(S (CC Lacus) (NP-SBJ (NP (DT proin) (NN metus)) (PP-LOC (IN vivamus) (NP (NP (NNP pharetra) (NNP primis) (POS natoque)) (NN sapien)))) (VP (VBZ aenean)) (. .))
+Dolor vitae nisl laoreet sed adipiscing.	do-lo-r vita-e n-isl la-or-eet sed adip-is-c-ing	tu-r-ul fo-dei m-ozr r-eul-iid zit etob-ozg-om-k	Turul fodei mozr reuliid zit etobozgomk.	S	(S (NP-SBJ (PRP Dolor)) (VP (VBD vitae) (NP-EXT (CD nisl)) (PP-DIR (TO laoreet) (NP (QP (CD sed) (CD adipiscing))))) (. .))
