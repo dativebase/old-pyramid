@@ -4,6 +4,7 @@ formencode
 inflect==0.2.5
 markdown==2.6.7
 nltk
+oursql
 passlib==1.6.5
 Pillow==3.4.2
 pyramid==1.7.3
