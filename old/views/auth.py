@@ -43,7 +43,7 @@ def login(request):
         .filter(User.username == username).first()
     if user is None:
         return not_authenticated(request)
-    salt = user.salt
+    salt = user.salt.encode('utf8')
     password = h.encrypt_password(password, salt)
     user = request.dbsession.query(User)\
         .filter(User.username == username)\
@@ -104,7 +104,7 @@ def email_reset_password(request):
             h.send_password_reset_email_to(
                 user, new_password, request.registry.settings, app_url)
             user.password = str(
-                h.encrypt_password(new_password, user.salt))
+                h.encrypt_password(new_password, user.salt.encode('utf8')))
             request.dbsession.add(user)
             if (    os.path.basename(
                     request.registry.settings['__file__']) ==
