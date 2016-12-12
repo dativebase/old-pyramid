@@ -2,6 +2,9 @@
   The Online Linguistic Database (OLD)
 ================================================================================
 
+.. image:: https://travis-ci.org/jrwdunham/old-pyramid.svg?branch=master
+    :target: https://travis-ci.org/jrwdunham/old-pyramid
+
 .. image:: OLD-logo.png
 
 The Online Linguistic Database (OLD) is software for linguistic fieldwork. It

@@ -2,7 +2,10 @@ language: python
 
 python:
   - "3.4"
-  - "3.5"
+#  - "3.5"
+
+# For instructions on installing OS dependencies, see:
+# - https://docs.travis-ci.com/user/installing-dependencies/
 
 # command to install dependencies
 install: "pip install -r requirements/test.txt -e \".[testing]\""
