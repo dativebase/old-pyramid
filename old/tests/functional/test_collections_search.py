@@ -194,6 +194,7 @@ class TestFormsSearchView(TestView):
             db.clear_all_models(['Language', 'User'])
 
             # Add a bunch of data to the db.
+            self.create_db()
             self._create_test_data(db, dbsession, self.n)
             add_SEARCH_to_web_test_valid_methods()
 

@@ -16,6 +16,8 @@ TODO_PARSER.txt
 
 old/models/db_update_scripts/**/*.sh
 
+old-commit.txt
+
 # Some Pylons-generated directories that should be ignored
 /dist/
 /data/
@@ -24,6 +26,7 @@ old/models/db_update_scripts/**/*.sh
 
 # Some OLD-specific directories that should be ignored
 /store/
+/test-store/
 
 
 # Ignore a large file in test_files
