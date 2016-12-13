@@ -619,6 +619,11 @@ def command_line_program_installed(program):
     return False
 
 
+def mitlm_installed():
+    """Check if the MITLM binaries are installed on the host."""
+    return command_line_program_installed('estimate-ngram')
+
+
 def ffmpeg_installed():
     """Check if the ffmpeg command-line utility is installed on the host."""
     return command_line_program_installed('ffmpeg')

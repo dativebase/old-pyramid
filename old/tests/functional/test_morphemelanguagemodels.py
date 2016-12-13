@@ -183,6 +183,9 @@ class TestMorphemelanguagemodelsView(TestView):
             assert resp['smoothing'] == '' # The ModKN smoothing algorithm is the implicit default with MITLM
             assert resp['restricted'] is False
 
+            if not h.mitlm_installed():
+                return
+
             # Attempt to compute the perplexity of the LM before its files have been generated.  Expect this
             # to work: perplexity generation creates its own pairs of test/training sets.
             response = self.app.put(
@@ -448,6 +451,9 @@ class TestMorphemelanguagemodelsView(TestView):
     def test_b_index(self):
         """Tests that GET /morpheme_language_models returns all morpheme_language_model resources."""
         with transaction.manager:
+
+            MITLM_INSTALLED = h.mitlm_installed()
+
             dbsession = self.get_dbsession()
             db = DBUtils(dbsession, self.settings)
 
@@ -456,7 +462,11 @@ class TestMorphemelanguagemodelsView(TestView):
             # Get all morpheme_language_models
             response = self.app.get(url('index'), headers=self.json_headers, extra_environ=self.extra_environ_view)
             resp = response.json_body
-            assert len(resp) == 3
+            if MITLM_INSTALLED:
+                assert len(resp) == 3
+            else:
+                assert len(resp) == 1
+                return
 
             # Test the paginator GET params.
             paginator = {'items_per_page': 1, 'page': 1}
@@ -586,6 +596,8 @@ class TestMorphemelanguagemodelsView(TestView):
         with transaction.manager:
             dbsession = self.get_dbsession()
             db = DBUtils(dbsession, self.settings)
+            if not h.mitlm_installed():
+                return
             morpheme_language_models = [
                 json.loads(json.dumps(self.fix_lm(lm.get_dict()))) for lm in
                 dbsession.query(MorphemeLanguageModel).all()]
