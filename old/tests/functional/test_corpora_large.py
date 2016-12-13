@@ -422,7 +422,9 @@ class TestCorporaLargeView(TestView):
                     headers=self.json_headers,
                     environ=self.extra_environ_admin, status=400)
                 tgrep2resp = response.json_body
-                assert tgrep2resp['error'] == 'Corpus %d has not been written to file as a treebank.'
+                assert tgrep2resp['error'] == (
+                    'Corpus %d has not been written to file as a treebank.' %
+                    (corpus_id,))
 
             # Write the corpus to file
             sleep(1)
@@ -671,7 +673,7 @@ class TestCorporaLargeView(TestView):
                     environ=self.extra_environ_admin, status=400)
                 resp = response.json_body
                 assert resp['errors']['tgrep2pattern'] == \
-                        "A tgrep2pattern attribute must be supplied and must have a unicode/string value"
+                        "A tgrep2pattern attribute must be supplied and must have a string value"
 
                 # Empty string TGrep2 pattern results in no forms being returned.
                 tgrep2pattern = json.dumps({'tgrep2pattern': ''})

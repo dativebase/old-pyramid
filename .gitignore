@@ -18,6 +18,8 @@ old-commit.txt
 
 old/models/db_update_scripts/**/*.sh
 
+old-commit.txt
+
 # Some Pylons-generated directories that should be ignored
 /dist/
 /data/

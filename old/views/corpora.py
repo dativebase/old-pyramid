@@ -297,10 +297,10 @@ class Corpora(Resources):
                                  '-wu', tgrep2pattern],
                                 stdout=stdout, stderr=fnull)
                 process.communicate()
-        match_ids = filter(None, map(_get_form_ids_from_tgrep2_output_line, open(tmp_path, 'r')))
+        match_ids = list(filter(None, map(_get_form_ids_from_tgrep2_output_line, open(tmp_path, 'r'))))
         with open(tmp_path, 'r') as file_:
-            match_ids = filter(None,
-                               map(_get_form_ids_from_tgrep2_output_line, file_))
+            match_ids = list(
+                filter(None, map(_get_form_ids_from_tgrep2_output_line, file_)))
         os.remove(tmp_path)
         if match_ids:
             query = eagerload_form(
