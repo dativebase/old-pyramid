@@ -14,6 +14,8 @@ __pycache__/
 TODO.txt
 TODO_PARSER.txt
 
+old-commit.txt
+
 old/models/db_update_scripts/**/*.sh
 
 # Some Pylons-generated directories that should be ignored
@@ -24,6 +26,7 @@ old/models/db_update_scripts/**/*.sh
 
 # Some OLD-specific directories that should be ignored
 /store/
+/test-store/
 
 
 # Ignore a large file in test_files
