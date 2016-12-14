@@ -4,7 +4,6 @@ formencode
 inflect==0.2.5
 markdown==2.6.7
 nltk
-https://launchpad.net/oursql/py3k/py3k-0.9.4/+download/oursql-0.9.4.zip
 passlib==1.6.5
 Pillow==3.4.2
 pyramid==1.7.3
