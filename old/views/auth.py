@@ -43,9 +43,11 @@ def login(request):
         .filter(User.username == username).first()
     if user is None:
         return not_authenticated(request)
-    # TODO: in tests the salt in the database is already bytes, but when not in
-    # tests, it's str. Why?
+    # TODO: when using SQLite, the salt in the database is already bytes, but
+    # when using MySQL it's str. Why?
     salt = user.salt
+    if isinstance(salt, str):
+        salt = salt.encode('utf8')
     password = h.encrypt_password(password, salt)
     user = request.dbsession.query(User)\
         .filter(User.username == username)\
@@ -105,7 +107,10 @@ def email_reset_password(request):
             app_url = request.route_url('info')
             h.send_password_reset_email_to(
                 user, new_password, request.registry.settings, app_url)
-            user.password = str(h.encrypt_password(new_password, user.salt))
+            salt = user.salt
+            if isinstance(salt, str):
+                salt = salt.encode('utf8')
+            user.password = str(h.encrypt_password(new_password, salt))
             request.dbsession.add(user)
             if (    os.path.basename(
                     request.registry.settings['__file__']) ==

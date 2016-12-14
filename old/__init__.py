@@ -19,14 +19,19 @@ LOGGER = logging.getLogger(__name__)
 __version__ = '2.0.0'
 
 
-def datetime_adapter(obj, request):
+def date_adapter(obj, request):
     return obj.isoformat()
+
+
+def datetime_adapter(obj, request):
+    #return obj.isoformat()
+    return obj.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def get_json_renderer():
     json_renderer = JSON()
     json_renderer.add_adapter(datetime.datetime, datetime_adapter)
-    json_renderer.add_adapter(datetime.date, datetime_adapter)
+    json_renderer.add_adapter(datetime.date, date_adapter)
     return json_renderer
 
 

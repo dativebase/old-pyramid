@@ -22,7 +22,7 @@ OLD, see the `Pylons OLD source`_
 For detailed information, see the `OLD Web Site`_ or the `Official OLD
 Documentation`_.
 
-Dative_ is a GUI for the OLD. See the `Dative source code`_, `Dative's web
+`Dative`_ is a GUI for the OLD. See the `Dative source code`_, `Dative's web
 site`_, or the `Dative app`_ for more information.
 
 
@@ -78,6 +78,15 @@ To run the tests::
 
     $ pytest
 
+To run tests with MySQL::
+
+    CREATE DATABASE oldtests
+        DEFAULT CHARACTER SET utf8
+        DEFAULT COLLATE utf8_bin;
+    GRANT ALL PRIVILEGES on oldtests.* to 'old'@'localhost';
+
+    CREATE DATABASE oldtests DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin;
+
 
 To Do
 ===============================================================================
@@ -90,9 +99,8 @@ To Do
 
 .. _`OLD Web Site`: http://www.onlinelinguisticdatabase.org/
 .. _`Official OLD Documentation`: http://online-linguistic-database.readthedocs.org/en/latest/
-.. _Dative: http://www.dative.ca/
+.. _`Dative`: http://www.dative.ca/
 .. _`Dative source code`: https://github.com/jrwdunham/dative/
-.. _`Dative`: https://github.com/jrwdunham/dative/
 .. _`Dative's web site`: http://www.dative.ca/
 .. _`Dative app`: http://app.dative.ca/
 .. _`Pyramid web framework`: http://www.pylonsproject.org/

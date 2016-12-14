@@ -223,7 +223,13 @@ class Model(object):
         result.  Return ``changed``.  Useful in the ``update_<model>`` function
         of the controllers.
         """
-        if getattr(self, name) != value:
-            setattr(self, name, value)
-            changed = True
+        if isinstance(value, float):
+            current = getattr(self, name)
+            if '{0:.4f}'.format(current) != '{0:.4f}'.format(value):
+                setattr(self, name, value)
+                changed = True
+        else:
+            if getattr(self, name) != value:
+                setattr(self, name, value)
+                changed = True
         return changed

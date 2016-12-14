@@ -1366,8 +1366,9 @@ class TestFilesView(TestView):
                 'utterance_type': 'Metalanguage Utterance'
             })
             params = json.dumps(params)
-            response = self.app.put(url('update', id=subinterval_referencing_id), params, self.json_headers,
-                                    extra_environ=self.extra_environ_contrib)
+            response = self.app.put(
+                url('update', id=subinterval_referencing_id), params,
+                self.json_headers, extra_environ=self.extra_environ_contrib)
             resp = response.json_body
             assert resp['parent_file']['id'] == plain_file_id
             assert resp['name'] == resp['parent_file']['name']
@@ -1378,8 +1379,10 @@ class TestFilesView(TestView):
             assert response.content_type == 'application/json'
 
             # Attempt a vacuous update and expect an error message.
-            response = self.app.put(url('update', id=subinterval_referencing_id), params, self.json_headers,
-                                    extra_environ=self.extra_environ_contrib, status=400)
+            response = self.app.put(
+                url('update', id=subinterval_referencing_id), params,
+                self.json_headers, extra_environ=self.extra_environ_contrib,
+                status=400)
             resp = response.json_body
             assert resp['error'] == 'The update request failed because the submitted data were not new.'
 

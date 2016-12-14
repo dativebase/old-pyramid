@@ -364,6 +364,7 @@ class Files(Resources):
             logged_in_user=self.logged_in_user)
         data = schema.to_python(data, state)
         # Data unique to referencing subinterval files
+
         changed = file_.set_attr('parent_file', data['parent_file'], changed)
         changed = file_.set_attr(
             'name',

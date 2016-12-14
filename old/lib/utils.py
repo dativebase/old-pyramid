@@ -391,7 +391,10 @@ class FakeForm:
 def get_RDBMS_name(settings):
     try:
         SQLAlchemyURL = settings['sqlalchemy.url']
-        return SQLAlchemyURL.split(':')[0]
+        prefix = SQLAlchemyURL.split(':')[0]
+        if prefix.startswith('mysql'):
+            return 'mysql'
+        return prefix
     except (TypeError, KeyError):
         # WARNING The exception below should be raised during production,
         # development and testing -- however, it must be replaced with the log

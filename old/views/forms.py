@@ -755,15 +755,11 @@ class Forms(Resources):
         morpheme_gloss_ids = []
         syntactic_category_string = []
         morpheme_delimiters = morpheme_delimiters or self.db.get_morpheme_delimiters()
-
-        LOGGER.debug('morpheme_delimiters: %s', morpheme_delimiters)
         if len([md for md in morpheme_delimiters if md]) > 0:
             morpheme_splitter = '[%s]' % ''.join(
                 [h.esc_RE_meta_chars(d) for d in morpheme_delimiters])
         else:
             morpheme_splitter = ''
-        LOGGER.debug('morpheme_splitter: %s', morpheme_splitter)
-
         morpheme_break = form.morpheme_break
         morpheme_gloss = form.morpheme_gloss
         mb_words = morpheme_break.split()     # e.g., 'le-s chien-s'
@@ -781,10 +777,6 @@ class Forms(Resources):
                 sc_word = sc_words[i]     # e.g., 'chien-s'
                 # splits on delimiters while retaining them
                 morpheme_and_delimiter_splitter = '(%s)' % morpheme_splitter
-
-                LOGGER.debug('morpheme_and_delimiter_splitter')
-                LOGGER.debug(morpheme_and_delimiter_splitter)
-
                 # e.g., ['chien', 's']
                 mb_word_morphemes_list = re.split(
                     morpheme_and_delimiter_splitter, mb_word)[::2]
@@ -887,10 +879,15 @@ class Forms(Resources):
             morpheme_delimiters = self.db.get_morpheme_delimiters()
             escaped_morpheme_delimiters = [
                 h.esc_RE_meta_chars(d) for d in morpheme_delimiters]
-            start_patt = '(%s)' % '|'.join(
-                escaped_morpheme_delimiters + [' ', '^'])
-            end_patt = '(%s)' % '|'.join(
-                escaped_morpheme_delimiters + [' ', '$'])
+            if (    len(escaped_morpheme_delimiters) == 1 and not
+                    escaped_morpheme_delimiters[0]):
+                start_patt = '(%s)' % '|'.join([' ', '^'])
+                end_patt = '(%s)' % '|'.join([' ', '$'])
+            else:
+                start_patt = '(%s)' % '|'.join(
+                    escaped_morpheme_delimiters + [' ', '^'])
+                end_patt = '(%s)' % '|'.join(
+                    escaped_morpheme_delimiters + [' ', '$'])
             morpheme_patt = '%s%s%s' % (
                 start_patt, form.morpheme_break, end_patt)
             gloss_patt = '%s%s%s' % (start_patt, form.morpheme_gloss, end_patt)

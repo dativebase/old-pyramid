@@ -124,7 +124,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.types import Unicode, UnicodeText
 from old.lib.utils import normalize
 
-log = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 import json
@@ -948,7 +948,7 @@ class SQLAQueryBuilder(object):
         appropriate.  This allows regexp and like searches to be case-sensitive.
         An example SQLA query would be self.dbsession.query(model.Form).filter(
         collate(model.Form.transcription, 'utf8_bin').like('a%'))
-        
+
         Previously there was a condition on collation that the relation_name be in
         ('like', 'regexp').  This condition was removed because MySQL does case-
         insensitive equality searches too!

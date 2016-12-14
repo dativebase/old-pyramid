@@ -13,10 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import codecs
 import json
 import logging
 import os
-from subprocess import call
+from subprocess import call, check_output, Popen, PIPE
 from time import sleep
 
 from sqlalchemy.sql import and_
@@ -214,13 +215,17 @@ class TestCorporaLargeView(TestView):
             oldload_script_path = os.path.join(
                 self.test_scripts_path, 'oldload.sh')
             RDBMS = sqlalchemy_URL_list[0]
+            if RDBMS.startswith('mysql'):
+                RDBMS = 'mysql'
 
             if RDBMS == 'mysql':
                 mysql_dump_path = '%s_mysql.sql' % loremipsum_path_no_ext
                 username = sqlalchemy_URL_list[1][2:]
                 password = sqlalchemy_URL_list[2].split('@')[0]
                 dbname = sqlalchemy_URL_list[3].split('/')[1]
-                if os.path.exists(mysql_dump_path):
+                # This is not an option anymore: too frustrated trying to load
+                # the dump file.
+                if False and os.path.exists(mysql_dump_path):
                     LOGGER.debug('The lorem ipsum MySQL dump file exists.  Loading it...')
                     # Clear the current DB completely
                     db.clear_all_models(retain=[])

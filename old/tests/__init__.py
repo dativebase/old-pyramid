@@ -95,9 +95,16 @@ class TestView(TestCase):
             return get_tm_session(session_factory, transaction.manager)
 
     def get_dbsession(self):
-        engine = get_engine(self.settings)
-        session_factory = get_session_factory(engine)
-        return get_tm_session(session_factory, transaction.manager)
+        if getattr(self, 'engine', None):
+            self.engine.dispose()
+        self.engine = get_engine(self.settings)
+        session_factory = get_session_factory(self.engine)
+        session = get_tm_session(session_factory, transaction.manager)
+        if not getattr(self, 'sessions', None):
+            self.sessions = []
+        self.sessions.append(session)
+        return session
+        #return get_tm_session(session_factory, transaction.manager)
 
     def setUp(self):
         self.default_setup()
@@ -166,7 +173,11 @@ class TestView(TestCase):
             for dir_name in dirs_to_destroy:
                 h.destroy_all_directories(self.inflect_p.plural(dir_name),
                                           self.settings)
-            testing.tearDown()
+        for session in getattr(self, 'sessions', []):
+            session.close()
+        if getattr(self, 'engine', None):
+            self.engine.dispose()
+        testing.tearDown()
 
     def _setattrs(self):
         """Set a whole bunch of instance attributes that are useful in tests."""
