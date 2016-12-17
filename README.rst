@@ -5,7 +5,6 @@
   The Online Linguistic Database (OLD)
 ================================================================================
 
-
 .. image:: OLD-logo.png
    :align: left
 
@@ -14,22 +13,11 @@ helps groups of linguists, language documenters, and/or language community
 members to collaboratively build a web-accessible database of their language
 data.
 
-Note: this is the OLD written using the Pyramid framework and is the version
-that will be used for current and future development. For the Pylons framework
-OLD, see the `Pylons OLD source`_
-
-
-For detailed information, see the `OLD Web Site`_ or the `Official OLD
-Documentation`_.
-
-`Dative`_ is a GUI for the OLD. See the `Dative source code`_, `Dative's web
-site`_, or the `Dative app`_ for more information.
-
 
 Features
 ================================================================================
 
-- Collaboration and data sharing
+- Multi-user database creation
 - Advanced search
 - Automatic morpheme cross-referencing
 - Configurable validation
@@ -41,26 +29,40 @@ Features
 - Graphical User Interface: Dative
 - RESTful JSON API
 
+For additional information, see the `OLD Web Site`_.
 
-Technical
-================================================================================
-
-The OLD is software for creating RESTful web services that send and receive
-data in JSON format. It is written in Python using the `Pyramid web framework`_
-and a MySQL database.
+`Dative`_ is a GUI for the OLD. See the `Dative source code`_, `Dative's web
+site`_, or the `Dative app`_ for more information.
 
 
 Installation
 ===============================================================================
 
-The Pyramid version of the OLD will be on PyPI soon. Until then, it can be
-installed from source::
+The easiest way to install the OLD is to do so on a virtual machine using the
+Dative/OLD Vagrant/Ansible deploy scripts at
+https://github.com/jrwdunham/deploy-dative-old::
+
+    $ git clone git@github.com:jrwdunham/deploy-dative-old.git
+    $ cd deploy-dative-old/playbooks/dative-old
+    $ ansible-galaxy install -f -p roles/ -r requirements.yml
+    $ vagrant up
+
+The above commands assume you have Vagrant (>= 1.7) installed and Ansible (v.
+2.1.1.0) installed. These commands will install the OLD and its dependencies
+(foma, MITLM, ffmpeg, TGrep2) on a virtual machine running Ubuntu 14.04; they
+will configure and serve two OLD instances as well as the Dative GUI.
+
+To install the OLD manually from source, create and activate a Python3 virtual
+environment, clone the OLD source, and use pip to install its dependencies::
 
     $ virtualenv -p /path/to/python3/executable env
     $ source env/bin/activate
     $ git clone git@github.com:jrwdunham/old-pyramid.git
     $ cd old-pyramid
-    $ pip install -e ".[testing]"
+    $ pip install -r requirements.txt -e .
+
+Modify the Pyramid config file (development.ini) to your liking, choosing
+SQLite or MySQL as RDBMS.
 
 Create the database tables and directory structure::
 
@@ -71,12 +73,29 @@ Serve::
     $ pserve development.ini
 
 Now if you navigate to http://localhost:6543/ you should see a big JSON object
-that describes the OLD's API. If you install _`Dative`, you can use it to
+that describes the OLD's API. If you install `Dative`_, you can use it to
 interact with the OLD.
+
+
+Technical
+================================================================================
+
+The OLD is software for creating OLD instances, RESTful web services that send
+and receive data in JSON format. It is written in Python using the `Pyramid web
+framework`_. It works with both MySQL and SQLite as the RDBMS.
+
+Note: this is the OLD written using the `Pyramid`_ framework and is the version
+that will be used for current and future development. For the `Pylons`_
+framework OLD, see the `Pylons OLD source`_ and the `Official OLD
+Documentation`_.
+
+
+For Developers
+================================================================================
 
 To run the tests::
 
-    $ pytest
+    $ pytest old/tests -v
 
 To run tests with MySQL, first make sure that there is a MySQL database called
 ``oldtests`` accessible to the user ``old``::
@@ -104,4 +123,6 @@ run ``pytest``::
 .. _`Dative's web site`: http://www.dative.ca/
 .. _`Dative app`: http://app.dative.ca/
 .. _`Pyramid web framework`: http://www.pylonsproject.org/
-.. _`Pylons OLD source`_: https://github.com/jrwdunham/old/
+.. _`Pyramid`: https://trypyramid.com/
+.. _`Pylons`: http://upcoming.pylonsproject.org/about-pylons-framework.html
+.. _`Pylons OLD source`: https://github.com/jrwdunham/old/
