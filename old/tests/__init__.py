@@ -28,9 +28,9 @@ from paste.deploy.converters import asbool
 from paste.deploy import appconfig
 from pyramid import testing
 from pyramid.paster import setup_logging
-from pyramid.threadlocal import get_current_request, get_current_registry
 import pytest
-import transaction
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import webtest
 
 from old import main
@@ -68,6 +68,14 @@ def add_SEARCH_to_web_test_valid_methods():
     webtest.lint.valid_methods = tuple(new_valid_methods)
 
 
+from sqlalchemy.pool import NullPool
+
+CONFIG_FILE = 'test.ini'
+SETTINGS = appconfig('config:{}'.format(CONFIG_FILE), relative_to='.')
+ENGINE = create_engine(SETTINGS['sqlalchemy.url'], poolclass=NullPool)
+#ENGINE = create_engine(SETTINGS['sqlalchemy.url'])
+Session = sessionmaker()
+
 
 class TestView(TestCase):
     """Base test view for testing OLD Pyramid views.
@@ -82,64 +90,71 @@ class TestView(TestCase):
     inflect_p = inflect.engine()
     inflect_p.classical()
 
-    @property
-    def dbsession(self):
-        """
-        if not self._dbsession:
-            self._dbsession = get_current_request().dbsession
-        return self._dbsession
-        """
-        engine = get_engine(self.settings)
-        session_factory = get_session_factory(engine)
-        with transaction.manager:
-            return get_tm_session(session_factory, transaction.manager)
-
-    def get_dbsession(self):
-        if getattr(self, 'engine', None):
-            self.engine.dispose()
-        self.engine = get_engine(self.settings)
-        session_factory = get_session_factory(self.engine)
-        session = get_tm_session(session_factory, transaction.manager)
-        if not getattr(self, 'sessions', None):
-            self.sessions = []
-        self.sessions.append(session)
-        return session
-        #return get_tm_session(session_factory, transaction.manager)
+    @classmethod
+    def tearDownClass(cls):
+        ENGINE.dispose()
+        Session.close_all()
 
     def setUp(self):
+        print('in setUp of TestView')
         self.default_setup()
         self.create_db()
 
+    def tearDown(self, **kwargs):
+        """Clean up after a test."""
+        print('tear fucking down')
+        db = DBUtils(self.dbsession, self.settings)
+        clear_all_tables = kwargs.get('clear_all_tables', False)
+        dirs_to_clear = kwargs.get('dirs_to_clear', [])
+        dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
+        if clear_all_tables:
+            db.clear_all_tables(['language'])
+        else:
+            self.clear_all_models(self.dbsession)
+        for dir_path in dirs_to_clear:
+            h.clear_directory_of_files(getattr(self, dir_path))
+        for dir_name in dirs_to_destroy:
+            h.destroy_all_directories(self.inflect_p.plural(dir_name),
+                                        self.settings)
+        self.tear_down_dbsession()
+        #testing.tearDown()
+
+    def tear_down_dbsession(self):
+        self.dbsession.commit()
+        self.dbsession.close()
+        self.connection.close()
+
     def default_setup(self):
-        config_file = 'test.ini'
-        self.settings = appconfig('config:{}'.format(config_file),
-                                  relative_to='.')
+        self.settings = SETTINGS
         self.config = {'__file__': self.settings['__file__'],
                        'here': self.settings['here']}
+        # See http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#session-external-transaction
+        self.connection = ENGINE.connect()
+        # begin a non-ORM transaction
+        self.trans = self.connection.begin()
+        # bind an individual Session to the connection
+        self.dbsession = Session(bind=self.connection)
         self.app = webtest.TestApp(main(self.config, **self.settings))
         setup_logging('test.ini#loggers')
         self._setattrs()
         self._setcreateparams()
-        self._dbsession = None
-        testing.setUp()
-        self.transaction = transaction
+        #testing.setUp()
 
     def create_db(self):
         # Create the database tables
-        with transaction.manager:
-            dbsession = self.get_dbsession()
-            h.create_OLD_directories(self.settings)
-            languages = omb.get_language_objects(self.settings['here'],
-                                                 truncated=True)
-            administrator = omb.generate_default_administrator(
-                settings=self.settings)
-            contributor = omb.generate_default_contributor(
-                settings=self.settings)
-            viewer = omb.generate_default_viewer(settings=self.settings)
-            Base.metadata.drop_all(bind=dbsession.bind, checkfirst=True)
-            Base.metadata.create_all(bind=dbsession.bind, checkfirst=True)
-            dbsession.add_all(languages + [administrator, contributor, viewer])
-            transaction.commit()
+        h.create_OLD_directories(self.settings)
+        languages = omb.get_language_objects(self.settings['here'],
+                                             truncated=True)
+        administrator = omb.generate_default_administrator(
+            settings=self.settings)
+        contributor = omb.generate_default_contributor(
+            settings=self.settings)
+        viewer = omb.generate_default_viewer(settings=self.settings)
+        Base.metadata.drop_all(bind=self.dbsession.bind, checkfirst=True)
+        self.dbsession.commit()
+        Base.metadata.create_all(bind=self.dbsession.bind, checkfirst=True)
+        self.dbsession.add_all(languages + [administrator, contributor, viewer])
+        self.dbsession.commit()
 
     def clear_all_models(self, dbsession, retain=('Language',)):
         """Convenience function for removing all OLD models from the database.
@@ -154,30 +169,7 @@ class TestView(TestCase):
                 models = dbsession.query(model).all()
                 for model in models:
                     dbsession.delete(model)
-
-    def tearDown(self, **kwargs):
-        """Clean up after a test."""
-        with transaction.manager:
-            dbsession = self.get_dbsession()
-            db = DBUtils(dbsession, self.settings)
-            clear_all_tables = kwargs.get('clear_all_tables', False)
-            dirs_to_clear = kwargs.get('dirs_to_clear', [])
-            dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
-            if clear_all_tables:
-                db.clear_all_tables(['language'])
-            else:
-                self.clear_all_models(dbsession)
-            transaction.commit()
-            for dir_path in dirs_to_clear:
-                h.clear_directory_of_files(getattr(self, dir_path))
-            for dir_name in dirs_to_destroy:
-                h.destroy_all_directories(self.inflect_p.plural(dir_name),
-                                          self.settings)
-        for session in getattr(self, 'sessions', []):
-            session.close()
-        if getattr(self, 'engine', None):
-            self.engine.dispose()
-        testing.tearDown()
+        dbsession.commit()
 
     def _setattrs(self):
         """Set a whole bunch of instance attributes that are useful in tests."""

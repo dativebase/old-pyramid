@@ -10,6 +10,7 @@ from pyramid.renderers import JSON
 from pyramid.settings import asbool
 
 from old.models import Model
+from old.lib.constants import ISO_STRFTIME
 from old.lib.foma_worker import start_foma_worker
 
 
@@ -24,8 +25,7 @@ def date_adapter(obj, request):
 
 
 def datetime_adapter(obj, request):
-    #return obj.isoformat()
-    return obj.strftime("%Y-%m-%dT%H:%M:%S")
+    return obj.strftime(ISO_STRFTIME)
 
 
 def get_json_renderer():
