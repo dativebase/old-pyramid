@@ -967,6 +967,7 @@ class TestMorphologiesView(TestView):
             'script_type': 'regex'
         })
         params = json.dumps(params)
+        sleep(1)
         response = self.app.put(url('update', id=morphology_1_id), params, self.json_headers,
                                     self.extra_environ_admin)
         resp = response.json_body
