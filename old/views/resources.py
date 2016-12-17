@@ -8,6 +8,8 @@ import inflect
 from sqlalchemy.sql import asc
 from sqlalchemy.exc import OperationalError
 
+import transaction
+
 from old.lib.constants import (
     ALLOWED_FILE_TYPES,
     COLLECTION_TYPES,

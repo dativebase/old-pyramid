@@ -556,11 +556,6 @@ class TestCollectionsView(TestView):
 
         assert form1_id not in [f['id'] for f in resp['forms']]
 
-        print('collection2_form_ids')
-        print(collection2_form_ids)
-        print('new_collection2_form_ids')
-        print(new_collection2_form_ids)
-
         assert sorted(collection2_form_ids) != sorted(new_collection2_form_ids)
         assert form1_id in collection2_form_ids
         assert form1_id not in new_collection2_form_ids
@@ -1221,9 +1216,6 @@ class TestCollectionsView(TestView):
         backup = self.dbsession.query(old_models.CollectionBackup)\
             .filter(old_models.CollectionBackup.UUID==resp['UUID'])\
             .order_by(desc(old_models.CollectionBackup.id)).first()
-        import pprint
-        print('FOX')
-        pprint.pprint(resp)
         assert backup.datetime_modified.strftime("%Y-%m-%dT%H:%M:%S") <= resp['datetime_modified']
         assert backup.title == original_title
         assert response.content_type == 'application/json'

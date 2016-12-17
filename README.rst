@@ -78,23 +78,23 @@ To run the tests::
 
     $ pytest
 
-To run tests with MySQL::
+To run tests with MySQL, first make sure that there is a MySQL database called
+``oldtests`` accessible to the user ``old``::
 
-    CREATE DATABASE oldtests
+    mysql> CREATE DATABASE oldtests
         DEFAULT CHARACTER SET utf8
         DEFAULT COLLATE utf8_bin;
-    GRANT ALL PRIVILEGES on oldtests.* to 'old'@'localhost';
+    mysql> CREATE USER 'old'@'localhost' IDENTIFIED BY 'demo';
+    mysql> GRANT ALL PRIVILEGES ON oldtests.* TO 'old'@'localhost';
 
-    CREATE DATABASE oldtests DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin;
+Then make sure that the test config file ``test.ini`` has the SQLite line
+commented out and the MySQL (with oursql driver) lines un-commented, and then
+run ``pytest``::
 
-
-To Do
-===============================================================================
-
-- Tests in test_forms_search.py are failing because of interaction with other
-  tests: the initialize "test" needs to make sure the db is in the correct
-  state.
-
+    #sqlalchemy.url = sqlite:///%(here)s/test-old.sqlite
+    sqlalchemy.url = mysql+oursql://old:demo@localhost:3306/oldtests
+    sqlalchemy.pool_recycle = 3600
+    $ pytest
 
 
 .. _`OLD Web Site`: http://www.onlinelinguisticdatabase.org/

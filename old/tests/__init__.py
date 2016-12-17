@@ -30,7 +30,7 @@ from pyramid import testing
 from pyramid.paster import setup_logging
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 import webtest
 
 from old import main
@@ -68,13 +68,17 @@ def add_SEARCH_to_web_test_valid_methods():
     webtest.lint.valid_methods = tuple(new_valid_methods)
 
 
-from sqlalchemy.pool import NullPool
-
 CONFIG_FILE = 'test.ini'
 SETTINGS = appconfig('config:{}'.format(CONFIG_FILE), relative_to='.')
-ENGINE = create_engine(SETTINGS['sqlalchemy.url'], poolclass=NullPool)
-#ENGINE = create_engine(SETTINGS['sqlalchemy.url'])
-Session = sessionmaker()
+CONFIG = {
+    '__file__': SETTINGS['__file__'],
+    'here': SETTINGS['here']
+}
+APP = webtest.TestApp(main(CONFIG, **SETTINGS))
+dburl = SETTINGS['sqlalchemy.url']
+engine = create_engine(dburl)
+session_factory = sessionmaker(bind=engine)
+Session = scoped_session(session_factory)
 
 
 class TestView(TestCase):
@@ -92,17 +96,15 @@ class TestView(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ENGINE.dispose()
+        engine.dispose()
         Session.close_all()
 
     def setUp(self):
-        print('in setUp of TestView')
         self.default_setup()
         self.create_db()
 
     def tearDown(self, **kwargs):
         """Clean up after a test."""
-        print('tear fucking down')
         db = DBUtils(self.dbsession, self.settings)
         clear_all_tables = kwargs.get('clear_all_tables', False)
         dirs_to_clear = kwargs.get('dirs_to_clear', [])
@@ -115,26 +117,19 @@ class TestView(TestCase):
             h.clear_directory_of_files(getattr(self, dir_path))
         for dir_name in dirs_to_destroy:
             h.destroy_all_directories(self.inflect_p.plural(dir_name),
-                                        self.settings)
+                                      self.settings)
         self.tear_down_dbsession()
         #testing.tearDown()
 
     def tear_down_dbsession(self):
         self.dbsession.commit()
-        self.dbsession.close()
-        self.connection.close()
+        Session.remove()
 
     def default_setup(self):
         self.settings = SETTINGS
-        self.config = {'__file__': self.settings['__file__'],
-                       'here': self.settings['here']}
-        # See http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#session-external-transaction
-        self.connection = ENGINE.connect()
-        # begin a non-ORM transaction
-        self.trans = self.connection.begin()
-        # bind an individual Session to the connection
-        self.dbsession = Session(bind=self.connection)
-        self.app = webtest.TestApp(main(self.config, **self.settings))
+        self.config = CONFIG
+        self.dbsession = Session()
+        self.app = APP
         setup_logging('test.ini#loggers')
         self._setattrs()
         self._setcreateparams()

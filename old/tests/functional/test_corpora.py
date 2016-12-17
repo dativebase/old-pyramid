@@ -47,12 +47,15 @@ class TestCorporaView(TestView):
     def tearDown(self):
         super().tearDown(dirs_to_destroy=['user', 'corpus'])
 
+    def setUp(self):
+        super().setUp()
+        h.destroy_all_directories('corpora', self.settings)
+
     def test_index(self):
         """Tests that GET /corpora returns an array of all corpora and that
         order_by and pagination parameters work correctly.
         """
 
-        print('FUCK YOU')
         dbsession = self.dbsession
         db = DBUtils(dbsession, self.settings)
 

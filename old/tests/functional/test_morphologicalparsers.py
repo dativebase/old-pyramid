@@ -63,12 +63,12 @@ class TestMorphologicalparsersView(TestView):
     """
 
     def setUp(self):
-        super().setUp()
+        self.default_setup()
         self.blackfoot_phonology_script = h.normalize(
             codecs.open(self.test_phonology_script_path, 'r', 'utf8').read())
 
     def tearDown(self):
-        pass
+        self.tear_down_dbsession()
 
     def fix_mp(self, mp_dict):
         for key, val in mp_dict.items():
@@ -110,10 +110,10 @@ class TestMorphologicalparsersView(TestView):
         TODO: test servecompiled
 
         """
-        super().create_db()
 
         dbsession = self.dbsession
         db = DBUtils(dbsession, self.settings)
+        self.create_db()
 
         # Create the default application settings -- note that we have only one morpheme delimiter.
         # This is relevant to the morphemic language old_models.

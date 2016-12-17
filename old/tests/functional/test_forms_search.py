@@ -172,6 +172,7 @@ def _create_test_data(db, dbsession, n=100):
 class TestFormsSearchView(TestView):
 
     n = 100
+
     def tearDown(self):
         self.tear_down_dbsession()
 
@@ -204,9 +205,9 @@ class TestFormsSearchView(TestView):
 
         dbsession = self.dbsession
         db = DBUtils(dbsession, self.settings)
+        self.create_db()
         # Add a bunch of data to the db.
         db.clear_all_models(['Language', 'User'])
-        self.create_db()
         _create_test_data(db, dbsession, self.n)
         add_SEARCH_to_web_test_valid_methods()
 
