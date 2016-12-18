@@ -38,6 +38,10 @@ site`_, or the `Dative app`_ for more information.
 Installation
 ===============================================================================
 
+
+Install via Vagrant/Ansible
+-------------------------------------------------------------------------------
+
 The easiest way to install the OLD is to do so on a virtual machine using the
 Dative/OLD Vagrant/Ansible deploy scripts at
 https://github.com/jrwdunham/deploy-dative-old::
@@ -51,6 +55,10 @@ The above commands assume you have Vagrant (>= 1.7) installed and Ansible (v.
 2.1.1.0) installed. These commands will install the OLD and its dependencies
 (foma, MITLM, ffmpeg, TGrep2) on a virtual machine running Ubuntu 14.04; they
 will configure and serve two OLD instances as well as the Dative GUI.
+
+
+Manual Install
+-------------------------------------------------------------------------------
 
 To install the OLD manually from source, create and activate a Python3 virtual
 environment, clone the OLD source, and use pip to install its dependencies::
