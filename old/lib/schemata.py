@@ -370,7 +370,7 @@ class FormSchema(Schema):
 class FormIdsSchema(Schema):
     """Schema used to validate a JSON object of the form {'forms': [1, 2, 3]}
     where value['forms'] can NOT be an empty array.  Used in the remember method
-    of controllers.forms.
+    of views.forms.
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -380,7 +380,7 @@ class FormIdsSchema(Schema):
 class FormIdsSchemaNullable(Schema):
     """Schema used to validate a JSON object of the form {'forms': [1, 2, 3]}
     where value['forms'] can be an empty array.  Used in the update method of
-    controllers.rememberedforms.
+    views.rememberedforms.
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -664,7 +664,7 @@ class GetMorphemeDelimiters(FancyValidator):
 class ApplicationSettingsSchema(Schema):
     """ApplicationSettingsSchema is a Schema for validating the data
     submitted to ApplicationsettingsController
-    (controllers/applicationsettings.py).
+    (views/applicationsettings.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -840,7 +840,7 @@ class ValidCrossref(FancyValidator):
 
 class SourceSchema(Schema):
     """SourceSchema is a Schema for validating the data submitted to
-    SourceController (controllers/source.py).
+    SourceController (views/source.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -926,7 +926,7 @@ class UniqueUnicodeValue(UnicodeString):
 
 class ElicitationMethodSchema(Schema):
     """ElicitationMethodSchema is a Schema for validating the data submitted to
-    ElicitationmethodsController (controllers/elicitationmethods.py).
+    ElicitationmethodsController (views/elicitationmethods.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -955,7 +955,7 @@ class ValidFormQuery(FancyValidator):
 
 class FormSearchSchema(Schema):
     """FormSearchSchema is a Schema for validating the data submitted to
-    FormsearchesController (controllers/formsearches.py).
+    FormsearchesController (views/formsearches.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -967,7 +967,7 @@ class FormSearchSchema(Schema):
 
 class OrthographySchema(Schema):
     """OrthographySchema is a Schema for validating the data submitted to
-    OrthographyController (controllers/orthography.py).
+    OrthographyController (views/orthography.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -980,7 +980,7 @@ class OrthographySchema(Schema):
 
 class PageSchema(Schema):
     """PageSchema is a Schema for validating the data submitted to
-    PagesController (controllers/pages.py).
+    PagesController (views/pages.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -994,7 +994,7 @@ class PageSchema(Schema):
 
 class SpeakerSchema(Schema):
     """SpeakerSchema is a Schema for validating the data submitted to
-    SpeakersController (controllers/speakers.py).
+    SpeakersController (views/speakers.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -1007,7 +1007,7 @@ class SpeakerSchema(Schema):
 
 class SyntacticCategorySchema(Schema):
     """SyntacticCategorySchema is a Schema for validating the data submitted to
-    SyntacticcategoriesController (controllers/syntacticcategories.py).
+    SyntacticcategoriesController (views/syntacticcategories.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -1033,7 +1033,7 @@ class ValidTagName(FancyValidator):
 
 class TagSchema(Schema):
     """TagSchema is a Schema for validating the data submitted to
-    TagsController (controllers/tags.py).
+    TagsController (views/tags.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -1044,7 +1044,7 @@ class TagSchema(Schema):
 
 class KeyboardSchema(Schema):
     """KeyboardSchema is a Schema for validating the data submitted to
-    KeyboardsController (controllers/keyboards.py).
+    KeyboardsController (views/keyboards.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -1198,7 +1198,7 @@ class LicitRoleChange(FancyValidator):
 
 class UserSchema(Schema):
     """UserSchema is a Schema for validating the data submitted to
-    UsersController (controllers/users.py).
+    UsersController (views/users.py).
     Note: non-admins should not be able to edit their usernames or roles
     """
     allow_extra_fields = True
@@ -1220,7 +1220,7 @@ class UserSchema(Schema):
 
 class PhonologySchema(Schema):
     """PhonologySchema is a Schema for validating the data submitted to
-    PhonologiesController (controllers/phonologies.py).
+    PhonologiesController (views/phonologies.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -1283,7 +1283,7 @@ class ValidFormReferences(FancyValidator):
 
 class CorpusSchema(Schema):
     """CorpusSchema is a Schema for validating the data submitted to
-    CorporaController (controllers/corpora.py).
+    CorporaController (views/corpora.py).
     .. note::
         Corpora can contain **extremely** large collections of forms.  Therefore
         there needs to be some efficiency measures built in around this collection
@@ -1333,7 +1333,7 @@ class RulesOrRulesCorpus(FancyValidator):
 
 class MorphologySchema(Schema):
     """MorphologySchema is a Schema for validating the data submitted to
-    MorphologiesController (controllers/morphologies.py).
+    MorphologiesController (views/morphologies.py).
     """
     chained_validators = [RulesOrRulesCorpus()]
     allow_extra_fields = True
@@ -1373,7 +1373,7 @@ class CompatibleParserComponents(FancyValidator):
 
 class MorphologicalParserSchema(Schema):
     """MorphologicalParserSchema is a Schema for validating the data submitted
-    to MorphologicalparsersController (controllers/morphologicalparsers.py).
+    to MorphologicalparsersController (views/morphologicalparsers.py).
     """
     chained_validators = [CompatibleParserComponents()]
     allow_extra_fields = True
@@ -1408,7 +1408,7 @@ class ValidSmoothing(FancyValidator):
 
 class MorphemeLanguageModelSchema(Schema):
     """MorphemeLanguageModel is a Schema for validating the data submitted to
-    MorphemelanguagemodelsController (controllers/morphemelanguagemodels.py).
+    MorphemelanguagemodelsController (views/morphemelanguagemodels.py).
     """
     allow_extra_fields = True
     filter_extra_fields = True
@@ -1431,3 +1431,12 @@ class OrderBySchema(Schema):
     order_by_model = UnicodeString()
     order_by_attribute = UnicodeString()
     order_by_direction = OneOf(['asc', 'desc'])
+
+
+class ExportSchema(Schema):
+    """ExportSchema is a Schema for validating the data used to create
+    an export (views/exports.py). No validation appears to be necessary at the
+    moment.
+    """
+    allow_extra_fields = True
+    filter_extra_fields = True
