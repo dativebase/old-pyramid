@@ -22,15 +22,17 @@ seemed like more trouble than it's worth.
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from .meta import Base, now
+from .phonology import Phonology
 import json
 
 class PhonologyBackup(Base):
-    """Class for creating OLD phonology_backup models.
+    """An OLD phonology backup is a copy of the state of a phonology at a
+    certain point in time. Every time a phonology is modified or deleted a
+    backup is created first.
 
     The vivify method takes a phonology and a user object as input and populates
     a number of phonology-like attributes, converting relational attributes to
     JSON objects.
-
     """
 
     __tablename__ = "phonologybackup"
@@ -38,19 +40,27 @@ class PhonologyBackup(Base):
     def __repr__(self):
         return "<PhonologyBackup (%s)>" % self.id
 
-    id = Column(Integer, Sequence('phonologybackup_seq_id', optional=True), primary_key=True)
-    phonology_id = Column(Integer)
-    UUID = Column(Unicode(36))
-    name = Column(Unicode(255))
-    description = Column(UnicodeText)
-    script = Column(UnicodeText)
-    enterer = Column(UnicodeText)
-    modifier = Column(UnicodeText)
+    id = Column(
+        Integer, Sequence('phonologybackup_seq_id', optional=True),
+        primary_key=True)
+    phonology_id = Column(
+        Integer,
+        doc='The id of the phonology that this phonology backup is a backup'
+        ' for.')
+    UUID = Column(
+        Unicode(36),
+        doc='The UUID of the phonology that this phonology backup is a backup'
+        ' for.')
+    name = Column(Unicode(255), doc=Phonology.name.__doc__)
+    description = Column(UnicodeText, doc=Phonology.description.__doc__)
+    script = Column(UnicodeText, doc=Phonology.script.__doc__)
+    enterer = Column(UnicodeText, doc=Phonology.enterer.__doc__)
+    modifier = Column(UnicodeText, doc=Phonology.modifier.__doc__)
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
-    compile_succeeded = Column(Boolean, default=False)
-    compile_message = Column(Unicode(255))
-    compile_attempt = Column(Unicode(36))
+    compile_succeeded = Column(Boolean, default=False, doc=Phonology.compile_succeeded.__doc__)
+    compile_message = Column(Unicode(255), doc=Phonology.compile_message.__doc__)
+    compile_attempt = Column(Unicode(36), doc=Phonology.compile_attempt.__doc__)
 
     def vivify(self, phonology_dict):
         """The vivify method gives life to a phonology_backup by specifying its

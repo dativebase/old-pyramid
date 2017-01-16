@@ -17,40 +17,52 @@
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean, Float
 from .meta import Base, now
+from .morphemelanguagemodel import MorphemeLanguageModel
 import json
 import logging
 
 log = logging.getLogger(__file__)
 
 class MorphemeLanguageModelBackup(Base):
+    """An OLD morpheme language model (LM) backup is a copy of the state of a
+    morpheme LM at a certain point in time. Every time a morpheme LM is
+    modified or deleted a backup is created first.
+    """
 
     __tablename__ = 'morphemelanguagemodelbackup'
 
     def __repr__(self):
         return '<MorphemeLanguageModelBackup (%s)>' % self.id
 
-    id = Column(Integer, Sequence('morphemelanguagemodelbackup_seq_id', optional=True), primary_key=True)
-    morphemelanguagemodel_id = Column(Integer)
-    UUID = Column(Unicode(36))
-    name = Column(Unicode(255))
-    description = Column(UnicodeText)
-    corpus = Column(UnicodeText)
-    enterer = Column(UnicodeText)
-    modifier = Column(UnicodeText)
+    id = Column(
+        Integer, Sequence('morphemelanguagemodelbackup_seq_id', optional=True), primary_key=True)
+    morphemelanguagemodel_id = Column(
+        Integer,
+        doc='The id of the morpheme language model that this morpheme language'
+        ' model backup is a backup for.')
+    UUID = Column(
+        Unicode(36),
+        doc='The UUID of the morpheme language model that this morpheme'
+        ' language model backup is a backup for.')
+    name = Column(Unicode(255), doc=MorphemeLanguageModel.name.__doc__)
+    description = Column(UnicodeText, doc=MorphemeLanguageModel.description.__doc__)
+    corpus = Column(UnicodeText, doc=MorphemeLanguageModel.corpus.__doc__)
+    enterer = Column(UnicodeText, doc=MorphemeLanguageModel.enterer.__doc__)
+    modifier = Column(UnicodeText, doc=MorphemeLanguageModel.modifier.__doc__)
     datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
-    generate_succeeded = Column(Boolean, default=False)
-    generate_message = Column(Unicode(255))
-    generate_attempt = Column(Unicode(36)) # a UUID
-    perplexity = Column(Float, default=0.0)
-    perplexity_attempt = Column(Unicode(36)) # a UUID
-    perplexity_computed = Column(Boolean, default=False)
-    toolkit = Column(Unicode(10))
-    order = Column(Integer)
-    smoothing = Column(Unicode(30))
-    vocabulary_morphology = Column(UnicodeText)
-    restricted = Column(Boolean)
-    categorial = Column(Boolean)
+    datetime_modified = Column(DateTime)
+    generate_succeeded = Column(Boolean, default=False, doc=MorphemeLanguageModel.generate_succeeded.__doc__)
+    generate_message = Column(Unicode(255), doc=MorphemeLanguageModel.generate_message.__doc__)
+    generate_attempt = Column(Unicode(36), doc=MorphemeLanguageModel.generate_attempt.__doc__)
+    perplexity = Column(Float, default=0.0, doc=MorphemeLanguageModel.perplexity.__doc__)
+    perplexity_attempt = Column(Unicode(36), doc=MorphemeLanguageModel.perplexity_attempt.__doc__)
+    perplexity_computed = Column(Boolean, default=False, doc=MorphemeLanguageModel.perplexity_computed.__doc__)
+    toolkit = Column(Unicode(10), doc=MorphemeLanguageModel.toolkit.__doc__)
+    order = Column(Integer, doc=MorphemeLanguageModel.order.__doc__)
+    smoothing = Column(Unicode(30), doc=MorphemeLanguageModel.smoothing.__doc__)
+    vocabulary_morphology = Column(UnicodeText, doc=MorphemeLanguageModel.vocabulary_morphology.__doc__)
+    restricted = Column(Boolean, doc=MorphemeLanguageModel.restricted.__doc__)
+    categorial = Column(Boolean, doc=MorphemeLanguageModel.categorial.__doc__)
 
     def vivify(self, morpheme_language_model_dict):
         """The vivify method gives life to a morpheme language model backup by specifying its

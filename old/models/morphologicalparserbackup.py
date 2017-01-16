@@ -17,30 +17,43 @@
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from .meta import Base, now
+from .morphologicalparser import MorphologicalParser
 import json
 
+
 class MorphologicalParserBackup(Base):
+    """An OLD morphological parser backup is a copy of the state of a
+    morphological parser at a certain point in time. Every time a parser
+    is modified or deleted a backup is created first.
+    """
 
     __tablename__ = 'morphologicalparserbackup'
 
     def __repr__(self):
         return '<MorphologicalParserBackup (%s)>' % self.id
 
-    id = Column(Integer, Sequence('morphologicalparserbackup_seq_id', optional=True), primary_key=True)
-    morphologicalparser_id = Column(Integer)
-    UUID = Column(Unicode(36))
-    name = Column(Unicode(255))
-    description = Column(UnicodeText)
-    phonology = Column(UnicodeText)
-    morphology = Column(UnicodeText)
-    language_model = Column(UnicodeText)
-    enterer = Column(UnicodeText)
-    modifier = Column(UnicodeText)
+    id = Column(
+        Integer, Sequence('morphologicalparserbackup_seq_id', optional=True),
+        primary_key=True)
+    morphologicalparser_id = Column(
+        Integer,
+        doc='The id of the morphological parser that this morphological parser'
+        ' backup is a backup for.')
+    UUID = Column(Unicode(36),
+        doc='The UUID of the morphological parser that this morphological'
+        ' parser backup is a backup for.')
+    name = Column(Unicode(255), doc=MorphologicalParser.name.__doc__)
+    description = Column(UnicodeText, doc=MorphologicalParser.description.__doc__)
+    phonology = Column(UnicodeText, doc=MorphologicalParser.phonology.__doc__)
+    morphology = Column(UnicodeText, doc=MorphologicalParser.morphology.__doc__)
+    language_model = Column(UnicodeText, doc=MorphologicalParser.language_model.__doc__)
+    enterer = Column(UnicodeText, doc=MorphologicalParser.enterer.__doc__)
+    modifier = Column(UnicodeText, doc=MorphologicalParser.modifier.__doc__)
     datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
-    compile_succeeded = Column(Boolean, default=False)
-    compile_message = Column(Unicode(255))
-    compile_attempt = Column(Unicode(36)) # a UUID
+    datetime_modified = Column(DateTime)
+    compile_succeeded = Column(Boolean, default=False, doc=MorphologicalParser.compile_succeeded.__doc__)
+    compile_message = Column(Unicode(255), doc=MorphologicalParser.compile_message.__doc__)
+    compile_attempt = Column(Unicode(36), doc=MorphologicalParser.compile_attempt.__doc__)
 
     def vivify(self, morphological_parser_dict):
         """The vivify method gives life to a morphology_backup by specifying its

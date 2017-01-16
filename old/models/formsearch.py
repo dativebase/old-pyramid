@@ -22,18 +22,32 @@ import logging
 log = logging.getLogger(__name__)
 
 class FormSearch(Base):
+    """A form search is a saved copy of a search that was performed across the
+    set of forms in the database.
+    """
 
     __tablename__ = 'formsearch'
 
     def __repr__(self):
         return '<FormSearch (%s)>' % self.id
 
-    id = Column(Integer, Sequence('formsearch_seq_id', optional=True), primary_key=True)
-    name = Column(Unicode(255))
-    search = Column(UnicodeText)    # The search params as JSON
-    description = Column(UnicodeText)
+    id = Column(
+        Integer, Sequence('formsearch_seq_id', optional=True), primary_key=True)
+    name = Column(
+        Unicode(255),
+        doc='A name for the OLD search')
+    search = Column(
+        UnicodeText,
+        doc='The search expression (a JSON string/object) that defines what'
+        ' forms are to be returned and their ordering.')
+    description = Column(
+        UnicodeText,
+        doc='A description of the OLD search.')
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
-    enterer = relation('User')
+    enterer = relation(
+        'User',
+        doc='The person (OLD user) who entered/created the form search. This'
+        ' value is specified automatically by the OLD.')
     datetime_modified = Column(DateTime, default=now)
 
     def get_dict(self):

@@ -17,6 +17,7 @@
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
+from .corpus import Corpus
 import json
 
 class CorpusBackup(Base):
@@ -37,18 +38,28 @@ class CorpusBackup(Base):
         return "<CorpusBackup (%s)>" % self.id
 
     id = Column(Integer, Sequence('corpusbackup_seq_id', optional=True), primary_key=True)
-    corpus_id = Column(Integer)
-    UUID = Column(Unicode(36))
-    name = Column(Unicode(255))
-    type = Column(Unicode(255))
-    description = Column(UnicodeText)
-    content = Column(UnicodeText(length=2**31))
-    enterer = Column(UnicodeText)
-    modifier = Column(UnicodeText)
-    form_search = Column(UnicodeText)
+    corpus_id = Column(
+        Integer,
+        doc='The id of the corpus that this corpus backup is a backup'
+        ' for.')
+    UUID = Column(
+        Unicode(36),
+        doc='The UUID of the corpus that this corpus backup is a backup'
+        ' for.')
+    name = Column(Unicode(255), doc=Corpus.name.__doc__)
+    # TODO: why is there a type here? Seems like a mistake.
+    type = Column(
+        Unicode(255),
+        doc='There should be no “type” attribute on OLD corpus backup'
+        ' resources. Will be removed in a future version.')
+    description = Column(UnicodeText, doc=Corpus.description.__doc__)
+    content = Column(UnicodeText(length=2**31), doc=Corpus.content.__doc__)
+    enterer = Column(UnicodeText, doc=Corpus.enterer.__doc__)
+    modifier = Column(UnicodeText, doc=Corpus.modifier.__doc__)
+    form_search = Column(UnicodeText, doc=Corpus.form_search.__doc__)
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
-    tags = Column(UnicodeText)
+    tags = Column(UnicodeText, doc=Corpus.tags.__doc__)
 
     def vivify(self, corpus_dict):
         """The vivify method gives life to a corpus_backup by specifying its

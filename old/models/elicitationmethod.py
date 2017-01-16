@@ -19,6 +19,7 @@ from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
 class ElicitationMethod(Base):
+    """An elicitation method categorizes how a linguistic form was elicited."""
 
     __tablename__ = 'elicitationmethod'
 
@@ -26,6 +27,10 @@ class ElicitationMethod(Base):
         return '<ElicitationMethod (%s)>' % self.id
 
     id = Column(Integer, Sequence('elicitationmethod_seq_id', optional=True), primary_key=True)
-    name = Column(Unicode(255))
-    description = Column(UnicodeText)
+    name = Column(
+        Unicode(255),
+        doc='A name for the elicitation method. Each elicitation method must'
+        ' have a name and it must be unique among elicitation methods.')
+    description = Column(
+        UnicodeText, doc='A description of the elicitation method.')
     datetime_modified = Column(DateTime, default=now)

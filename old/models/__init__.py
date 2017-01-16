@@ -12,6 +12,7 @@ from .collection import Collection
 from .collectionbackup import CollectionBackup
 from .corpus import Corpus
 from .corpusbackup import CorpusBackup
+from .export import Export
 from .elicitationmethod import ElicitationMethod
 from .file import File
 from .form import Form

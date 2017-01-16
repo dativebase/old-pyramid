@@ -19,17 +19,33 @@ from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
 class Page(Base):
+    """An OLD page resources is a web page written using a specified
+    lightweight markup language (i.e., Markdown or reStructuredText).
+    """
 
     __tablename__ = 'page'
 
     def __repr__(self):
         return '<Page (%s)>' % self.id
 
-    id = Column(Integer, Sequence('page_seq_id', optional=True),
-            primary_key=True)
+    id = Column(
+        Integer, Sequence('page_seq_id', optional=True), primary_key=True)
     name = Column(Unicode(255), unique=True)
-    heading = Column(Unicode(255))
-    markup_language = Column(Unicode(100))
-    content = Column(UnicodeText)
-    html = Column(UnicodeText)
+    heading = Column(
+        Unicode(255),
+        doc='The text of the primary heading of an OLD page.')
+    markup_language = Column(
+        Unicode(100),
+        doc='The markup language (“Markdown” or “reStructuredText”)'
+        ' that is used to generate HTML from the “content” value of an OLD'
+        ' page.')
+    content = Column(
+        UnicodeText,
+        doc='The content of an OLD page is the text that defines the content of'
+        ' the page. It should make use of the markup conventions from the'
+        ' selected “markup language”. It will be rendered as HTML.')
+    html = Column(
+        UnicodeText,
+        doc='The HTML attribute of an OLD page is the string of HTML generated'
+        ' from the “content” value using the specified “markup language”.')
     datetime_modified = Column(DateTime, default=now)

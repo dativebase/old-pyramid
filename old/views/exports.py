@@ -36,7 +36,8 @@ Requirements:
        - the client must poll the OLD in order to determine when the export is
          complete.
        - the export should be saved to disk and be efficiently retrievable (a
-         static asset, with or without authentication required)
+         static asset, with or without authentication required, see
+         http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/assets.html)
        - checked for consistency and repaired, if necessary
          how? get all lastmod times for all resources prior to export
          generation and then re-check them prior to export save?
@@ -62,6 +63,7 @@ from old.lib.constants import (
 )
 from old.lib.dbutils import get_last_modified
 import old.lib.helpers as h
+from old.lib.export_worker import EXPORT_WORKER_Q
 from old.lib.schemata import FormIdsSchema
 import old.models as old_models
 from old.views.resources import (
@@ -86,6 +88,9 @@ class Exports(Resources):
         self.request.response.status_int = 404
         return NO_UPDATE
 
+    # TODO: when a user attempts to create an export and one is currently being
+    # generated, we should maybe warn them of that prior to creating a new one...
+
     def _get_create_data(self, data):
         """User supplies no data when creating an export. All data are based on
         logged-in user and date of creation request.
@@ -98,13 +103,26 @@ class Exports(Resources):
         return {
             'UUID': UUID,
             'datetime_entered': now,
-            'timestamp': timestamp,
             'enterer': user_model,
             'name': name,
             'generate_succeeded': False,
             'generate_message': '',
             'generate_attempt': str(uuid4())
         }
+
+    def _post_create(self, export):
+        """After creating the export database model, we generate the actual
+        export .zip directory on disk in a separate thread here.
+        """
+        EXPORT_WORKER_Q.put({
+            'id': h.generate_salt(),
+            'func': 'generate_export',
+            'args': {
+                'export_id': export.id,
+                'user_id': self.logged_in_user.id,
+                'config_path': self.request.registry.settings['__file__'],
+            }
+        })
 
     def _get_user_data(self, data):
         return {}

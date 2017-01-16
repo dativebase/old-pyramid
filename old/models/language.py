@@ -19,20 +19,39 @@ from sqlalchemy.types import Unicode, DateTime
 from .meta import Base, now
 
 class Language(Base):
+    """An OLD language is a language in the ISO 639-3 code set."""
 
     __tablename__ = 'language'
 
     def __repr__(self):
         return '<Language (%s)>' % self.Id
 
-    Id = Column(Unicode(3), primary_key=True)
-    Part2B = Column(Unicode(3))
-    Part2T = Column(Unicode(3))
-    Part1 = Column(Unicode(2))
-    Scope = Column(Unicode(1))
-    Type = Column(Unicode(1))
-    Ref_Name = Column(Unicode(150))
-    Comment = Column(Unicode(150))
+    Id = Column(
+        Unicode(3), primary_key=True,
+        doc='A three-character alphabetic unique identifier for a language, as'
+        ' specified via the ISO 639-3 standard.')
+    Part2B = Column(
+        Unicode(3),
+        doc='Equivalent ISO 639-2 (three-character) identifier of the'
+        ' bibliographic applications code set, if there is one.')
+    Part2T = Column(
+        Unicode(3),
+        doc='Equivalent 639-2 (three-character) identifier of the terminology'
+        ' applications code set, if there is one.')
+    Part1 = Column(
+        Unicode(2),
+        doc='Equivalent ISO 639-1 (two-character) identifier, if there is one.')
+    Scope = Column(
+        Unicode(1),
+        doc='One of I(ndividual), M(acrolanguage), or S(pecial). See'
+        ' http://www-01.sil.org/iso639-3/scope.asp.')
+    Type = Column(
+        Unicode(1),
+        doc='One of A(ncient), C(onstructed), E(xtinct), H(istorical),'
+        ' L(iving), or S(pecial). See http://www-01.sil.org/iso639-3/types.asp.')
+    Ref_Name = Column(Unicode(150), doc='Reference language name.')
+    Comment = Column(
+        Unicode(150), doc='Comment relating to one or more of the columns.')
     datetime_modified = Column(DateTime, default=now)
 
     def get_dict(self):

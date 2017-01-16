@@ -19,14 +19,26 @@ from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
 class Translation(Base):
+    """An OLD translation is a translation of an OLD form. It may have been
+    provided by a speaker/consultant, it may be speculative, or it may have
+    been judged for appropriateness/correctness by a speaker.
+    """
 
     __tablename__ = 'translation'
 
     def __repr__(self):
         return '<Translation (%s)>' % self.id
 
-    id = Column(Integer, Sequence('translation_seq_id', optional=True), primary_key=True)
-    transcription = Column(UnicodeText, nullable=False)
-    grammaticality = Column(Unicode(255))
+    id = Column(
+        Integer, Sequence('translation_seq_id', optional=True),
+        primary_key=True)
+    transcription = Column(
+        UnicodeText, nullable=False,
+        doc='The transcription of a translation, in the metalanguage.')
+    grammaticality = Column(
+        Unicode(255),
+        doc='The (semantic/pragmatic) appropriateness of a translation with'
+        ' respect to the form that it is associated to.')
     form_id = Column(Integer, ForeignKey('form.id'))
     datetime_modified = Column(DateTime, default=now)
+    form_doc = 'The OLD form that this translation is a translation of.'

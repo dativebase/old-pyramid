@@ -22,6 +22,9 @@ import logging
 log = logging.getLogger(name=__name__)
 
 class CorpusForm(Base):
+    """The corpus-form model encodes the many-to-many relationship between
+    corpora and forms.
+    """
 
     __tablename__ = 'corpusform'
 
@@ -33,6 +36,9 @@ class CorpusForm(Base):
 
 
 class CorpusTag(Base):
+    """The corpus-tag model encodes the many-to-many relationship between
+    corpora and tags.
+    """
 
     __tablename__ = 'corpustag'
 
@@ -59,31 +65,61 @@ class Keeper(object):
 
 
 class Corpus(Base):
+    """An OLD corpus is an (potentially ordered) collection of forms. The
+    constituent forms may be defined with reference to an OLD search or they
+    may be referenced explicitly via their id values. A given form may be in
+    multiple corpora simultaneously.
+    """
 
     __tablename__ = 'corpus'
 
     def __repr__(self):
         return "<Corpus (%s)>" % self.id
 
-    id = Column(Integer, Sequence('corpus_seq_id', optional=True), primary_key=True)
+    id = Column(
+        Integer, Sequence('corpus_seq_id', optional=True), primary_key=True)
     UUID = Column(Unicode(36))
-    name = Column(Unicode(255))
-    description = Column(UnicodeText)
-    content = Column(UnicodeText(length=2**31))
+    name = Column(
+        Unicode(255),
+        doc='A name for the OLD corpus. Each corpus must have a name and it'
+        ' must be unique among corpora within a given OLD.')
+    description = Column(
+        UnicodeText, doc='A description of the corpus.')
+    content = Column(
+        UnicodeText(length=2**31),
+        doc='The content of the corpus: a block of text containing references'
+        ' to the forms that constitute the content of the corpus.')
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
-    enterer = relation('User', primaryjoin='Corpus.enterer_id==User.id')
+    enterer = relation(
+        'User', primaryjoin='Corpus.enterer_id==User.id',
+        doc='The OLD user who entered/created the corpus.')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
-    modifier = relation('User', primaryjoin='Corpus.modifier_id==User.id')
-    form_search_id = Column(Integer, ForeignKey('formsearch.id', ondelete='SET NULL'))
-    form_search = relation('FormSearch')
+    modifier = relation(
+        'User', primaryjoin='Corpus.modifier_id==User.id',
+        doc='The OLD user who made the most recent modification to a given'
+        ' corpus.')
+    form_search_id = Column(
+        Integer, ForeignKey('formsearch.id', ondelete='SET NULL'))
+    form_search = relation(
+        'FormSearch',
+        doc='An OLD form search object which defines the set of forms that'
+        ' constitute the corpus.')
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
-    tags = relation('Tag', secondary=CorpusTag.__table__)
-    forms = relation('Form', secondary=CorpusForm.__table__, backref='corpora')
+    tags = relation(
+        'Tag', secondary=CorpusTag.__table__,
+        doc='Tags for categorizing corpora.')
+    forms = relation(
+        'Form', secondary=CorpusForm.__table__, backref='corpora',
+        doc='The forms that comprise a given corpus.')
 
     # ``files`` attribute holds references to ``CorpusFile`` models, not ``File``
     # models.  This is a one-to-many relation, like form.translations.
-    files = relation('CorpusFile', backref='corpus', cascade='all, delete, delete-orphan')
+    files = relation(
+        'CorpusFile', backref='corpus', cascade='all, delete, delete-orphan',
+        doc='A list of files associated with this corpus. These are binary'
+        ' representations of the corpus in various formats, e.g., NLTK-style'
+        ' corpora or PTB-style treebanks.')
 
     def get_dict(self):
         """Return a Python dictionary representation of the Corpus.  This
@@ -134,24 +170,42 @@ class Corpus(Base):
 
 
 class CorpusFile(Base):
-    """Represents a corpus' forms written to disk in a certain format."""
+    """An OLD corpus file is a representation of an OLD corpus as a sequence of
+    forms written to disk according to a certain format.
+    """
 
     __tablename__ = 'corpusfile'
 
     def __repr__(self):
         return "<CorpusFile (%s)>" % self.id
 
-    id = Column(Integer, Sequence('corpusfile_seq_id', optional=True), primary_key=True)
+    id = Column(
+        Integer, Sequence('corpusfile_seq_id', optional=True), primary_key=True)
     corpus_id = Column(Integer, ForeignKey('corpus.id', ondelete='SET NULL'))
-    filename = Column(Unicode(255))
-    format = Column(Unicode(255))
+    filename = Column(
+        Unicode(255),
+        doc='An OLD corpus file\'s filename attribute is the name of the corpus'
+        ' file on disk.')
+    format = Column(
+        Unicode(255),
+        doc='The format according to which an OLD corpus has been written to'
+        ' disk as a file. Currently valid values are “treebank” and'
+        ' “transcriptions only”')
     creator_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
-    creator = relation('User', primaryjoin='CorpusFile.creator_id==User.id')
+    creator = relation(
+        'User', primaryjoin='CorpusFile.creator_id==User.id',
+        doc='The creator/enterer (OLD user) of an OLD corpus file resource.')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     modifier = relation('User', primaryjoin='CorpusFile.modifier_id==User.id')
     datetime_modified = Column(DateTime, default=now)
     datetime_created = Column(DateTime)
-    restricted = Column(Boolean)
+    restricted = Column(
+        Boolean,
+        doc='An OLD corpus file is classified as restricted if any of the forms'
+        ' in the corpus are restricted.')
+
+    corpus_doc = (
+        'The OLD corpus resource that an OLD corpus file resource is based on.')
 
     def get_dict(self):
         """Return a Python dictionary representation of the corpus file."""

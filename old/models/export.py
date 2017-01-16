@@ -34,6 +34,7 @@ import logging
 log = logging.getLogger(__name__)
 
 class Export(Base):
+    """An export represents the export of the data in an OLD instance."""
 
     __tablename__ = 'export'
 
@@ -43,14 +44,25 @@ class Export(Base):
     id = Column(Integer, Sequence('export_seq_id', optional=True),
                 primary_key=True)
     UUID = Column(Unicode(36))
-    name = Column(Unicode(255))
+    name = Column(Unicode(255), doc='The name of the export.')
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
-    enterer = relation('User', primaryjoin='Morphology.enterer_id==User.id')
+    enterer = relation(
+        'User', primaryjoin='Export.enterer_id==User.id',
+        doc='The OLD user who created the export.')
     datetime_entered = Column(DateTime)
-    timestamp = Column(TIMESTAMP)
-    generate_succeeded = Column(Boolean, default=False)
-    generate_message = Column(Unicode(255))
-    generate_attempt = Column(Unicode(36)) # a UUID
+    generate_succeeded = Column(
+        Boolean, default=False,
+        doc='Indicates whether the attempt to generate the export was'
+        ' successful or not.')
+    generate_message = Column(
+        Unicode(255),
+        doc='String that indicates what happened in the attempt to generate the'
+        ' export.')
+    generate_attempt = Column(
+        Unicode(36),
+        doc='A UUID value that is updated when the attempt to generate the'
+        ' export has ended. A change in this value indicates that the generate'
+        ' attempt is over.')
 
     def get_dict(self):
         return {
@@ -59,9 +71,8 @@ class Export(Base):
             'name': self.name,
             'enterer': self.get_mini_user_dict(self.enterer),
             'datetime_entered': self.datetime_entered,
-            'timestamp': self.timestamp,
-            'generate_succeeded': self.compile_succeeded,
-            'generate_message': self.compile_message,
-            'generate_attempt': self.compile_attempt,
+            'generate_succeeded': self.generate_succeeded,
+            'generate_message': self.generate_message,
+            'generate_attempt': self.generate_attempt,
         }
 

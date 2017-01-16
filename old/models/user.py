@@ -22,6 +22,9 @@ from old.models import Form, File, Collection
 
 
 class UserForm(Base):
+    """The file-tag model encodes the many-to-many relationship between
+    users and their remembered forms.
+    """
 
     __tablename__ = 'userform'
 
@@ -33,36 +36,83 @@ class UserForm(Base):
 
 
 class User(Base):
+    """An OLD user is a person with an account on a given OLD. Users are the
+    elicitors, enterers, and modifiers of content on OLDs.
+    """
 
     __tablename__ = 'user'
 
     def __repr__(self):
         return "<User (%s)>" % self.id
 
-    id = Column(Integer, Sequence('user_seq_id', optional=True),
-            primary_key=True)
-    username = Column(Unicode(255), unique=True)
-    password = Column(Unicode(255))
-    salt = Column(Unicode(255))
-    first_name = Column(Unicode(255))
-    last_name = Column(Unicode(255))
-    email = Column(Unicode(255))
-    affiliation = Column(Unicode(255))
-    role = Column(Unicode(100))
-    markup_language = Column(Unicode(100))
-    page_content = Column(UnicodeText)
-    html = Column(UnicodeText)
+    id = Column(
+        Integer, Sequence('user_seq_id', optional=True), primary_key=True)
+    username = Column(
+        Unicode(255), unique=True,
+        doc='An OLD user’s username, a unique identifier within a given OLD.')
+    password = Column(
+        Unicode(255),
+        doc='An OLD user’s password.')
+    salt = Column(
+        Unicode(255),
+        doc='The salt attribute of an OLD user is a randomly-generated string'
+        ' used to enhance the security of the user\'s encrypted password.')
+    first_name = Column(
+        Unicode(255),
+        doc='The first (given) name of an OLD user.')
+    last_name = Column(
+        Unicode(255),
+        doc='The last name (surname) of this user.')
+    email = Column(
+        Unicode(255),
+        doc='An OLD user’s email address.')
+    affiliation = Column(
+        Unicode(255),
+        doc='The academic institution, First Nation, museum, etc. that an OLD'
+        ' user is affiliated with.')
+    role = Column(
+        Unicode(100),
+        doc='The role of an OLD user determines level of access: one of'
+        ' “administrator”, “contributor”, or “viewer”.')
+    markup_language = Column(
+        Unicode(100),
+        doc='The markup language (Markdown or reStructuredText) that will be'
+        ' used to generate HTML from an OLD user’s “page content”.')
+    page_content = Column(
+        UnicodeText,
+        doc='An OLD user\'s page content is text that defines the user’s'
+        ' page; users may use markup conventions from the selected “markup'
+        ' language” in this field and the output will be rendered as HTML.')
+    html = Column(
+        UnicodeText,
+        doc='The HTML of the user’s page; this is generated from the “page'
+        ' content” using the specified “markup language”.')
+
     input_orthography_id = Column(Integer, ForeignKey('orthography.id',
         ondelete='SET NULL'))
-    input_orthography = relation('Orthography',
-        primaryjoin='User.input_orthography_id==Orthography.id')
+    input_orthography = relation(
+        'Orthography',
+        primaryjoin='User.input_orthography_id==Orthography.id',
+        doc='An OLD user\'s input orthography is the orthography (alphabet)'
+        ' that they wish to enter transcriptions of the object language in. The'
+        ' software should convert these strings to the storage orthography'
+        ' transparently.')
     output_orthography_id = Column(Integer, ForeignKey('orthography.id',
         ondelete='SET NULL'))
-    output_orthography = relation('Orthography',
-        primaryjoin='User.output_orthography_id==Orthography.id')
+    output_orthography = relation(
+        'Orthography',
+        primaryjoin='User.output_orthography_id==Orthography.id',
+        doc='An OLD user\'s output orthography is the orthography (alphabet)'
+        ' that they wish transcriptions of the object language to be displayed'
+        ' in. The software should convert storage orthography strings to this'
+        ' orthography transparently.')
+
     datetime_modified = Column(DateTime, default=now)
-    remembered_forms = relation('Form', secondary=UserForm.__table__,
-            backref='memorizers')
+    remembered_forms = relation(
+        'Form', secondary=UserForm.__table__, backref='memorizers',
+        doc='An OLD user\'s remembered forms are a collection of OLD form'
+        ' resources that the user has “remembered”. This can be used to give'
+        ' persistent clipboard-like functionality to an OLD client.')
 
     def get_dict(self):
         return {

@@ -23,19 +23,28 @@ import json
 
 
 class Keyboard(Base):
+    """An OLD keyboard represents a mapping between keys on a (physical)
+    keyboard and characters (or strings). An OLD may contain numerous keyboards
+    for different purposes, that may be associated to specific fields.
+    """
 
     __tablename__ = 'keyboard'
 
     def __repr__(self):
         return "<Keyboard (%s)>" % self.id
 
-    id = Column(Integer, Sequence('keyboard_seq_id', optional=True), primary_key=True)
-    name = Column(Unicode(255), unique=True)
+    id = Column(
+        Integer, Sequence('keyboard_seq_id', optional=True), primary_key=True)
+    name = Column(
+        Unicode(255), unique=True)
     description = Column(UnicodeText)
-    keyboard = Column(UnicodeText, default=u'{}')
+    keyboard = Column(UnicodeText, default='{}',
+        doc='A mapping from keyboard key codes to Unicode characters or'
+        ' strings.')
 
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
-    enterer = relation('User', primaryjoin='Keyboard.enterer_id==User.id')
+    enterer = relation(
+        'User', primaryjoin='Keyboard.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     modifier = relation('User', primaryjoin='Keyboard.modifier_id==User.id')
     datetime_entered = Column(DateTime)

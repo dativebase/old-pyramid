@@ -22,18 +22,21 @@ seemed like more trouble than it's worth.
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from .meta import Base, now
+from .morphology import Morphology
 import json
 import logging
 
 log = logging.getLogger(__name__)
 
+
 class MorphologyBackup(Base):
-    """Class for creating OLD morphology_backup models.
+    """An OLD morphology backup is a copy of the state of a morphology at a
+    certain point in time. Every time a morphology is modified or deleted a
+    backup is created first.
 
     The vivify method takes a morphology and a user object as input and populates
     a number of morphology-like attributes, converting relational attributes to
     JSON objects.
-
     """
 
     __tablename__ = "morphologybackup"
@@ -41,27 +44,43 @@ class MorphologyBackup(Base):
     def __repr__(self):
         return "<MorphologyBackup (%s)>" % self.id
 
-    id = Column(Integer, Sequence('morphologybackup_seq_id', optional=True), primary_key=True)
-    morphology_id = Column(Integer)
-    UUID = Column(Unicode(36))
-    name = Column(Unicode(255))
-    description = Column(UnicodeText)
-    script_type = Column(Unicode(5))
-    lexicon_corpus = Column(UnicodeText)
-    rules_corpus = Column(UnicodeText)
-    enterer = Column(UnicodeText)
-    modifier = Column(UnicodeText)
+    id = Column(
+        Integer, Sequence('morphologybackup_seq_id', optional=True),
+        primary_key=True)
+    morphology_id = Column(
+        Integer,
+        doc='The id of the morphology that this morphology backup is a backup'
+        ' for.')
+    UUID = Column(Unicode(36),
+        doc='The UUID of the morphology that this morphology backup is a backup'
+        ' for.')
+    name = Column(Unicode(255), doc=Morphology.name.__doc__)
+    description = Column(UnicodeText, doc=Morphology.description.__doc__)
+    script_type = Column(Unicode(5), doc=Morphology.script_type.__doc__)
+    lexicon_corpus = Column(UnicodeText, doc=Morphology.lexicon_corpus.__doc__)
+    rules_corpus = Column(UnicodeText, doc=Morphology.rules_corpus.__doc__)
+    enterer = Column(UnicodeText, doc=Morphology.enterer.__doc__)
+    modifier = Column(UnicodeText, doc=Morphology.modifier.__doc__)
     datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
-    compile_succeeded = Column(Boolean, default=False)
-    compile_message = Column(Unicode(255))
-    compile_attempt = Column(Unicode(36))
-    generate_attempt = Column(Unicode(36))
-    extract_morphemes_from_rules_corpus = Column(Boolean, default=False)
-    rules = Column(UnicodeText)
-    rich_upper = Column(Boolean, default=False)
-    rich_lower = Column(Boolean, default=False)
-    include_unknowns = Column(Boolean, default=False)
+    datetime_modified = Column(DateTime)
+    compile_succeeded = Column(
+        Boolean, default=False, doc=Morphology.compile_succeeded.__doc__)
+    compile_message = Column(
+        Unicode(255), doc=Morphology.compile_message.__doc__)
+    compile_attempt = Column(
+        Unicode(36), doc=Morphology.compile_attempt.__doc__)
+    generate_attempt = Column(
+        Unicode(36), doc=Morphology.generate_attempt.__doc__)
+    extract_morphemes_from_rules_corpus = Column(
+        Boolean, default=False,
+        doc=Morphology.extract_morphemes_from_rules_corpus.__doc__)
+    rules = Column(UnicodeText, doc=Morphology.rules.__doc__)
+    rich_upper = Column(
+        Boolean, default=False, doc=Morphology.rich_upper.__doc__)
+    rich_lower = Column(
+        Boolean, default=False, doc=Morphology.rich_lower.__doc__)
+    include_unknowns = Column(
+        Boolean, default=False, doc=Morphology.include_unknowns.__doc__)
 
     def vivify(self, morphology_dict):
         """The vivify method gives life to a morphology_backup by specifying its

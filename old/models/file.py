@@ -23,6 +23,9 @@ import logging
 log = logging.getLogger(__name__)
 
 class FileTag(Base):
+    """The file-tag model encodes the many-to-many relationship between
+    files and tags.
+    """
 
     __tablename__ = 'filetag'
 
@@ -33,8 +36,13 @@ class FileTag(Base):
 
 
 class File(Base):
-    """There are 3 types of file:
-    
+    """An OLD file is a digital file such as an audio file, video file, image,
+    etc. A file's digital content may be stored on the OLD instance's server or
+    it may be hosted elsewhere. A file may also represent a sub-interval of
+    another time-based file.
+
+    There are 3 types of file:
+
     1. Standard files: their content is a file in /files/filename.  These files
        have a filename attribute.
     2. Subinterval-referring A/V files: these refer to another OLD file for
@@ -50,34 +58,79 @@ class File(Base):
         return "<File (%s)>" % self.id
 
     id = Column(Integer, Sequence('file_seq_id', optional=True), primary_key=True)
-    filename = Column(Unicode(255), unique=True)    # filename is the name of the file as written to disk
-    name = Column(Unicode(255))                     # just a name; useful for subinterval-referencing files; need not be unique
-    MIME_type = Column(Unicode(255))
-    size = Column(Integer)
-    description = Column(UnicodeText)
-    date_elicited = Column(Date)
+    filename = Column(
+        Unicode(255), unique=True,
+        doc='The name of an OLD file as it is written to disk.')
+    name = Column(
+        Unicode(255),
+        doc='The (possibly user-supplied) name of an OLD file; relevant for'
+        ' externally hosted files or subinterval files.')
+    MIME_type = Column(
+        Unicode(255),
+        doc='The type of the file; technically, this is the MIME (Multipurpose'
+        ' Internet Mail Extensions) type or Internet media type.')
+    size = Column(Integer, doc='The size of an OLD file in bytes.')
+    description = Column(
+        UnicodeText,
+        doc='A description of an OLD file.')
+    date_elicited = Column(
+        Date, doc='The date an OLD file was elicited')
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
-    enterer = relation('User', primaryjoin='File.enterer_id==User.id')
+    enterer = relation(
+        'User', primaryjoin='File.enterer_id==User.id',
+        doc='The person (OLD user) who entered/created the file. This value is'
+        ' specified automatically by the OLD.')
     elicitor_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
-    elicitor = relation('User', primaryjoin='File.elicitor_id==User.id')
+    elicitor = relation(
+        'User', primaryjoin='File.elicitor_id==User.id',
+        doc='The person (OLD user) elicited (e.g., recorded) the file.')
     speaker_id = Column(Integer, ForeignKey('speaker.id', ondelete='SET NULL'))
-    speaker = relation('Speaker')
-    utterance_type = Column(Unicode(255))
-    tags = relation('Tag', secondary=FileTag.__table__, backref='files')
+    speaker = relation(
+        'Speaker',
+        doc='The speaker of the content encoded in this file, if relevant.')
+    utterance_type = Column(
+        Unicode(255),
+        doc='If an OLD file represents an utterance, then this value indicates'
+        ' whether that utterance is in the object language, the metalanguage, or'
+        ' both.')
+    tags = relation(
+        'Tag', secondary=FileTag.__table__, backref='files',
+        doc='The tags associated to a given file. Useful for categorization.')
 
     # Attributes germane to externally hosted files.
-    url = Column(Unicode(255))          # for external files
-    password = Column(Unicode(255))     # for external files requiring authentication
+    url = Column(
+        Unicode(255),
+        doc='The URL where an OLD file’s data are stored. Relevant to'
+        ' externally-hosted files.')
+    password = Column(Unicode(255),
+        doc='The password (if relevant) needed to access an OLD file’s'
+        ' externally hosted data.')
 
     # Attributes germane to subinterval-referencing a/v files.
     parent_file_id = Column(Integer, ForeignKey('file.id', ondelete='SET NULL'))
-    parent_file = relation('File', remote_side=[id])
-    start = Column(Float)
-    end = Column(Float)
+    parent_file = relation('File', remote_side=[id],
+        doc='The audio or video (parent) file that a subinterval-referencing'
+        ' OLD file refers to for its file data.')
+    start = Column(
+        Float,
+        doc='The time in the parent file where a subinterval-referencing OLD'
+        ' file’s data begins.')
+    end = Column(
+        Float,
+        doc='The time in the parent file where a subinterval-referencing OLD'
+        ' file’s data ends.')
 
-    lossy_filename = Column(Unicode(255))        # .ogg generated from .wav or resized images
+    lossy_filename = Column(
+        Unicode(255),
+        doc='The name given to the reduced-size copy that was made of this'
+        ' file.') # .ogg generated from .wav or resized images
+
+    forms_doc = 'The set of forms that an OLD file resource is associated to.'
+    collections_doc = (
+        'The set of collection resources that an OLD file resource is'
+        ' associated to.')
 
     def get_dict(self):
         """Return a Python dictionary representation of the File.  This

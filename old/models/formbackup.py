@@ -19,13 +19,18 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
-from sqlalchemy import Column, Sequence
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from .meta import Base, now
 import json
 
+from sqlalchemy import Column, Sequence
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
+
+from .form import Form
+from .meta import Base, now
+
 class FormBackup(Base):
-    """Class for creating OLD FormBackup models.
+    """An OLD form backup is a copy of the state of a form at a
+    certain point in time. Every time a form is modified or deleted a
+    backup is created first.
 
     The vivify method takes a Form and a User object as input and populates a
     number of Form-like attributes, converting relational attributes to JSON
@@ -40,38 +45,43 @@ class FormBackup(Base):
     def __repr__(self):
         return "<FormBackup (%s)>" % self.id
 
-    id = Column(Integer, Sequence('formbackup_seq_id', optional=True), primary_key=True)
-    form_id = Column(Integer)
-    UUID = Column(Unicode(36))
-    transcription = Column(Unicode(510), nullable=False)
-    phonetic_transcription = Column(Unicode(510))
-    narrow_phonetic_transcription = Column(Unicode(510))
-    morpheme_break = Column(Unicode(510))
-    morpheme_gloss = Column(Unicode(510))
-    comments = Column(UnicodeText)
-    speaker_comments = Column(UnicodeText)
-    grammaticality = Column(Unicode(255))
-    date_elicited = Column(Date)
+    id = Column(
+        Integer, Sequence('formbackup_seq_id', optional=True), primary_key=True)
+    form_id = Column(
+        Integer,
+        doc='The id of the form that this form backup is a backup for.')
+    UUID = Column(
+        Unicode(36),
+        doc='The UUID of the form that this form backup is a backup for.')
+    transcription = Column(Unicode(510), nullable=False, doc=Form.transcription.__doc__)
+    phonetic_transcription = Column(Unicode(510), doc=Form.phonetic_transcription.__doc__)
+    narrow_phonetic_transcription = Column(Unicode(510), doc=Form.narrow_phonetic_transcription.__doc__)
+    morpheme_break = Column(Unicode(510), doc=Form.morpheme_break.__doc__)
+    morpheme_gloss = Column(Unicode(510), doc=Form.morpheme_gloss.__doc__)
+    comments = Column(UnicodeText, doc=Form.comments.__doc__)
+    speaker_comments = Column(UnicodeText, doc=Form.speaker_comments.__doc__)
+    grammaticality = Column(Unicode(255), doc=Form.grammaticality.__doc__)
+    date_elicited = Column(Date, doc=Form.date_elicited.__doc__)
     datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
-    syntactic_category_string = Column(Unicode(510))
-    morpheme_break_ids = Column(UnicodeText)
-    morpheme_gloss_ids = Column(UnicodeText)
-    break_gloss_category = Column(Unicode(1023))
-    syntax = Column(Unicode(1023))
-    semantics = Column(Unicode(1023))
-    status = Column(Unicode(40))
-    elicitor = Column(UnicodeText)
-    enterer = Column(UnicodeText)
-    verifier = Column(UnicodeText)
-    speaker = Column(UnicodeText)
-    elicitation_method = Column(UnicodeText)
-    syntactic_category = Column(UnicodeText)
-    source = Column(UnicodeText)
-    translations = Column(UnicodeText)
-    tags = Column(UnicodeText)
-    files = Column(UnicodeText) 
-    modifier = Column(UnicodeText)
+    datetime_modified = Column(DateTime)
+    syntactic_category_string = Column(Unicode(510), doc=Form.syntactic_category_string.__doc__)
+    morpheme_break_ids = Column(UnicodeText, doc=Form.morpheme_break_ids.__doc__)
+    morpheme_gloss_ids = Column(UnicodeText, doc=Form.morpheme_gloss_ids.__doc__)
+    break_gloss_category = Column(Unicode(1023), doc=Form.break_gloss_category.__doc__)
+    syntax = Column(Unicode(1023), doc=Form.syntax.__doc__)
+    semantics = Column(Unicode(1023), doc=Form.semantics.__doc__)
+    status = Column(Unicode(40), doc=Form.status.__doc__)
+    elicitor = Column(UnicodeText, doc=Form.elicitor.__doc__)
+    enterer = Column(UnicodeText, doc=Form.enterer.__doc__)
+    verifier = Column(UnicodeText, doc=Form.verifier.__doc__)
+    speaker = Column(UnicodeText, doc=Form.speaker.__doc__)
+    elicitation_method = Column(UnicodeText, doc=Form.elicitation_method.__doc__)
+    syntactic_category = Column(UnicodeText, doc=Form.syntactic_category.__doc__)
+    source = Column(UnicodeText, doc=Form.source.__doc__)
+    translations = Column(UnicodeText, doc=Form.translations.__doc__)
+    tags = Column(UnicodeText, doc=Form.tags.__doc__)
+    files = Column(UnicodeText, doc=Form.files.__doc__)
+    modifier = Column(UnicodeText, doc=Form.modifier.__doc__)
 
     def vivify(self, form_dict):
         """The vivify method gives life to FormBackup by specifying its

@@ -19,6 +19,9 @@ from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
 class SyntacticCategory(Base):
+    """An OLD syntactic category is the grammatical category assigned to a
+    form. It may derive from a syntactic or a morphological analysis.
+    """
 
     __tablename__ = 'syntacticcategory'
 
@@ -30,10 +33,20 @@ class SyntacticCategory(Base):
         return '<SyntacticCategory (%s)>' % self.id
 
     id = Column(Integer, Sequence('syntacticcategory_seq_id', optional=True), primary_key=True)
-    name = Column(Unicode(255))
-    type = Column(Unicode(60))
+    name = Column(
+        Unicode(255),
+        doc='The name of a syntactic category is the category itself, e.g.,'
+        ' “D” or “S”.')
+    type = Column(
+        Unicode(60),
+        doc='The type of syntactic category; one of “lexical”,'
+        ' “phrasal” or “sentential”.')
     description = Column(UnicodeText)
     datetime_modified = Column(DateTime, default=now)
+
+    forms_doc = (
+        'The set of OLD form resources that an OLD syntactic category resource'
+        ' is associated to.')
 
     def get_dict(self):
         return {

@@ -24,36 +24,49 @@ import json
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from .meta import Base, now
+from .collection import Collection
 
 
 class CollectionBackup(Base):
+    """An OLD collection backup is a copy of the state of a collection at a
+    certain point in time. Every time a collection is modified or deleted a
+    backup is created first.
+    """
 
     __tablename__ = "collectionbackup"
 
     def __repr__(self):
         return "<CollectionBackup (%s)>" % self.id
 
-    id = Column(Integer, Sequence('collectionbackup_seq_id', optional=True), primary_key=True)
-    collection_id = Column(Integer)
-    UUID = Column(Unicode(36))
-    title = Column(Unicode(255))
-    type = Column(Unicode(255))
-    url = Column(Unicode(255))
-    description = Column(UnicodeText)
-    markup_language = Column(Unicode(100))
-    contents = Column(UnicodeText)
-    html = Column(UnicodeText)
-    date_elicited = Column(Date)
+    id = Column(
+        Integer, Sequence('collectionbackup_seq_id', optional=True),
+        primary_key=True)
+    collection_id = Column(
+        Integer,
+        doc='The id of the collection that this collection backup is a backup'
+        ' for.')
+    UUID = Column(
+        Unicode(36),
+        doc='The UUID of the collection that this collection backup is a backup'
+        ' for.')
+    title = Column(Unicode(255), doc=Collection.title.__doc__)
+    type = Column(Unicode(255), doc=Collection.type.__doc__)
+    url = Column(Unicode(255), doc=Collection.url.__doc__)
+    description = Column(UnicodeText, doc=Collection.description.__doc__)
+    markup_language = Column(Unicode(100), doc=Collection.markup_language.__doc__)
+    contents = Column(UnicodeText, doc=Collection.contents.__doc__)
+    html = Column(UnicodeText, doc=Collection.html.__doc__)
+    date_elicited = Column(Date, doc=Collection.date_elicited.__doc__)
     datetime_entered = Column(DateTime)
     datetime_modified = Column(DateTime, default=now)
-    speaker = Column(UnicodeText)
-    source = Column(UnicodeText)
-    elicitor = Column(UnicodeText)
-    enterer = Column(UnicodeText)
-    modifier = Column(UnicodeText)
-    tags = Column(UnicodeText)
-    files = Column(UnicodeText)
-    forms = Column(UnicodeText)
+    speaker = Column(UnicodeText, doc=Collection.speaker.__doc__)
+    source = Column(UnicodeText, doc=Collection.source.__doc__)
+    elicitor = Column(UnicodeText, doc=Collection.elicitor.__doc__)
+    enterer = Column(UnicodeText, doc=Collection.enterer.__doc__)
+    modifier = Column(UnicodeText, doc=Collection.modifier.__doc__)
+    tags = Column(UnicodeText, doc=Collection.tags.__doc__)
+    files = Column(UnicodeText, doc=Collection.files.__doc__)
+    forms = Column(UnicodeText, doc=Collection.forms_doc)
 
     def vivify(self, collection_dict):
         """The vivify method gives life to CollectionBackup by specifying its

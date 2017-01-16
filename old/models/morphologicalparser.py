@@ -132,7 +132,8 @@ def get_session_factory(engine):
 LOGGER = logging.getLogger(__name__)
 
 class Parse(Base):
-    """A parse is a parser-specific mapping from a transcription to a parse.
+    """A parse is a morphological parser-specific mapping from a transcription
+    to a particular parse of that transcription.
     """
 
     __tablename__ = 'parse'
@@ -146,30 +147,71 @@ class Parse(Base):
 
     id = Column(Integer, Sequence('parse_seq_id', optional=True),
             primary_key=True)
-    transcription = Column(Unicode(1000))
-    parse = Column(UnicodeText)
-    candidates = Column(UnicodeText)
-    parser_id = Column(Integer, ForeignKey('morphologicalparser.id', ondelete='SET NULL'))
+    transcription = Column(
+        Unicode(1000),
+        doc='For an OLD Parse resource, the input transcription is the input'
+        ' string whose parse is cached via the Parse resources.')
+    parse = Column(
+        UnicodeText,
+        doc='In an OLD Parse resource, the parse attribute is the output parse,'
+        ' i.e., the one that a morphological parser estimated as having the'
+        ' greatest probability, given the input transcription.')
+    candidates = Column(
+        UnicodeText,
+        doc='The candidates attribute of an OLD Parse is a JSON array of'
+        ' candidate parses that are possible parses of the input transcription,'
+        ' given the phonology, morphology, and lexicon of a particular OLD'
+        ' morphological parser.')
+    parser_id = Column(
+        Integer, ForeignKey('morphologicalparser.id', ondelete='SET NULL'))
     datetime_modified = Column(DateTime, default=now)
+
+    parser_doc = (
+        'An OLD morphological parser resource that an OLD parse is caching a'
+        ' mapping for.')
 
 
 class MorphologicalParser(MorphologicalParser, Base):
+    """An OLD morphological parser is a resource that can be used to analyze a
+    word into its constituent morphemes. A parser consists of a phonology, a
+    morphology and a morpheme language model (LM). The phonology and morphology
+    are composed into a single finite-state transducer that returns candidate
+    parses for a given input string. The morpheme LM then selects the most
+    probable candidate.
+    """
 
     __tablename__ = 'morphologicalparser'
 
     def __repr__(self):
         return '<MorphologicalParser (%s)>' % self.id
 
-    id = Column(Integer, Sequence('morphologicalparser_seq_id', optional=True), primary_key=True)
+    id = Column(
+        Integer, Sequence('morphologicalparser_seq_id', optional=True),
+        primary_key=True)
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    phonology_id = Column(Integer, ForeignKey('phonology.id', ondelete='SET NULL'))
-    phonology = relation('Phonology')
+    phonology_id = Column(
+        Integer, ForeignKey('phonology.id', ondelete='SET NULL'))
+    phonology = relation(
+        'Phonology',
+        doc='The phonology of an OLD morphological parser is an OLD phonology'
+        ' resource that defines how underlying (phonemic) representations are'
+        ' mapped to surface (phonetic, orthographic) ones. It is a finite-state'
+        ' transducer.')
     morphology_id = Column(Integer, ForeignKey('morphology.id', ondelete='SET NULL'))
-    morphology = relation('Morphology')
+    morphology = relation(
+        'Morphology',
+        doc='The morphology of an OLD morphological parser is an OLD morphology'
+        ' resource that defines the available lexical items/ morphemes and'
+        ' their order of composition (morphotactics). It is a finite-state'
+        ' transducer.')
     language_model_id = Column(Integer, ForeignKey('morphemelanguagemodel.id', ondelete='SET NULL'))
-    language_model = relation('MorphemeLanguageModel')
+    language_model = relation(
+        'MorphemeLanguageModel',
+        doc='The morpheme language model (LM) of an OLD morphological parser is'
+        ' an OLD morpheme LM that can assign probabilities to sequences of'
+        ' morphemes. It is an N-gram language model.')
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation('User', primaryjoin='MorphologicalParser.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
@@ -183,27 +225,89 @@ class MorphologicalParser(MorphologicalParser, Base):
     generate_message = Column(Unicode(255))
     generate_attempt = Column(Unicode(36)) # a UUID
 
-    # MorphologicalParser().parses is a collection of cached parse objects, i.e.,
-    # a mapping from transcriptions to parses.
-    parses = relation('Parse', backref='parser', cascade='all, delete, delete-orphan')
+    parses = relation(
+        'Parse', backref='parser', cascade='all, delete, delete-orphan',
+        doc='The parses property of an OLD morphological parser is a collection'
+        ' of cached parse objects, i.e., a mapping from transcriptions to'
+        ' parses.')
 
     # These incidental attributes are initialized by the constructor.
-    parent_directory = Column(Unicode(255))
-    persist_cache = Column(Boolean)
+    parent_directory = Column(
+        Unicode(255),
+        doc='The path to the directory on disk where an OLD morphological'
+        ' parser\'s files are stored.')
+    persist_cache = Column(
+        Boolean,
+        doc='If an OLD morphological parser’s persist cache attribute is'
+        ' true, then the results of parsing will be memoized/cached across'
+        ' requests, i.e., until the parser is destroyed or modified.')
 
-    # These attributes are valued when ``self.write`` and (as a result) ``self.replicate_attributes``
-    # are called.  Their purpose is to preserve enough values from ``self.language_model``
-    # and ``self.morphology`` to allow the parser to parse even when those referenced models have
-    # been altered or deleted.
-    word_boundary_symbol = Column(Unicode(10))
-    morphology_rare_delimiter = Column(Unicode(10))
-    morphology_rich_upper = Column(Boolean)
-    morphology_rich_lower = Column(Boolean)
-    morphology_rules_generated = Column(UnicodeText)
-    language_model_start_symbol = Column(Unicode(10))
-    language_model_end_symbol = Column(Unicode(10))
-    language_model_categorial = Column(Boolean, default=False)
-    morpheme_delimiters = Column(Unicode(255))
+    # These attributes are valued when ``self.write`` and (as a result)
+    # ``self.replicate_attributes`` are called. Their purpose is to preserve
+    # enough values from ``self.language_model`` and ``self.morphology`` to
+    # allow the parser to parse even when those referenced models have been
+    # altered or deleted.
+    word_boundary_symbol = Column(
+        Unicode(10),
+        doc='The apply method of an OLD morphological parser prefixes and'
+        ' postfixes the word boundary symbol to inputs and removes it from'
+        ' outputs transparently. The parser inherits this value from the'
+        ' phonology it references; it assumes that the writer of the phonology'
+        ' script has used this string to represent word boundaries. (Note: should'
+        ' be deprecated and the FST toolkit\'s implicit word boundary symbol'
+        ' (i.e., .#.) should be used instead.)')
+    morphology_rare_delimiter = Column(
+        Unicode(10),
+        doc='The morphology rare delimiter attribute of an OLD morphological'
+        ' parser is an attribute of both the parser\'s morphology and its'
+        ' morpheme languagemodel model. A parser can only be successfully created'
+        ' or updated if the rare delimiter value of its morphology and its LM are'
+        ' identical (assuming the LM is not categorial; if it is, then the rare'
+        ' delimiter is irrelevant). This string affects how all LM files come out'
+        ' as well as how the morphology foma scripts are generated.')
+    morphology_rich_upper = Column(
+        Boolean,
+        doc='This morphology rich upper attribute of an OLD morphological'
+        ' parser is is a value copied over from the parser\'s morphology. It'
+        ' determines whether the upper side of the tape of a morphology'
+        ' represents the morphemes in its lexicon as form|gloss|category triples'
+        ' (rich) or simply as form singletons (not rich); it affects whether a'
+        ' parser must perform disambiguation on the output of its morphophonology'
+        ' prior to candidate ranking.')
+    morphology_rich_lower = Column(Boolean,
+        doc='This morphology rich lower attribute of an OLD morphological'
+        ' parser is is a value copied over from the parser\'s morphology. It'
+        ' determines whether the lower side of the tape of a morphology'
+        ' represents the morphemes in its lexicon as form|gloss|category triples'
+        ' (rich) or simply as form singletons (not rich).')
+    morphology_rules_generated = Column(
+        UnicodeText,
+        doc='The morphology rules generated attribute of an OLD morphological'
+        ' parser is an attribute copied over from the parser\'s morphology. It is'
+        ' a string of word formation rules (strings of categories and delimiters)'
+        ' separated by spaces. It is used by the parser to filter out'
+        ' morphologically invalid disambiguations.')
+    language_model_start_symbol = Column(
+        Unicode(10),
+        doc='The language model start symbol attribute of an OLD morphological'
+        ' parser is a copy of the start symbol value of the morpheme language'
+        ' model of a parser.')
+    language_model_end_symbol = Column(
+        Unicode(10),
+        doc='The language model end symbol attribute of an OLD morphological'
+        ' parser is a copy of the end symbol value of the morpheme language'
+        ' model of a parser.')
+    language_model_categorial = Column(
+        Boolean, default=False,
+        doc='The language model categorial attribute of an OLD morphological'
+        ' parser is an attribute copied over from a parser\'s morpheme LM. It'
+        ' determines whether the LM returns probabilities for morpheme sequences'
+        ' or simply category sequences.')
+    morpheme_delimiters = Column(
+        Unicode(255),
+        doc='The morpheme delimiters attribute of an OLD morphological parser'
+        ' is a string representation of the list of characters that the parser\'s'
+        ' morphology uses to separate morphemes.')
 
     def get_dict(self):
         return {

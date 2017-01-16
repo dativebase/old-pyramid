@@ -28,9 +28,11 @@ import logging
 log = logging.getLogger(__name__)
 
 class MorphemeLanguageModel(LanguageModel, Base):
-    """The OLD currently uses the MITLM toolkit to build its language models. 
-    Support for CMU-Cambridge, SRILM, KenLM, etc. may be forthcoming...
+    """An OLD morpheme language model is an N-gram language model that encodes
+    the probability of sequences of morphemes in the words of a given language.
 
+    The OLD currently uses the MITLM toolkit to build its language models. 
+    Support for CMU-Cambridge, SRILM, KenLM, etc. may be forthcoming...
     """
 
     __tablename__ = 'morphemelanguagemodel'
@@ -38,12 +40,18 @@ class MorphemeLanguageModel(LanguageModel, Base):
     def __repr__(self):
         return '<MorphemeLanguageModel (%s)>' % self.id
 
-    id = Column(Integer, Sequence('morphemelanguagemodel_seq_id', optional=True), primary_key=True)
+    id = Column(
+        Integer, Sequence('morphemelanguagemodel_seq_id', optional=True),
+        primary_key=True)
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    corpus_id = Column(Integer, ForeignKey('corpus.id', ondelete='SET NULL'))
-    corpus = relation('Corpus') # whence we extract the morpheme sequences and their counts
+    corpus_id = Column(
+        Integer, ForeignKey('corpus.id', ondelete='SET NULL'))
+    corpus = relation(
+        'Corpus',
+        doc='An OLD corpus of forms from which morpheme sequences are extracted'
+        ' in order to build an OLD morpheme language model.')
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation('User', primaryjoin='MorphemeLanguageModel.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
@@ -53,23 +61,81 @@ class MorphemeLanguageModel(LanguageModel, Base):
     generate_succeeded = Column(Boolean, default=False)
     generate_message = Column(Unicode(255))
     generate_attempt = Column(Unicode(36)) # a UUID
-    perplexity = Column(Float, default=0.0)
-    perplexity_attempt = Column(Unicode(36)) # a UUID
-    perplexity_computed = Column(Boolean, default=False)
-    toolkit = Column(Unicode(10))
-    order = Column(Integer)
-    smoothing = Column(Unicode(30))
-    vocabulary_morphology_id = Column(Integer, ForeignKey('morphology.id', ondelete='SET NULL'))
-    vocabulary_morphology = relation('Morphology') # if specified, LM will use the lexicon of the morphology as the fixed vocabulary
-    restricted = Column(Boolean, default=False)
-    categorial = Column(Boolean, default=False) # if True, the model will be built over sequences of categories, not morphemes
-    morpheme_delimiters = Column(Unicode(255))
+    perplexity = Column(
+        Float, default=0.0,
+        doc='The perplexity of an OLD morpheme language model’s corpus'
+        ' according to the language model.')
+    perplexity_attempt = Column(
+        Unicode(36),
+        doc='The perplexity attempt of an OLD morpheme language model is a'
+        ' unique value (a UUID) created by the OLD after each attempt to'
+        ' estimate/generate a language model based on the specified'
+        ' configuration.')
+    perplexity_computed = Column(
+        Boolean, default=False,
+        doc='Perplexity computed is a boolean indicating whether the perplexity'
+        ' of an OLD morpheme language model was successfully computed during'
+        ' the most recent attempt.')
+    toolkit = Column(
+        Unicode(10),
+        doc='The name of the N-gram language model toolkit to be used to create'
+        ' an OLD morpheme language model; currently MITLM is the only supported'
+        ' toolkit.')
+    order = Column(
+        Integer,
+        doc='The order of a morpheme language model, i.e. "2" for a bigram'
+        ' model or "3" for a trigram one.')
+    smoothing = Column(
+        Unicode(30),
+        doc='The smoothing algorithm to be used to estimate an OLD morpheme'
+        ' language model; currently, the only options are the algorithms made'
+        ' available by MITLM.')
+    vocabulary_morphology_id = Column(
+        Integer, ForeignKey('morphology.id', ondelete='SET NULL'))
+    vocabulary_morphology = relation(
+        'Morphology',
+        doc='An OLD morphology that will be used to determine the vocabulary of'
+        ' unigrams for a given OLD morpheme language model.')
+    restricted = Column(
+        Boolean, default=False,
+        doc='A boolean value indicating whether an OLD morpheme language model'
+        ' is restricted. An OLD will set this to true if any of the forms in'
+        ' any of the corpora of an OLD morpheme language model are tagged as'
+        ' restricted.')
+    categorial = Column(
+        Boolean, default=False,
+        doc='If the categorial attribute of an OLD morpheme language model (LM)'
+        ' is set to true, then the elements of the LM will be simple morpheme'
+        ' categories; if set to false (the default), then the elements of the'
+        ' model will be fully specified morphemes, i.e., shape-gloss-category'
+        ' triples.')
+    morpheme_delimiters = Column(
+        Unicode(255),
+        doc='A comma-delimited list of delimiter characters that should be used'
+        ' to separate morphemes in the morpheme break field and morpheme glosses'
+        ' in the morpheme gloss field. This value is taken from the OLD'
+        ' system-wide value by an OLD morpheme language model (LM) upon'
+        ' creation/update; the LM uses it to identify morphemes.')
 
     # These incidental attributes are initialized by the constructor.
-    parent_directory = Column(Unicode(255))
-    rare_delimiter = Column(Unicode(10))
-    start_symbol = Column(Unicode(10))
-    end_symbol = Column(Unicode(10))
+    parent_directory = Column(
+        Unicode(255),
+        doc='The path to the directory on disk where an OLD morpheme language'
+        ' model’s files are stored.')
+    rare_delimiter = Column(
+        Unicode(10),
+        doc='A seldom-used Unicode character used to separate the components of'
+        ' morphemes in an OLD morpheme language model.')
+    start_symbol = Column(
+        Unicode(10),
+        doc='In an OLD morpheme language model, the start symbol is the string'
+        ' used to indicate the left edge of words. The default value is "<s>",'
+        ' as in the ARPA LM format.')
+    end_symbol = Column(
+        Unicode(10),
+        doc='In an OLD morpheme language model, the end symbol is the string'
+        ' used to indicate the right edge of words. The default value is'
+        ' "</s>", as in the ARPA LM format.')
 
     def get_dict(self):
         return {

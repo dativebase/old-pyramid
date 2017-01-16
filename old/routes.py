@@ -36,6 +36,7 @@ RESOURCES = {
     },
     'corpusbackup': {'searchable': True},
     'elicitationmethod': {},
+    'export': {},
     'file': {'searchable': True},
     'form': {
         'searchable': True,

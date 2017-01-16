@@ -7,6 +7,10 @@ from .meta import Base, now
 
 
 class Tag(Base):
+    """An OLD tag is a general-purpose resource used to categorize numerous
+    other OLD resources. Several OLD resources can be associated to zero or
+    many tags.
+    """
 
     __tablename__ = 'tag'
 
@@ -17,6 +21,13 @@ class Tag(Base):
     name = Column(Unicode(255), unique=True)
     description = Column(UnicodeText)
     datetime_modified = Column(DateTime, default=now)
+
+    forms_doc = (
+        'The set of OLD form resources that an OLD tag resource is associated'
+        ' to.')
+    files_doc = (
+        'The set of OLD file resources that an OLD tag resource is associated'
+        ' to.')
 
     def get_dict(self):
         return {

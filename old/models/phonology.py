@@ -21,17 +21,27 @@ from .meta import Base, now
 from old.lib.parser import PhonologyFST
 
 class Phonology(PhonologyFST, Base):
+    """An OLD phonology is a finite-state transducer that defines a mapping
+    between underlying representations of words (e.g., sequences of phonemes)
+    to surface representations (e.g., phonetic or orthographic transcriptions).
+    """
 
     __tablename__ = 'phonology'
 
     def __repr__(self):
         return '<Phonology (%s)>' % self.id
 
-    id = Column(Integer, Sequence('phonology_seq_id', optional=True), primary_key=True)
+    id = Column(
+        Integer, Sequence('phonology_seq_id', optional=True), primary_key=True)
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    script = Column(UnicodeText)
+    script = Column(
+        UnicodeText,
+        doc='The FST script that defines an OLD phonology. The script is an'
+        ' ordered set of rewrite rules that conforms to the foma regular'
+        ' expression/rewrite rule syntax. See Hulden (2012) and Beesley and'
+        ' Karttunen (2003).')
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation('User', primaryjoin='Phonology.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
@@ -43,8 +53,14 @@ class Phonology(PhonologyFST, Base):
     compile_attempt = Column(Unicode(36))
 
     # These two incidental attributes are initialized by the constructor.
-    parent_directory = Column(Unicode(255))
-    word_boundary_symbol = Column(Unicode(10))
+    parent_directory = Column(
+        Unicode(255),
+        doc='The path to the directory on disk where an OLD phonology\'s'
+        ' files are stored.')
+    word_boundary_symbol = Column(
+        Unicode(10),
+        doc='The word boundary symbol of an OLD phonology is used to represent'
+        ' the left and right edges of words.')
 
     def get_dict(self):
         return {
