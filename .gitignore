@@ -29,6 +29,7 @@ old-commit.txt
 # Some OLD-specific directories that should be ignored
 /store/
 /test-store/
+/schemata/
 
 
 # Ignore a large file in test_files

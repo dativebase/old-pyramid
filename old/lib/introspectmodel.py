@@ -28,7 +28,16 @@ TODO:
    - old/Form/transcription: "An OLD form transcription is ..." (from docstring
      of model column)
 
-2. Encode the languages of strings, i.e., internationalization:
+2. Static, versioned schema site,
+   - Served at URL = schema.onlinelinguisticdatabase.org/<VERSION>/
+   - URL/OLD.jsonld:         JSON-LD context for entire OLD schema
+   - URL/OLD:                HTML page with term definition for OLD
+   - URL/forms:              HTML page with term definition for collection of OLD forms
+   - URL/Form:               HTML page with term definition for collection of OLD forms
+   - URL/Form.jsonld:        JSON-LD context for a single OLD form
+   - URL/Form/transcription: HTML page defining the attribute (e.g., Form transcription)
+
+3. Encode the languages of strings, i.e., internationalization:
    https://www.w3.org/TR/json-ld/#string-internationalization
 
    - it looks like you can use ISO 639-3
@@ -43,7 +52,7 @@ TODO:
         }
     }
 
-3. Use abbreviated forms of IRIs:
+4. Use abbreviated forms of IRIs:
    {
        '@context': {
             'ex': 'http://schema.onlinelinguisticdatabase.org/',
@@ -58,7 +67,10 @@ import inspect
 import logging
 import os
 import pprint
+import shutil
 
+
+import inflect
 from sqlalchemy.orm.attributes import (
     InstrumentedAttribute,
     CollectionAttributeImpl,
@@ -67,13 +79,21 @@ from sqlalchemy.orm.attributes import (
 )
 
 import old
-from old.lib.utils import to_single_space
+from old.lib.utils import (
+    to_single_space,
+    camel_case2lower_space
+)
 import old.models as old_models
+
+
+inflect_p = inflect.engine()
+inflect_p.classical()
 
 
 LOGGER = logging.getLogger(__name__)
 OLD_SCHEMA_URL = 'http://schema.onlinelinguisticdatabase.org/{}'.format(
     old.__version__)
+OLD_SCHEMA_URL = ''
 
 
 def get_old_model_classes():
@@ -206,16 +226,16 @@ def get_relational_term_counterpart(needle, schema):
     return None
 
 
-def fix_id_suffixed_cols(jsonld_schema):
+def fix_id_suffixed_cols(old_schema):
     """Attempt to get JSON-LD term definitions for ``_id``-suffixed attributes
     of OLD models/resources, using their ``_id``-less counterparts.
     """
-    new_jsonld_schema = jsonld_schema.copy()
-    for term, val in jsonld_schema.items():
+    new_jsonld_schema = old_schema.copy()
+    for term, val in old_schema.items():
         term_def = val['definition']
         if term_def is None and term.endswith('_id'):
             counterpart_term = term.replace('_id', '')
-            counterpart_val = get_relational_term_counterpart(counterpart_term, jsonld_schema)
+            counterpart_val = get_relational_term_counterpart(counterpart_term, old_schema)
             if counterpart_val:
                 new_val = counterpart_val.copy()
                 new_val['definition'] = 'An integer identifier for the {} relation. {}'.format(
@@ -235,30 +255,80 @@ def model_is_m2m_relation(model_term_defn):
     return 'encodes the many-to-many relationship between' in model_term_defn
 
 
-def get_old_jsonld_schema():
-    """Return a JSON-LD schema for the OLD. That is, return a dict, whose
-    attributes are model schema paths and whose values are ...::
+def get_collection_term(model_term):
+    """Return the name of the collection of resources corresponding to the name
+    of the resource model passed in. E.g., return 'syntactic categories' for
+    'SyntacticCategory'.
+    """
+    if model_term == 'ApplicationSettings':
+        return 'application_settings', 'application settings'
+    with_space = camel_case2lower_space(model_term)
+    *butlast, last = with_space.split()
+    hmn = ' '.join(butlast + [inflect_p.plural(last)])
+    return hmn.replace(' ', '_'), hmn
+
+
+def get_collection_defn(collection_term, model_term):
+    return ('The {collection} of an OLD are the entire set of {model} resources'
+            ' within that OLD.'.format(
+                collection=collection_term, model=model_term))
+
+
+def introspect_old_schema():
+    """Return a representation of the schema of the OLD. This dict forms the
+    raw material for creating a set of HTML pages and JSON-LD '@context'
+    objects that can be referenced in the creation of JSON-LD exports of an OLD
+    instance's data set.
+
+    Returns a dict, whose keys are IRI paths representing an OLD, a resource
+    collection, a resource, or a resource attribute, and whose values are dicts
+    with '@id', 'definition' and possibly '@type' keys. For example::
 
         {
-            "http://schema.onlinelinguisticdatabase.org/Form":
-                "String describing what a form is.",
+            'Form/transcription': {
+                '@id': 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/transcription',
+                'definition': 'A transcription of a linguistic form, probably orthographic.'
+            },
+            'OLD': {...},
+            'forms': {...},
+            'Form': {...},
             ...
         }
 
     """
-    jsonld_schema = {}
+    # An entry for the entire OLD.
+    old_schema = {
+        'OLD': {
+            'definition': get_model_docstring(old),
+            '@id': '{}/OLD'.format(OLD_SCHEMA_URL),
+            'entity_type': 'old instance'
+        }
+    }
     old_model_classes = get_old_model_classes()
     for model_name in sorted(old_model_classes.keys()):
+        # An entry for each OLD resource, e.g., "Form"
         old_model_class = old_model_classes[model_name]
         model_term = model_name
         model_term_iri = '{}/{}'.format(OLD_SCHEMA_URL, model_name)
         model_term_defn = get_model_docstring(old_model_class)
         if model_is_m2m_relation(model_term_defn):
             continue
-        jsonld_schema[model_term] = {
+        old_schema[model_term] = {
             'definition': model_term_defn,
-            '@id': model_term_iri
+            '@id': model_term_iri,
+            'entity_type': 'old resource'
         }
+        # An entry for each OLD resource collection, e.g., "forms"
+        collection_term, collection_term_hmn = get_collection_term(model_term)
+        collection_term_iri = '{}/{}'.format(OLD_SCHEMA_URL, collection_term)
+        collection_term_defn = get_collection_defn(collection_term_hmn, model_term)
+        old_schema[collection_term] = {
+            'definition': collection_term_defn,
+            '@id': collection_term_iri,
+            'entity_type': 'old collection',
+            'resource': model_term
+        }
+        # An entry for each OLD resource attribute, e.g., "Form/transcription"
         for col_name in old_model_class.__dict__:
             if '_sa_' == col_name[:4] or col_name.startswith('__'):
                 continue
@@ -274,20 +344,177 @@ def get_old_jsonld_schema():
                 col_name, col_obj, model_name, old_model_class)
             val = {
                 '@id': col_term_iri,
-                'definition': col_term_defn
+                'definition': col_term_defn,
+                'entity_type': 'old resource attribute',
+                'parent_resource': model_term
             }
+            # Many-to-one relationships should valuate to IRIs in JSON-LD
             if isinstance(col_obj.impl, (ScalarObjectAttributeImpl,)):
                 val['@type'] = '@id'
-            jsonld_schema[col_term] = val
-    jsonld_schema = fix_id_suffixed_cols(jsonld_schema)
-    return jsonld_schema
+            old_schema[col_term] = val
+    old_schema = fix_id_suffixed_cols(old_schema)
+    return old_schema
 
 
-def get_jsonld_form_context(jsonld_schema=None):
-    if not jsonld_schema:
-        jsonld_schema = get_old_jsonld_schema()
+HTML_TEMPLATE = '''
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>title</title>
+    <!-- <link rel="stylesheet" type="text/css" href="style.css"/> -->
+    <!-- <script type="text/javascript" src="script.js"></script> -->
+  </head>
+  <body>
+  {body}
+  </body>
+</html>
+'''.strip()
+
+
+def get_old_inst_html(valdict, old_schema):
+    """Return the HTML for the schema page for the OLD itself."""
+    inner_html = [
+        '    <h1>Online Linguistic Database (OLD) Instance</h1>',
+        '    <p>' + valdict['definition'] + '</p>',
+        '    <p>An OLD may contain zero or more resources belonging to the'
+        '       following collections:</p>',
+        '    <ul>'
+    ]
+    collections = {term: valdict for term, valdict in old_schema.items() if
+                   valdict['entity_type'] == 'old collection'}
+    for collname in sorted(collections):
+        valdict = collections[collname]
+        hmn = collname.replace('_', ' ')
+        inner_html.append(
+            '      <li><a href="{coll_url}">{hmn}</a></li>'.format(
+                coll_url=valdict['@id'], hmn=hmn))
+    inner_html.append('    </ul>')
+    return HTML_TEMPLATE.format(body='\n'.join(inner_html))
+
+
+def get_resource_html(resource_name, valdict, old_schema):
+    """Return the HTML for an OLD resource, e.g., 'Form'."""
+    inner_html = [
+        '    <h1>OLD Resource: {}</h1>'.format(resource_name),
+        '    <p>' +  valdict['definition'] + '</p>',
+        '    <p>An OLD {} has the following attributes:</p>'.format(
+            resource_name),
+        '    <ul>'
+    ]
+    attributes = {term: valdict for term, valdict in old_schema.items() if
+                  valdict.get('parent_resource') == resource_name}
+    for attrname in sorted(attributes):
+        valdict = attributes[attrname]
+        hmn = attrname.split('/')[1].replace('_', ' ')
+        inner_html.append(
+            '      <li><a href="{attr_url}">{hmn}</a></li>'.format(
+                attr_url=valdict['@id'], hmn=hmn))
+    inner_html.append('    </ul>')
+    return HTML_TEMPLATE.format(body='\n'.join(inner_html))
+
+
+def get_collection_html(coll_name, valdict, old_schema):
+    """Return the HTML for an OLD collection, e.g., 'forms'."""
+    resource = valdict.get('resource')
+    resource_url = old_schema[resource]['@id']
+    inner_html = [
+        '    <h1>OLD Resource Collection: {}</h1>'.format(coll_name),
+        '    <p>' +  valdict['definition'] + '</p>',
+        '    <p>See <a href="{rsrc_url}">{rsrc}</a>.</p>'.format(
+            rsrc_url=resource_url, rsrc=resource)
+    ]
+    return HTML_TEMPLATE.format(body='\n'.join(inner_html))
+
+
+def get_resource_attribute_html(attr_name, valdict, old_schema):
+    """Return the HTML for an OLD resource attribute, e.g., 'transcription' of
+    'Form'.
+    """
+    rsrc_name, attr_name = attr_name.split('/')
+    rsrc_iri = old_schema[rsrc_name]['@id']
+    inner_html = [
+        '    <h1>Attribute {} of OLD Resource <a href="{}">{}</a></h1>'.format(
+            attr_name, rsrc_iri, rsrc_name),
+        '    <p>' +  valdict['definition'] + '</p>',
+    ]
+    return HTML_TEMPLATE.format(body='\n'.join(inner_html))
+
+
+def add_html_to_old_schema(old_schema):
+    """Add 'html' keys to each dict val in the ``old_schema`` dict. The HTML
+    should consist of the OLD entity's definition and, if it is a resource, an
+    alphabetic listing of its attributes as links.
+    """
+    for term, valdict in old_schema.items():
+        if valdict['entity_type'] == 'old instance':
+            valdict['html'] = get_old_inst_html(valdict, old_schema)
+        elif valdict['entity_type'] == 'old collection':
+            valdict['html'] = get_collection_html(term, valdict, old_schema)
+        elif valdict['entity_type'] == 'old resource':
+            valdict['html'] = get_resource_html(term, valdict, old_schema)
+        elif valdict['entity_type'] == 'old resource attribute':
+            valdict['html'] = get_resource_attribute_html(term, valdict, old_schema)
+    return old_schema
+
+
+def write_schema_html_to_disk(old_schema):
+    """Write the OLD schema to disk as a set (hierarchy) of HTML files.
+    1. make schemata/ dir
+    2. make schemata/<VERSION> dir
+    3. write OLD html to schemata/<VERSION>/OLD/index.html
+    4. write collections html to schemata/<VERSION>/<collections>/index.html
+    5. write resources html to schemata/<VERSION>/<resource>/index.html
+    6. write attributes html to schemata/<VERSION>/<resource>/<attribute>/index.html
+    FOX
+    """
+    schemata_parent_path = os.path.realpath(os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        '..', '..'))
+    print(schemata_parent_path)
+    print(os.listdir(schemata_parent_path))
+    schemata_path = os.path.join(schemata_parent_path, 'schemata')
+    if not os.path.isdir(schemata_path):
+        os.makedirs(schemata_path)
+    schema_path = os.path.join(schemata_path, old.__version__)
+    if os.path.isdir(schema_path):
+        shutil.rmtree(schema_path)
+        os.makedirs(schema_path)
+    old_inst_path = os.path.join(schema_path, 'OLD')
+    os.makedirs(old_inst_path)
+    old_inst_index = os.path.join(old_inst_path, 'index.html')
+    with open(old_inst_index, 'w') as fileo:
+        fileo.write(old_schema['OLD']['html'])
+
+    for term, valdict in old_schema.items():
+        if valdict['entity_type'] in ('old collection', 'old resource'):
+            path = os.path.join(schema_path, term)
+            os.makedirs(path)
+            index_path = os.path.join(path, 'index.html')
+            with open(index_path, 'w') as fileo:
+                fileo.write(valdict['html'])
+
+    for term, valdict in old_schema.items():
+        if valdict['entity_type'] == 'old resource attribute':
+            attr_path = os.path.join(schema_path, term)
+            os.makedirs(attr_path)
+            index_path = os.path.join(attr_path, 'index.html')
+            with open(index_path, 'w') as fileo:
+                fileo.write(valdict['html'])
+
+
+
+    # /Users/joeldunham/Development/old-pyramid/old/old/lib/introspectmodel.py
+
+
+
+# TODO: deprecate
+def get_jsonld_form_context(old_schema=None):
+    if not old_schema:
+        old_schema = introspect_old_schema()
     form_context = {}
-    for term, val in jsonld_schema.items():
+    for term, val in old_schema.items():
         parts = term.split('/')
         if len(parts) > 1 and parts[0] == 'Form':
             term = term.split('/')[1]
@@ -302,76 +529,6 @@ def get_jsonld_form_context(jsonld_schema=None):
                 new_val = val['@id']
             form_context[term] = new_val
     return form_context
-
-
-
-
-
-"""
-'http://schema.onlinelinguisticdatabase.org/2.0.0/Form': 'A Form is a linguistic form, i.e., a word, morpheme, or sentence. It may represent an utterance at a specific time by a particular person '
-                                                          'or an abstract generalization such as a morpheme.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/UUID': 'A Universally unique identifier assigned to an OLD Form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/break_gloss_category': 'The morpheme break, morpheme gloss and (syntactic) category string values of a form all interleaved into a single '
-                                                                               'string. This value is auto-generated by the OLD.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/collections': 'The collections, i.e., texts (e.g., papers, elicitation records, etc.), that a given form is a part of.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/comments': 'General-purpose notes and commentary about the form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/corpora': 'The set of corpora that an OLD form belongs to.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/date_elicited': 'The date when a particular form was elicited.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/datetime_entered': 'The date and time when an OLD Form was entered into the database, i.e., its creation time.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/datetime_modified': 'The date and time when an OLD Form was last modified.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/elicitation_method': 'How a linguistic form was elicited. Examples: “volunteered”, “judged elicitor’s utterance”, “translation task”, etc.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/elicitationmethod_id': 'An integer identifier for the http://schema.onlinelinguisticdatabase.org/2.0.0/Form/elicitationmethod relation. How '
-                                                                               'a linguistic form was elicited. Examples: “volunteered”, “judged elicitor’s utterance”, “translation task”, etc.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/elicitor': 'The linguistic fieldworker who elicited the form with the help of the consultant.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/elicitor_id': 'An integer identifier for the http://schema.onlinelinguisticdatabase.org/2.0.0/Form/elicitor relation. The linguistic '
-                                                                      'fieldworker who elicited the form with the help of the consultant.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/enterer': 'The person (OLD user) who entered/created an OLD Form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/enterer_id': 'An integer identifier for the http://schema.onlinelinguisticdatabase.org/2.0.0/Form/enterer relation. The person (OLD user) '
-                                                                     'who entered/created an OLD Form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/files': 'The digital files (e.g., audio, video, image or text) that are associated to a given form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/grammaticality': 'The grammaticality of the form, e.g., grammatical, ungrammatical, questionable, infelicitous in a given context. Possible '
-                                                                         'values are defined in the application settings if each OLD.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/id': 'The integer id of an OLD Form. Created by the relational database management system. No two instances of a given OLD Form in a given '
-                                                             'OLD instance can have the same id value.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/memorizers': 'The set of OLD user resources that currently have a particular OLD form in their set of remembered forms.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/modifier': 'The person (OLD user) who last modified an OLD Form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/modifier_id': 'An integer identifier for the http://schema.onlinelinguisticdatabase.org/2.0.0/Form/modifier relation. The person (OLD user) '
-                                                                      'who last modified an OLD Form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/morpheme_break': 'A sequence of morpheme shapes and delimiters. The OLD assumes phonemic shapes (e.g., “in-perfect”), but phonetic (i.e., '
-                                                                         'allomorphic, e.g., “im-perfect”) ones are ok.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/morpheme_break_ids': 'An OLD-generated value that essentially memoizes/caches the forms (and their relevant properties) that match the '
-                                                                             'morphemes transcriptions/shapes identified in the morpheme break value of a form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/morpheme_gloss': 'A sequence of morpheme glosses and delimiters, isomorphic to the morpheme break sequence, e.g., “NEG-parfait”.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/morpheme_gloss_ids': 'An OLD-generated value that essentially memoizes/caches the forms (and their relevant properties) that match the '
-                                                                             'morpheme glosses identified in the morpheme break value of a form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/narrow_phonetic_transcription': 'A phonetic transcription, probably in IPA.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/phonetic_transcription': 'A narrow phonetic transcription, probably in IPA.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/semantics': 'A semantic representation of the meaning of the form in some string-based format.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/source': 'The textual source (e.g., research paper, text collection, book of learning materials) from which the form was drawn, if '
-                                                                 'applicable.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/source_id': 'An integer identifier for the http://schema.onlinelinguisticdatabase.org/2.0.0/Form/source relation. The textual source (e.g., '
-                                                                    'research paper, text collection, book of learning materials) from which the form was drawn, if applicable.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/speaker': 'The speaker (consultant) who produced or judged the form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/speaker_comments': 'Comments about the form made by the speaker/consultant.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/speaker_id': 'An integer identifier for the http://schema.onlinelinguisticdatabase.org/2.0.0/Form/speaker relation. The speaker (consultant) '
-                                                                     'who produced or judged the form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/status': 'The status of the form: “tested” for data that have been elicited/tested/verified with a consultant or “requires testing” for data '
-                                                                 'that are posited and still need testing/elicitation.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/syntactic_category': 'The category (syntactic and/or morphological) of the form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/syntactic_category_string': 'A sequence of categories (and morpheme delimiters) that is auto-generated by an OLD based on the '
-                                                                                    'morphemes/glosses in the morpheme break and morpheme gloss values of a form and the categories of matching '
-                                                                                    'lexical items in the database.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/syntacticcategory_id': 'An integer identifier for the http://schema.onlinelinguisticdatabase.org/2.0.0/Form/syntacticcategory relation. The '
-                                                                               'category (syntactic and/or morphological) of the form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/syntax': 'A syntactic phrase structure representation in some kind of string-based format.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/tags': 'A collection of zero or more OLD tag resources associated to an OLD Form',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/transcription': 'A transcription of a linguistic form, probably orthographic.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/translations': 'The translations for the form. Each translation may have its own grammaticality/acceptibility specification indicating '
-                                                                       'whether it is an acceptable translation for the given form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/verifier': 'The person (OLD user) who has verified the reliability/accuracy of this form.',
- 'http://schema.onlinelinguisticdatabase.org/2.0.0/Form/verifier_id': 'An integer identifier for the http://schema.onlinelinguisticdatabase.org/2.0.0/Form/verifier relation. The person (OLD user) '
-                                                                      'who has verified the reliability/accuracy of this form.',
-"""
 
 
 

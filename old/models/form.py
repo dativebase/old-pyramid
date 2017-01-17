@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""Form model"""
+"""The forms of an OLD are the collection of Form resources in that OLD."""
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
@@ -94,7 +94,7 @@ class Form(Base):
     grammaticality = Column(
         Unicode(255), doc='The grammaticality of the form, e.g., grammatical,'
         ' ungrammatical, questionable, infelicitous in a given context.'
-        ' Possible values are defined in the application settings if each OLD.')
+        ' Possible values are defined in the application settings of each OLD.')
     date_elicited = Column(
         Date, doc='The date when a particular form was elicited.')
     datetime_entered = Column(DateTime)
@@ -163,7 +163,7 @@ class Form(Base):
         Integer, ForeignKey('syntacticcategory.id', ondelete='SET NULL'))
     syntactic_category = relation(
         'SyntacticCategory', backref='forms',
-        doc='The category (syntactic and/or morphological) of the form.')
+        doc='The category (syntactic or morphological) of the form.')
     source_id = Column(Integer, ForeignKey('source.id', ondelete='SET NULL'))
     source = relation(
         'Source',

@@ -24,9 +24,11 @@ from uuid import uuid4
 from sqlalchemy.sql import desc
 
 from old.lib.introspectmodel import (
+    add_html_to_old_schema,
     get_old_model_classes,
-    get_old_jsonld_schema,
-    get_jsonld_form_context
+    get_jsonld_form_context,
+    introspect_old_schema,
+    write_schema_html_to_disk
 )
 from old.lib.dbutils import DBUtils
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
@@ -53,8 +55,11 @@ class TestExportsView(TestView):
     def tearDown(self):
         super().tearDown(dirs_to_clear=['reduced_files_path', 'files_path'])
 
-    def test_create(self):
-        """Tests that POST /exports initiates the creation of a new export."""
+    def test_schema_introspection(self):
+        """Tests that old/lib/introspectmodel can correctly introspect the
+        model and docstrings of the OLD and return a dict representing the
+        schema of the OLD.
+        """
 
         dbsession = self.dbsession
         db = DBUtils(dbsession, self.settings)
@@ -62,10 +67,16 @@ class TestExportsView(TestView):
         response = self.app.post(url('create'), '{}', self.json_headers,
                                     self.extra_environ_admin)
         resp = response.json_body
-        jsonld_schema = get_old_jsonld_schema()
-        # pprint.pprint(jsonld_schema, width=200)
-        # pprint.pprint(jsonld_schema)
+        old_schema = introspect_old_schema()
+        # pprint.pprint(old_schema, width=200)
+        #pprint.pprint(old_schema)
 
-        jsonld_form_context = get_jsonld_form_context(jsonld_schema)
-        pprint.pprint(jsonld_form_context)
+        jsonld_form_context = get_jsonld_form_context(old_schema)
+        #pprint.pprint(jsonld_form_context)
+
+        old_schema = add_html_to_old_schema(old_schema)
+        pprint.pprint(old_schema)
+
+        write_schema_html_to_disk(old_schema)
+
 
