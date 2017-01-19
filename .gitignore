@@ -30,6 +30,7 @@ old-commit.txt
 /store/
 /test-store/
 /schemata/
+/exports/
 
 
 # Ignore a large file in test_files

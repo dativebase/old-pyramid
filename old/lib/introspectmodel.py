@@ -17,7 +17,16 @@ based on that model. In particular, it contains functions that can generate
 JSON-LD schema definitions for OLD models and their properties/attributes at a
 given OLD version.
 
+- http://json-ld.org/spec/latest/json-ld-api-best-practices/
+
 TODO:
+
+Connect my terms to other ontologies/schemata:
+
+- ORE aggregate
+- Dublin Core schemas (dcmitype)
+- schema.org
+
 
 1. My terms are all hierarchical and all need definitions:
 
@@ -64,6 +73,7 @@ TODO:
 
 import importlib
 import inspect
+import json
 import logging
 import os
 import pprint
@@ -93,7 +103,6 @@ inflect_p.classical()
 LOGGER = logging.getLogger(__name__)
 OLD_SCHEMA_URL = 'http://schema.onlinelinguisticdatabase.org/{}'.format(
     old.__version__)
-OLD_SCHEMA_URL = ''
 
 
 def get_old_model_classes():
@@ -230,18 +239,15 @@ def fix_id_suffixed_cols(old_schema):
     """Attempt to get JSON-LD term definitions for ``_id``-suffixed attributes
     of OLD models/resources, using their ``_id``-less counterparts.
     """
-    new_jsonld_schema = old_schema.copy()
     for term, val in old_schema.items():
         term_def = val['definition']
         if term_def is None and term.endswith('_id'):
             counterpart_term = term.replace('_id', '')
             counterpart_val = get_relational_term_counterpart(counterpart_term, old_schema)
             if counterpart_val:
-                new_val = counterpart_val.copy()
-                new_val['definition'] = 'An integer identifier for the {} relation. {}'.format(
+                val['definition'] = 'An integer identifier for the {} relation. {}'.format(
                     counterpart_term, counterpart_val['definition'])
-                new_jsonld_schema[term] = new_val
-    return new_jsonld_schema
+    return old_schema
 
 
 def model_is_m2m_relation(model_term_defn):
@@ -300,7 +306,7 @@ def introspect_old_schema():
     old_schema = {
         'OLD': {
             'definition': get_model_docstring(old),
-            '@id': '{}/OLD'.format(OLD_SCHEMA_URL),
+            '@id': '/OLD',
             'entity_type': 'old instance'
         }
     }
@@ -309,18 +315,19 @@ def introspect_old_schema():
         # An entry for each OLD resource, e.g., "Form"
         old_model_class = old_model_classes[model_name]
         model_term = model_name
-        model_term_iri = '{}/{}'.format(OLD_SCHEMA_URL, model_name)
+        model_term_iri = '/{}'.format(model_name)
         model_term_defn = get_model_docstring(old_model_class)
+        collection_term, collection_term_hmn = get_collection_term(model_term)
         if model_is_m2m_relation(model_term_defn):
             continue
         old_schema[model_term] = {
             'definition': model_term_defn,
             '@id': model_term_iri,
-            'entity_type': 'old resource'
+            'entity_type': 'old resource',
+            'collection': collection_term
         }
         # An entry for each OLD resource collection, e.g., "forms"
-        collection_term, collection_term_hmn = get_collection_term(model_term)
-        collection_term_iri = '{}/{}'.format(OLD_SCHEMA_URL, collection_term)
+        collection_term_iri = '/{}'.format(collection_term)
         collection_term_defn = get_collection_defn(collection_term_hmn, model_term)
         old_schema[collection_term] = {
             'definition': collection_term_defn,
@@ -339,7 +346,7 @@ def introspect_old_schema():
             except Exception as e:
                 continue
             col_term = '{}/{}'.format(model_term, col_name)
-            col_term_iri = '{}/{}'.format(OLD_SCHEMA_URL, col_term)
+            col_term_iri = '/{}'.format(col_term)
             col_term_defn = get_col_term_defn(
                 col_name, col_obj, model_name, old_model_class)
             val = {
@@ -355,6 +362,14 @@ def introspect_old_schema():
     old_schema = fix_id_suffixed_cols(old_schema)
     return old_schema
 
+CSS = '''
+
+div#main {
+    width: 50%;
+    margin: 1em auto 1em auto;
+}
+
+'''.strip()
 
 HTML_TEMPLATE = '''
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -362,12 +377,14 @@ HTML_TEMPLATE = '''
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
-    <title>title</title>
-    <!-- <link rel="stylesheet" type="text/css" href="style.css"/> -->
+    <title>OLD Schema</title>
+    <link rel="stylesheet" type="text/css" href="/style.css"/>
     <!-- <script type="text/javascript" src="script.js"></script> -->
   </head>
   <body>
-  {body}
+    <div id="main">
+    {main}
+    </div>
   </body>
 </html>
 '''.strip()
@@ -376,11 +393,11 @@ HTML_TEMPLATE = '''
 def get_old_inst_html(valdict, old_schema):
     """Return the HTML for the schema page for the OLD itself."""
     inner_html = [
-        '    <h1>Online Linguistic Database (OLD) Instance</h1>',
-        '    <p>' + valdict['definition'] + '</p>',
-        '    <p>An OLD may contain zero or more resources belonging to the'
-        '       following collections:</p>',
-        '    <ul>'
+        '      <h1>Online Linguistic Database (OLD) Instance</h1>',
+        '      <p>' + valdict['definition'] + '</p>',
+        '      <p>An OLD may contain zero or more resources belonging to the'
+        '         following collections:</p>',
+        '      <ul>'
     ]
     collections = {term: valdict for term, valdict in old_schema.items() if
                    valdict['entity_type'] == 'old collection'}
@@ -388,20 +405,52 @@ def get_old_inst_html(valdict, old_schema):
         valdict = collections[collname]
         hmn = collname.replace('_', ' ')
         inner_html.append(
-            '      <li><a href="{coll_url}">{hmn}</a></li>'.format(
+            '        <li><a href="{coll_url}">{hmn}</a></li>'.format(
                 coll_url=valdict['@id'], hmn=hmn))
-    inner_html.append('    </ul>')
-    return HTML_TEMPLATE.format(body='\n'.join(inner_html))
+    inner_html.append('      </ul>')
+    return HTML_TEMPLATE.format(main='\n'.join(inner_html))
+
+
+def get_breadcrumbs(entity_type, **kwargs):
+    """Return HTML breadcrumbs for the OLD entity of type ``entity_type``.
+    """
+    if entity_type == 'old resource':
+        return ' / '.join([
+            '<a href="/">OLD</a>',
+            '<a href="{coll_iri}">{coll_name}</a>'.format(
+                coll_iri=kwargs['coll_iri'], coll_name=kwargs['coll_name']),
+            kwargs['resource']
+        ])
+    elif entity_type == 'old collection':
+        return ' / '.join([
+            '<a href="/">OLD</a>',
+            kwargs['collection']
+        ])
+    elif entity_type == 'old resource attribute':
+        return ' / '.join([
+            '<a href="/">OLD</a>',
+            '<a href="{coll_iri}">{coll_name}</a>'.format(
+                coll_iri=kwargs['coll_iri'], coll_name=kwargs['coll_name']),
+            '<a href="{rsrc_iri}">{rsrc_name}</a>'.format(
+                rsrc_iri=kwargs['rsrc_iri'], rsrc_name=kwargs['rsrc_name']),
+            kwargs['attribute']
+        ])
+
 
 
 def get_resource_html(resource_name, valdict, old_schema):
     """Return the HTML for an OLD resource, e.g., 'Form'."""
+    coll_name = valdict['collection']
+    coll_iri = old_schema[coll_name]['@id']
     inner_html = [
-        '    <h1>OLD Resource: {}</h1>'.format(resource_name),
-        '    <p>' +  valdict['definition'] + '</p>',
-        '    <p>An OLD {} has the following attributes:</p>'.format(
+        '      <h1>OLD Resource: {}</h1>'.format(resource_name),
+        '      <div id="bc">' + get_breadcrumbs(
+            'old resource', resource=resource_name, coll_iri=coll_iri,
+            coll_name=coll_name) + '</div>',
+        '      <p>' +  valdict['definition'] + '</p>',
+        '      <p>An OLD {} has the following attributes:</p>'.format(
             resource_name),
-        '    <ul>'
+        '      <ul>'
     ]
     attributes = {term: valdict for term, valdict in old_schema.items() if
                   valdict.get('parent_resource') == resource_name}
@@ -409,10 +458,10 @@ def get_resource_html(resource_name, valdict, old_schema):
         valdict = attributes[attrname]
         hmn = attrname.split('/')[1].replace('_', ' ')
         inner_html.append(
-            '      <li><a href="{attr_url}">{hmn}</a></li>'.format(
+            '        <li><a href="{attr_url}">{hmn}</a></li>'.format(
                 attr_url=valdict['@id'], hmn=hmn))
-    inner_html.append('    </ul>')
-    return HTML_TEMPLATE.format(body='\n'.join(inner_html))
+    inner_html.append('      </ul>')
+    return HTML_TEMPLATE.format(main='\n'.join(inner_html))
 
 
 def get_collection_html(coll_name, valdict, old_schema):
@@ -420,12 +469,14 @@ def get_collection_html(coll_name, valdict, old_schema):
     resource = valdict.get('resource')
     resource_url = old_schema[resource]['@id']
     inner_html = [
-        '    <h1>OLD Resource Collection: {}</h1>'.format(coll_name),
-        '    <p>' +  valdict['definition'] + '</p>',
-        '    <p>See <a href="{rsrc_url}">{rsrc}</a>.</p>'.format(
+        '      <h1>OLD Resource Collection: {}</h1>'.format(coll_name),
+        '      <div id="bc">' + get_breadcrumbs(
+            'old collection', collection=coll_name) + '</div>',
+        '      <p>' +  valdict['definition'] + '</p>',
+        '      <p>See <a href="{rsrc_url}">{rsrc}</a>.</p>'.format(
             rsrc_url=resource_url, rsrc=resource)
     ]
-    return HTML_TEMPLATE.format(body='\n'.join(inner_html))
+    return HTML_TEMPLATE.format(main='\n'.join(inner_html))
 
 
 def get_resource_attribute_html(attr_name, valdict, old_schema):
@@ -434,12 +485,17 @@ def get_resource_attribute_html(attr_name, valdict, old_schema):
     """
     rsrc_name, attr_name = attr_name.split('/')
     rsrc_iri = old_schema[rsrc_name]['@id']
+    coll_name = old_schema[rsrc_name]['collection']
+    coll_iri = old_schema[coll_name]['@id']
     inner_html = [
-        '    <h1>Attribute {} of OLD Resource <a href="{}">{}</a></h1>'.format(
+        '      <h1>Attribute {} of OLD Resource <a href="{}">{}</a></h1>'.format(
             attr_name, rsrc_iri, rsrc_name),
-        '    <p>' +  valdict['definition'] + '</p>',
+        '      <div id="bc">' + get_breadcrumbs(
+            'old resource attribute', attribute=attr_name, coll_iri=coll_iri,
+            coll_name=coll_name, rsrc_iri=rsrc_iri, rsrc_name=rsrc_name) + '</div>',
+        '      <p>' +  valdict['definition'] + '</p>',
     ]
-    return HTML_TEMPLATE.format(body='\n'.join(inner_html))
+    return HTML_TEMPLATE.format(main='\n'.join(inner_html))
 
 
 def add_html_to_old_schema(old_schema):
@@ -459,21 +515,114 @@ def add_html_to_old_schema(old_schema):
     return old_schema
 
 
+def add_jsonld_to_old_schema(old_schema):
+    """Update the OLD schema so that it contains JSON-LD objects for the OLD
+    data set itself as well as for each OLD resource. At present, the top-level
+    object of an OLD JSON-LD object is an OLD which contains resource
+    collections that valuate to arrays of resource IRIs::
+
+        {
+            "@context": {
+                "OLD": "<IRI for dereferencing what an OLD is>",
+                ... # MORE DC metadata here about this OLD (export)
+            },
+            "@id": "<IRI for this entire OLD export>",
+            "OLD": {
+                "@context": {
+                    "forms":
+                        "<IRI for dereferencing what an OLD forms resource
+                        collection is.>",
+                    "syntactic_categories":
+                        "<IRI for dereferencing what an OLD syntactic categories
+                        resource collection is.>",
+                    ...
+                },
+                "forms": [
+                    "<IRI for particular Form resource A>",
+                    "<IRI for particular Form resource B>"
+                    ...
+                ],
+                "syntactic_categories": [
+                    "<IRI for particular SyntacticCategory resource A>",
+                    "<IRI for particular SyntacticCategory resource B>"
+                    ...
+                ],
+                ...
+            }
+
+    The value of a single Resource instance, say a Form instance as referenced
+    by and "<IRI for particular Form resource A>" would be::
+
+        {
+            "@context": {
+                "Form": "@id": "<IRI for dereferencing what an OLD Form
+                            resource is.>"
+            },
+            "Form": {
+                "@context": {
+                    "transcription":
+                        "<IRI for dereferencing what an OLD Form.transcription
+                          attribute is.>",
+                    "enterer": {
+                        "@type": "@id",
+                        "@id": "<IRI for dereferencing what an OLD Form.enterer
+                                 attribute is.>"
+                    },
+                    ...
+                },
+                "trancsription": "nitsíkohtaahsi'taki",
+                "enterer": "<IRI for a particular OLD user who is the enterer>",
+                ...
+            }
+        }
+
+    """
+    old_collection_terms = {}
+    for term, val in old_schema.items():
+        if val.get('entity_type') == 'old resource':
+            jsonld_obj = {
+                '@context': {
+                    term: '{}{}'.format(OLD_SCHEMA_URL, val['@id'])
+                },
+                term: {
+                    '@context': {}
+                }
+            }
+            attributes = {
+                attr_term: attr_val
+                for attr_term, attr_val in old_schema.items()
+                if attr_val.get('parent_resource') == term}
+            for attr_term, attr_val in attributes.items():
+                short_term = attr_term.split('/')[1]
+                term_type = attr_val.get('@type')
+                term_iri = '{}{}'.format(OLD_SCHEMA_URL, attr_val['@id'])
+                if term_type:
+                    jsonld_obj[term]['@context'][short_term] = {
+                        '@type': term_type, '@id': term_iri}
+                else:
+                    jsonld_obj[term]['@context'][short_term] = term_iri
+            val['jsonld'] = jsonld_obj
+        elif val.get('entity_type') == 'old collection':
+            old_collection_terms[term] = '{}{}'.format(
+                OLD_SCHEMA_URL, val['@id'])
+        old_schema['OLD']['jsonld'] = {
+            '@context': {
+                'OLD': '{}{}'.format(OLD_SCHEMA_URL, old_schema['OLD']['@id'])
+            },
+            'OLD': {
+                '@context': old_collection_terms
+            }
+        }
+    return old_schema
+
+
 def write_schema_html_to_disk(old_schema):
-    """Write the OLD schema to disk as a set (hierarchy) of HTML files.
-    1. make schemata/ dir
-    2. make schemata/<VERSION> dir
-    3. write OLD html to schemata/<VERSION>/OLD/index.html
-    4. write collections html to schemata/<VERSION>/<collections>/index.html
-    5. write resources html to schemata/<VERSION>/<resource>/index.html
-    6. write attributes html to schemata/<VERSION>/<resource>/<attribute>/index.html
-    FOX
+    """Write the versioned OLD schema to disk as a set (hierarchy) of HTML
+    files.
     """
     schemata_parent_path = os.path.realpath(os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         '..', '..'))
-    print(schemata_parent_path)
-    print(os.listdir(schemata_parent_path))
     schemata_path = os.path.join(schemata_parent_path, 'schemata')
     if not os.path.isdir(schemata_path):
         os.makedirs(schemata_path)
@@ -481,20 +630,50 @@ def write_schema_html_to_disk(old_schema):
     if os.path.isdir(schema_path):
         shutil.rmtree(schema_path)
         os.makedirs(schema_path)
+    # write CSS
+    css_path = os.path.join(schema_path, 'style.css')
+    with open(css_path, 'w') as fileo:
+        fileo.write(CSS)
+    # write index.html (and redundant OLD/index.html)
+    old_inst_index = os.path.join(schema_path, 'index.html')
+    with open(old_inst_index, 'w') as fileo:
+        fileo.write(old_schema['OLD']['html'])
     old_inst_path = os.path.join(schema_path, 'OLD')
     os.makedirs(old_inst_path)
     old_inst_index = os.path.join(old_inst_path, 'index.html')
     with open(old_inst_index, 'w') as fileo:
         fileo.write(old_schema['OLD']['html'])
-
+    # write OLD.jsonld
+    old_jsonld_path = os.path.join(schema_path, 'OLD.jsonld')
+    with open(old_jsonld_path, 'w') as fileo:
+        fileo.write(
+            json.dumps(
+                old_schema['OLD']['jsonld'],
+                sort_keys=True,
+                indent=4,
+                separators=(',', ': ')))
+    # Write HTML pages for resources and resource collections
     for term, valdict in old_schema.items():
-        if valdict['entity_type'] in ('old collection', 'old resource'):
+        entity_type = valdict['entity_type']
+        if entity_type in ('old collection', 'old resource'):
             path = os.path.join(schema_path, term)
             os.makedirs(path)
             index_path = os.path.join(path, 'index.html')
             with open(index_path, 'w') as fileo:
                 fileo.write(valdict['html'])
-
+            # Write the resource's JSON-LD obj to a <RESOURCE>.jsonld file.
+            # TODO: when served, .jsonld documents should have the header
+            # ``content-type:application/ld+json``
+            if entity_type == 'old resource':
+                path = os.path.join(schema_path, term + '.jsonld')
+                with open(path, 'w') as fileo:
+                    fileo.write(
+                        json.dumps(
+                            valdict['jsonld'],
+                            sort_keys=True,
+                            indent=4,
+                            separators=(',', ': ')))
+    # Write HTML pages for resource attributes
     for term, valdict in old_schema.items():
         if valdict['entity_type'] == 'old resource attribute':
             attr_path = os.path.join(schema_path, term)
@@ -504,32 +683,8 @@ def write_schema_html_to_disk(old_schema):
                 fileo.write(valdict['html'])
 
 
-
-    # /Users/joeldunham/Development/old-pyramid/old/old/lib/introspectmodel.py
-
-
-
-# TODO: deprecate
-def get_jsonld_form_context(old_schema=None):
-    if not old_schema:
-        old_schema = introspect_old_schema()
-    form_context = {}
-    for term, val in old_schema.items():
-        parts = term.split('/')
-        if len(parts) > 1 and parts[0] == 'Form':
-            term = term.split('/')[1]
-            if term.endswith('_id'):
-                continue
-            if val.get('@type'):
-                new_val = {
-                    '@type': val['@type'],
-                    '@id': val['@id']
-                }
-            else:
-                new_val = val['@id']
-            form_context[term] = new_val
-    return form_context
-
-
-
-
+def get_old_schema():
+    old_schema = introspect_old_schema()
+    old_schema = add_html_to_old_schema(old_schema)
+    old_schema = add_jsonld_to_old_schema(old_schema)
+    return old_schema

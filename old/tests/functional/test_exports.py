@@ -25,8 +25,8 @@ from sqlalchemy.sql import desc
 
 from old.lib.introspectmodel import (
     add_html_to_old_schema,
+    add_jsonld_to_old_schema,
     get_old_model_classes,
-    get_jsonld_form_context,
     introspect_old_schema,
     write_schema_html_to_disk
 )
@@ -67,16 +67,17 @@ class TestExportsView(TestView):
         response = self.app.post(url('create'), '{}', self.json_headers,
                                     self.extra_environ_admin)
         resp = response.json_body
-        old_schema = introspect_old_schema()
+
+
+        # old_schema = introspect_old_schema()
         # pprint.pprint(old_schema, width=200)
-        #pprint.pprint(old_schema)
+        # pprint.pprint(old_schema)
 
-        jsonld_form_context = get_jsonld_form_context(old_schema)
-        #pprint.pprint(jsonld_form_context)
+        # old_schema = add_html_to_old_schema(old_schema)
+        # pprint.pprint(old_schema)
 
-        old_schema = add_html_to_old_schema(old_schema)
-        pprint.pprint(old_schema)
+        # old_schema = add_jsonld_to_old_schema(old_schema)
+        # pprint.pprint(old_schema, width=200)
 
-        write_schema_html_to_disk(old_schema)
-
+        # write_schema_html_to_disk(old_schema)
 

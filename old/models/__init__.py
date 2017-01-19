@@ -10,7 +10,10 @@ import zope.sqlalchemy
 from .applicationsettings import ApplicationSettings
 from .collection import Collection
 from .collectionbackup import CollectionBackup
-from .corpus import Corpus
+from .corpus import (
+    Corpus,
+    CorpusFile
+)
 from .corpusbackup import CorpusBackup
 from .export import Export
 from .elicitationmethod import ElicitationMethod
@@ -23,7 +26,10 @@ from .language import Language
 from .model import Model
 from .morphemelanguagemodel import MorphemeLanguageModel
 from .morphemelanguagemodelbackup import MorphemeLanguageModelBackup
-from .morphologicalparser import MorphologicalParser
+from .morphologicalparser import (
+    MorphologicalParser,
+    Parse
+)
 from .morphologicalparserbackup import MorphologicalParserBackup
 from .morphology import Morphology
 from .morphologybackup import MorphologyBackup
