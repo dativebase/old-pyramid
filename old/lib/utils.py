@@ -420,11 +420,14 @@ def is_audio_video_file(file_):
     return 'audio' in file_.MIME_type or 'video' in file_.MIME_type
 
 
-def clear_directory_of_files(directory_path):
+def clear_directory_of_files(directory_path, dirs=False):
     """Removes all files from the directory path but leaves the directory."""
-    for filename in os.listdir(directory_path):
-        if os.path.isfile(os.path.join(directory_path, filename)):
-            os.remove(os.path.join(directory_path, filename))
+    for name in os.listdir(directory_path):
+        path = os.path.join(directory_path, name)
+        if os.path.isfile(path):
+            os.remove(path)
+        elif dirs and os.path.isdir(path):
+            rmtree(path)
 
 
 ################################################################################

@@ -114,7 +114,13 @@ class TestView(TestCase):
         else:
             self.clear_all_models(self.dbsession)
         for dir_path in dirs_to_clear:
-            h.clear_directory_of_files(getattr(self, dir_path))
+            print('clearing directory {}'.format(dir_path))
+            print('clearing directory {}'.format(getattr(self, dir_path)))
+            print(os.path.isdir(getattr(self, dir_path)))
+            if kwargs.get('clear_dirs') is True:
+                h.clear_directory_of_files(getattr(self, dir_path), dirs=True)
+            else:
+                h.clear_directory_of_files(getattr(self, dir_path))
         for dir_name in dirs_to_destroy:
             h.destroy_all_directories(self.inflect_p.plural(dir_name),
                                       self.settings)
@@ -183,6 +189,8 @@ class TestView(TestCase):
             'test.application_settings': True}
         self.json_headers = {'Content-Type': 'application/json'}
         self.here = self.settings['here']
+        self.exports_path = os.path.join(
+            self.here, self.settings['exports_dir'])
         self.files_path = h.get_old_directory_path(
             'files', settings=self.settings)
         self.reduced_files_path = h.get_old_directory_path(
