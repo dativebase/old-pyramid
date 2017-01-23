@@ -102,6 +102,7 @@ import re
 from uuid import uuid4
 
 from formencode.validators import Invalid
+from pyld import jsonld
 from sqlalchemy import bindparam
 from sqlalchemy.sql import asc, or_
 from sqlalchemy.orm import subqueryload
@@ -272,6 +273,15 @@ class Exports(Resources):
                             sort_keys=True,
                             indent=4,
                             separators=(',', ': ')))
+                # Testing out PyLD's jsonld.normalize here:
+                #normalized = jsonld.normalize(
+                #    rsrc_jsonld, {
+                #        'algorithm': 'URDNA2015',
+                #        'format': 'application/nquads'})
+                #pprint.pprint('\n\nWITHOUT NORMALIZATION')
+                #pprint.pprint(rsrc_jsonld)
+                #pprint.pprint('\n\nWITH NORMALIZATION')
+                #pprint.pprint(normalized)
 
         # Write the OLD.jsonld to disk in the exports/ subdir
         with open(old_jsonld_path, 'w') as fileo:

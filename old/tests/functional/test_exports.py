@@ -175,6 +175,7 @@ class TestExportsView(TestView):
     def tearDown(self):
         super().tearDown(
             dirs_to_clear=['reduced_files_path', 'files_path', 'exports_path'],
+            #dirs_to_clear=['reduced_files_path', 'files_path'],
             clear_dirs=True)
 
     def test_schema_introspection(self):
@@ -185,6 +186,7 @@ class TestExportsView(TestView):
         dbsession = self.dbsession
         db = DBUtils(dbsession, self.settings)
         response = self.app.post(url('create'), '{}', self.json_headers,
+                                 self.extra_environ_admin)
         resp = response.json_body
         # old_schema = introspect_old_schema()
         # pprint.pprint(old_schema, width=200)
