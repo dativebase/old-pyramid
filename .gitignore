@@ -44,6 +44,7 @@ old/tests/data/morphologies/
 # Ignore the special-purpose .ini files
 gmail.ini
 keyboards.ini
+devlocal.ini
 
 # Ignore _requests_tests.py since it is copied from tests/ when setup-app is run
 /_requests_tests.py
