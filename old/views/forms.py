@@ -69,9 +69,12 @@ class Forms(Resources):
         """
         return self._filter_restricted_models(query_obj)
 
-    def _headers_control(self, result):
+    def __headers_control(self, result):
         """Set Last-Modified in response header and return 304 if the requester
         already has an up-to-date cache of the results of this call to index/
+        WARNING: _headers_control de-activated in forms because it is not
+        working correctly: at present, it tells the browser to cache when it
+        should not.
         """
         last_modified = get_last_modified(result)
         if last_modified:

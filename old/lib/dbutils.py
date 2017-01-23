@@ -214,7 +214,7 @@ def get_last_modified(result):
     if 'items' in result:
         result = result['items']
     if result:
-        return sorted(r.datetime_modified for r in result)[-1]\
+        return sorted(r['datetime_modified'] for r in result)[-1]\
             .strftime('%a, %d %b %Y %H:%M:%S GMT')
     return None
 
