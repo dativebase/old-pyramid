@@ -68,7 +68,7 @@ def main(argv=None):
         h.create_OLD_directories(settings)
         # ISO-639-3 Language data for the languages table
         LOGGER.info('Retrieving ISO-639-3 languages data.')
-        languages = omb.get_language_objects(settings['here'])
+        languages = omb.get_language_objects(settings['here'], truncated=False)
         # Get default users.
         LOGGER.info('Creating a default administrator, contributor and viewer.')
         administrator = omb.generate_default_administrator(
