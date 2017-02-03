@@ -378,7 +378,7 @@ HTML_TEMPLATE = '''
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
     <title>OLD Schema</title>
-    <link rel="stylesheet" type="text/css" href="/style.css"/>
+    <link rel="stylesheet" type="text/css" href="/{version}/style.css"/>
     <!-- <script type="text/javascript" src="script.js"></script> -->
   </head>
   <body>
@@ -405,10 +405,11 @@ def get_old_inst_html(valdict, old_schema):
         valdict = collections[collname]
         hmn = collname.replace('_', ' ')
         inner_html.append(
-            '        <li><a href="{coll_url}">{hmn}</a></li>'.format(
-                coll_url=valdict['@id'], hmn=hmn))
+            '        <li><a href="/{version}/{coll_url}">{hmn}</a></li>'.format(
+                version=old.__version__, coll_url=valdict['@id'], hmn=hmn))
     inner_html.append('      </ul>')
-    return HTML_TEMPLATE.format(main='\n'.join(inner_html))
+    return HTML_TEMPLATE.format(version=old.__version__,
+                                main='\n'.join(inner_html))
 
 
 def get_breadcrumbs(entity_type, **kwargs):
@@ -416,23 +417,26 @@ def get_breadcrumbs(entity_type, **kwargs):
     """
     if entity_type == 'old resource':
         return ' / '.join([
-            '<a href="/">OLD</a>',
-            '<a href="{coll_iri}">{coll_name}</a>'.format(
-                coll_iri=kwargs['coll_iri'], coll_name=kwargs['coll_name']),
+            '<a href="/{version}/">OLD</a>'.format(version=old.__version__),
+            '<a href="/{version}/{coll_iri}">{coll_name}</a>'.format(
+                version=old.__version__, coll_iri=kwargs['coll_iri'],
+                coll_name=kwargs['coll_name']),
             kwargs['resource']
         ])
     elif entity_type == 'old collection':
         return ' / '.join([
-            '<a href="/">OLD</a>',
+            '<a href="/{version}/">OLD</a>'.format(version=old.__version__),
             kwargs['collection']
         ])
     elif entity_type == 'old resource attribute':
         return ' / '.join([
-            '<a href="/">OLD</a>',
-            '<a href="{coll_iri}">{coll_name}</a>'.format(
-                coll_iri=kwargs['coll_iri'], coll_name=kwargs['coll_name']),
-            '<a href="{rsrc_iri}">{rsrc_name}</a>'.format(
-                rsrc_iri=kwargs['rsrc_iri'], rsrc_name=kwargs['rsrc_name']),
+            '<a href="/{version}/">OLD</a>'.format(version=old.__version__),
+            '<a href="/{version}/{coll_iri}">{coll_name}</a>'.format(
+                version=old.__version__, coll_iri=kwargs['coll_iri'],
+                coll_name=kwargs['coll_name']),
+            '<a href="/{version}/{rsrc_iri}">{rsrc_name}</a>'.format(
+                version=old.__version__, rsrc_iri=kwargs['rsrc_iri'],
+                rsrc_name=kwargs['rsrc_name']),
             kwargs['attribute']
         ])
 
@@ -458,10 +462,11 @@ def get_resource_html(resource_name, valdict, old_schema):
         valdict = attributes[attrname]
         hmn = attrname.split('/')[1].replace('_', ' ')
         inner_html.append(
-            '        <li><a href="{attr_url}">{hmn}</a></li>'.format(
-                attr_url=valdict['@id'], hmn=hmn))
+            '        <li><a href="/{version}/{attr_url}">{hmn}</a></li>'.format(
+                version=old.__version__, attr_url=valdict['@id'], hmn=hmn))
     inner_html.append('      </ul>')
-    return HTML_TEMPLATE.format(main='\n'.join(inner_html))
+    return HTML_TEMPLATE.format(version=old.__version__,
+                                main='\n'.join(inner_html))
 
 
 def get_collection_html(coll_name, valdict, old_schema):
@@ -473,10 +478,11 @@ def get_collection_html(coll_name, valdict, old_schema):
         '      <div id="bc">' + get_breadcrumbs(
             'old collection', collection=coll_name) + '</div>',
         '      <p>' +  valdict['definition'] + '</p>',
-        '      <p>See <a href="{rsrc_url}">{rsrc}</a>.</p>'.format(
-            rsrc_url=resource_url, rsrc=resource)
+        '      <p>See <a href="/{version}/{rsrc_url}">{rsrc}</a>.</p>'.format(
+            version=old.__version__, rsrc_url=resource_url, rsrc=resource)
     ]
-    return HTML_TEMPLATE.format(main='\n'.join(inner_html))
+    return HTML_TEMPLATE.format(version=old.__version__,
+                                main='\n'.join(inner_html))
 
 
 def get_resource_attribute_html(attr_name, valdict, old_schema):
@@ -488,14 +494,15 @@ def get_resource_attribute_html(attr_name, valdict, old_schema):
     coll_name = old_schema[rsrc_name]['collection']
     coll_iri = old_schema[coll_name]['@id']
     inner_html = [
-        '      <h1>Attribute {} of OLD Resource <a href="{}">{}</a></h1>'.format(
-            attr_name, rsrc_iri, rsrc_name),
+        '      <h1>Attribute {} of OLD Resource <a href="/{}/{}">{}</a></h1>'.format(
+            attr_name, old.__version__, rsrc_iri, rsrc_name),
         '      <div id="bc">' + get_breadcrumbs(
             'old resource attribute', attribute=attr_name, coll_iri=coll_iri,
             coll_name=coll_name, rsrc_iri=rsrc_iri, rsrc_name=rsrc_name) + '</div>',
         '      <p>' +  valdict['definition'] + '</p>',
     ]
-    return HTML_TEMPLATE.format(main='\n'.join(inner_html))
+    return HTML_TEMPLATE.format(version=old.__version__,
+                                main='\n'.join(inner_html))
 
 
 def add_html_to_old_schema(old_schema):
@@ -629,9 +636,22 @@ def write_schema_html_to_disk(old_schema):
     schema_path = os.path.join(schemata_path, old.__version__)
     if os.path.isdir(schema_path):
         shutil.rmtree(schema_path)
-        os.makedirs(schema_path)
+    os.makedirs(schema_path)
     # write CSS
     css_path = os.path.join(schema_path, 'style.css')
+    print('trying to write css to {}'.format(css_path))
+
+    if os.path.isdir(schema_path):
+        print('schema_path {} is a dir!'.format(schema_path))
+    else:
+        print('schema_path {} is NOT a dir!'.format(schema_path))
+
+    if os.path.isfile(css_path):
+        print('css_path {} is a file!'.format(css_path))
+    else:
+        print('css_path {} is NOT a file!'.format(css_path))
+
+
     with open(css_path, 'w') as fileo:
         fileo.write(CSS)
     # write index.html (and redundant OLD/index.html)
@@ -683,8 +703,65 @@ def write_schema_html_to_disk(old_schema):
                 fileo.write(valdict['html'])
 
 
+def add_filedata_attrs(old_schema):
+    """Certain OLD resources, notably Files, implicitly reference file objects
+    on disk. These are referenced in the JSON-LD export as IRIs, with
+    attributes that contain a ``_filedata`` suffix. This function, adds the
+    appropriate ``_filedata``-suffixed attributes to the OLD schema.
+
+    TODOs:
+
+    1. The following parser-related resources can have binary files on disk
+       associated with them also:
+
+        - morpheme_language_models
+        - morphological_parsers
+        - morphologies
+        - phonologies
+
+       Tests should be written that create resources of the above types, and
+       generate and/or compile them, as appropriate. New ``_filedata``-suffixed
+       attributes will be necessary.
+
+    2. The OLD user-specific directories are creates as follows:
+
+        - users
+            - <username>
+
+    """
+    old_schema.update({
+        'File/filename_filedata': {
+            '@id': '/File/filename_filedata',
+            '@type': '@id',
+            'definition': 'The IRI where the binary data of an OLD file can be'
+                          ' retrieved.',
+            'entity_type': 'old resource attribute',
+            'parent_resource': 'File'
+        },
+        'File/lossy_filename_filedata': {
+            '@id': '/File/lossy_filename_filedata',
+            '@type': '@id',
+            'definition': 'The IRI where the reduced-sized binary data of an'
+                          ' OLD file can be retrieved.',
+            'entity_type': 'old resource attribute',
+            'parent_resource': 'File'
+        },
+        # Note: Corpora.writetofile can also create .gz and .t2c files
+        'CorpusFile/filename_filedata': {
+            '@id': '/CorpusFile/filename_filedata',
+            '@type': '@id',
+            'definition': 'The IRI where the binary data of an OLD corpus file'
+                          ' can be retrieved.',
+            'entity_type': 'old resource attribute',
+            'parent_resource': 'CorpusFile'
+        }
+    })
+    return old_schema
+
+
 def get_old_schema():
     old_schema = introspect_old_schema()
+    old_schema = add_filedata_attrs(old_schema)
     old_schema = add_html_to_old_schema(old_schema)
     old_schema = add_jsonld_to_old_schema(old_schema)
     return old_schema

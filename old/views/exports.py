@@ -99,8 +99,10 @@ import logging
 import os
 import pprint
 import re
+import shutil
 from uuid import uuid4
 
+import bagit
 from formencode.validators import Invalid
 from pyld import jsonld
 from sqlalchemy import bindparam
@@ -225,13 +227,29 @@ class Exports(Resources):
         exports_dir_path = _create_exports_dir(settings)
         export_path = _create_export_dir(exports_dir_path, export)
         db_path = _create_db_path(export_path)
+        #export_store_path = _create_store_path(export_path)
+        export_store_path = os.path.join(export_path, 'store')
+
+        # Copy all of the "files" (Files, Parsers, Corpora, etc.) of this OLD
+        # to the export directory.
+        store_path = settings['permanent_store']
+        shutil.copytree(store_path, export_store_path)
 
         # The IRI/URIs we will need for the "@id" values of the JSON-LD objects
         old_instance_uri = settings['uri']
         db_uri_path = db_path.replace(os.path.dirname(exports_dir_path), '')
+        path, leaf = os.path.split(db_uri_path)
+        db_uri_path = os.path.join(path, 'data', leaf)
+        store_uri_path = export_store_path.replace(
+            os.path.dirname(exports_dir_path), '')
+        path, leaf = os.path.split(store_uri_path)
+        store_uri_path = os.path.join(path, 'data', leaf)
         if old_instance_uri.endswith('/'):
             old_instance_uri = old_instance_uri[:-1]
+        # Note: the /data is required because bagit will put everything in a
+        # data/ dir.
         root_iri = '{}{}'.format(old_instance_uri, db_uri_path)
+        root_store_iri = '{}{}'.format(old_instance_uri, store_uri_path)
 
         # Create the OLD.jsonld root export object
         old_jsonld_path = os.path.join(db_path, 'OLD.jsonld')
@@ -259,9 +277,22 @@ class Exports(Resources):
                 # Insert a representation of each resource attribute into the
                 # Resource's .jsonld object.
                 for attr, term_def in rsrc_jsonld[rsrc]['@context'].items():
-                    val = getattr(rsrc_mdl_inst, attr)
-                    rsrc_jsonld[rsrc][attr] = _get_rsrc_attr_val_jsonld_repr(
-                        val, term_def, root_iri)
+                    try:
+                        val = getattr(rsrc_mdl_inst, attr)
+                        rsrc_jsonld[rsrc][attr] = \
+                            _get_rsrc_attr_val_jsonld_repr(
+                                val, term_def, root_iri)
+                    except AttributeError:
+                        if attr.endswith('_filedata'):
+                            attr_ctprt = attr[:-9]
+                            val = getattr(rsrc_mdl_inst, attr_ctprt)
+                            print('We want an IRI for attr {} of resource {}'
+                                  ' with val {}, given root_store_iri {}'.format(
+                                      attr, rsrc, val, root_store_iri))
+                            rsrc_jsonld[rsrc][attr] = self._get_filedata_iri(
+                                rsrc, rsrc_mdl_inst, attr, val, root_store_iri)
+                        else:
+                            raise
                 rsrc_jsonld_path = os.path.join(
                     db_path, rsrc_iri.split('/')[-1])
 
@@ -291,6 +322,8 @@ class Exports(Resources):
                     sort_keys=True,
                     indent=4,
                     separators=(',', ': ')))
+        bagit.make_bag(export_path)
+        shutil.make_archive(export_path, 'zip', export_path)
 
     def _post_create_TODO(self, export):
         """After creating the export database model, we generate the actual
@@ -314,10 +347,36 @@ class Exports(Resources):
     def _get_update_data(self, user_data):
         return {}
 
+    def _get_filedata_iri(self, rsrc_name, rsrc, attr, val, root_store_iri):
+        """Return the IRI for a ``_filedata`` "attribute" of an OLD resource.
+        For example, File resources with filename attributes should have a
+        filename_filedata pseudo-attribute in the JSON-LD export which is an
+        IRI that locates the binary data of the File. This method returns that
+        IRI. For development, the structure of the store/ directories is:
+
+            - corpora
+            - files
+                - reduced_files
+            - morpheme_language_models
+            - morphological_parsers
+            - morphologies
+            - phonologies
+            - users
+                - <username>
+        """
+        dirname = self.inflect_p.plural(h.camel_case2snake_case(rsrc_name))
+        if dirname == 'files':
+            if attr == 'lossy_filename_filedata':
+                dirname = os.path.join(dirname, 'reduced_files')
+        if dirname == 'corpus_files':
+            subdirname = 'corpus_%s' % rsrc.id
+            dirname = os.path.join('corpora', subdirname)
+        return os.path.join(root_store_iri, dirname, val)
+
 
 def _get_rsrc_attr_val_jsonld_repr(val, term_def, root_iri):
     """Return a JSON-LD representation of ``val``, which is the value of an OLD
-    resource attribute. If ``vall` is another OLD resource, we return the IRI
+    resource attribute. If ``val` is another OLD resource, we return the IRI
     to its own JSON-LD object.
     """
     if isinstance(val, list):
@@ -367,3 +426,12 @@ def _create_db_path(export_path):
     db_path = os.path.join(export_path, 'db')
     _create_dir(db_path)
     return db_path
+
+
+def _create_store_path(export_path):
+    store__path = os.path.join(export_path, 'store')
+    _create_dir(store__path)
+    return store__path
+
+
+

@@ -17,7 +17,8 @@ def notfound_view(request):
 
 @view_config(context=Exception, renderer='json')
 def error(exc, request):
-    LOGGER.warning('Internal Server Error (500): %s %s', exc.__class__.__name__,
-                   exc)
+    # LOGGER.warning('Internal Server Error (500): %s %s', exc.__class__.__name__,
+    #                exc)
+    LOGGER.error(exc, exc_info=True)
     request.response.status = 500
     return {'error': 'Internal Server Error'}

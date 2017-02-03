@@ -267,6 +267,11 @@ def camel_case2lower_space(name):
     return re.sub('([a-z0-9])([A-Z])', r'\1 \2', s1).lower()
 
 
+def camel_case2snake_case(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
 def get_names_and_code_points(graph):
     return (graph,
             get_unicode_names(graph),

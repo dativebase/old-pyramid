@@ -495,6 +495,14 @@ class TestView(TestCase):
             'input_orthography': None,
             'output_orthography': None
         }
+        self.tag_create_params = {
+            'name': '',
+            'description': ''
+        }
+        self.elicitation_method_create_params = {
+            'name': '',
+            'description': ''
+        }
 
     def poll(self, requester, changing_attr, changing_attr_originally,
              log, wait=2, vocal=True, task_descr='task'):
