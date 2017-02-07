@@ -33,6 +33,7 @@ from pyramid.settings import asbool
 from old.models import Model
 from old.lib.constants import ISO_STRFTIME
 from old.lib.foma_worker import start_foma_worker
+from old.lib.export_worker import start_export_worker
 
 
 LOGGER = logging.getLogger(__name__)
@@ -140,6 +141,7 @@ class OLDHeadersMiddleware(object):
 def main(global_config, **settings):
     """This function returns a Pyramid WSGI application."""
     start_foma_worker()
+    start_export_worker()
     config = Configurator(settings=settings)
     config.include('pyramid_beaker')
     config.include('pyramid_jinja2')

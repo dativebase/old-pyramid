@@ -369,7 +369,7 @@ class MorphologicalParser(MorphologicalParser, Base):
         """
 
         self.generate_succeeded = False
-        self.generate_message = u''
+        self.generate_message = ''
         try:
             self.write_morphophonology_script()
             self.replicate_attributes()
@@ -682,7 +682,7 @@ class Cache(object):
                             if transcription not in persisted]
                 dbsession.add_all(unpersisted)
                 transaction.commit()
-                # LOGGER.warn('DB_CACHE: PERSISTED %s' % u', '.join([p.transcription for p in unpersisted]))
+                # LOGGER.warn('DB_CACHE: PERSISTED %s' % ', '.join([p.transcription for p in unpersisted]))
                 self.updated = False
 
     def json_dumps_candidates(self, candidates):

@@ -643,6 +643,17 @@ def includeme(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
 
+    config.add_route('export_generate',
+                     '/exports/{id}/generate',
+                     request_method='PUT')
+    config.add_view('old.views.exports.Exports',
+                    attr='generate',
+                    route_name='export_generate',
+                    request_method='PUT',
+                    renderer='json',
+                    decorator=(authenticate,
+                               authorize(['administrator', 'contributor'])))
+
     ###########################################################################
     # Phonology Special Routing
     ###########################################################################

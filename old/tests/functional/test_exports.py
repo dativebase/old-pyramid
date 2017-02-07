@@ -262,36 +262,46 @@ class TestExportsView(TestView):
         dbsession = self.dbsession
         db = self.db = DBUtils(dbsession, self.settings)
 
-        # This was copied verbatim (non-DRY) from test_forms_search.py and is
-        # not ideal for this kind of testing since it creates OLD models via the
-        # session and not via simulated requests. An improved set of tests will
-        # generate a more realistic data set. Maybe encrypting a real data set
-        # would be the way to go.
         self._create_test_data()
-
         store_path = self.settings['permanent_store']
-        import subprocess
-        import pprint
-        cmd = ['tree', '-C', store_path]
-        tree = subprocess.check_output(cmd)
-        #pprint.pprint(tree)
-        print('tree')
-        print(tree.decode('utf8'))
-        print('endtree')
 
+        # Create the export model.
         response = self.app.post(url('create'), '{}', self.json_headers,
-                                    self.extra_environ_admin)
+                                 self.extra_environ_admin)
         resp = response.json_body
-        # print(resp)
-        # pprint.pprint(resp)
+        export_id = resp['id']
+
+        # Generate the export.
+        response = self.app.put(
+            '/exports/{id}/generate'.format(id=export_id),
+            headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        resp = response.json_body
+        generate_attempt = resp['generate_attempt']
+        assert resp['generate_succeeded'] is False
+
+        # Poll ``GET /exports/export_id`` until ``generate_attempt`` has changed.
+        while True:
+            response = self.app.get(
+                url('show', id=export_id), headers=self.json_headers,
+                extra_environ=self.extra_environ_admin)
+            resp = response.json_body
+            if generate_attempt != resp['generate_attempt']:
+                LOGGER.debug(
+                    'Generate attempt for export %d has terminated.', export_id)
+                break
+            else:
+                LOGGER.debug(
+                    'Waiting for export %d to generate ...', export_id)
+            sleep(1)
+
+        assert resp['generate_succeeded'] is True
         exports_dir_path = self.settings['exports_dir']
         assert os.path.isdir(exports_dir_path)
-        # print(os.listdir(exports_dir_path))
         expected_export_path = os.path.join(exports_dir_path, resp['name'])
         assert os.path.isdir(expected_export_path)
         db_path = os.path.join(expected_export_path, 'data', 'db')
         assert os.path.isdir(db_path)
-        # print(os.listdir(db_path))
 
         form_ids = [
             idtup[0] for idtup in
@@ -307,8 +317,6 @@ class TestExportsView(TestView):
             db_path, 'Form-{}.jsonld'.format(form_ids[0]))
         with open(target_jsonld_path) as filei:
             target_jsonld = json.loads(filei.read())
-        # pprint.pprint(target_jsonld)
-        # pprint.pprint(target_form.get_dict())
         assert '@context' in target_jsonld
         assert '@context' in target_jsonld['Form']
         target_path = (

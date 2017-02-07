@@ -12,7 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""This module contains some multithreading worker and queue logic for
+"""OLD JSON-LD/BagIt Export
+
+This module contains some multithreading worker and queue logic for
 long-running processes related to the creation of OLD exports.
 
 The export worker can only run a callable that is a global in
@@ -25,7 +27,7 @@ The export worker can only run a callable that is a global in
         'args': {
             'export_id': export.id,
             'user_id': self.logged_in_user.id,
-            'config_path': self.request.registry.settings['__file__'],
+            'settings': self.request.registry.settings,
         }
     })
 
@@ -33,21 +35,107 @@ Cf. http://www.chrismoos.com/2009/03/04/pylons-worker-threads.
 
 For an introduction to Python threading, see
 http://www.ibm.com/developerworks/aix/library/au-threadingpython/.
+
+Sprint 1---Basic:
+
+    X export of entire data set
+    X access files (.jsonld, media files) over HTTP
+    X download entire export as zipped bag (https://en.wikipedia.org/wiki/BagIt)
+    X separate export thread
+    - fully public in exports/public/
+
+- Options
+  - entire data set, fully public
+  - entire data set, fully private
+  - entire data set, fully public, private parts encrypted
+  - partial data set, fully public, private parts removed
+
+- Public vs Private exports in distinct directories:
+
+  - exports/public/
+  - exports/private/
+
+  - The server will be configured to serve everything in exports/public/
+    openly. In contrast, access to exports/private/ would be routed through the
+    standard OLD/Pyramid auth mechanism.
+
+- Directory structure and archive of entire export (.7z, .tar.gz, .zip)?
+  - choose one or offer several options?
+
+- BagIt Specification Conformance
+  - https://en.wikipedia.org/wiki/BagIt
+  - https://github.com/LibraryOfCongress/bagit-python
+
+- Export type "Partially Encrypted":
+
+  - GnuPG encryption private/public key-based encryption
+  - No encryption is the default
+  - Special tags used for encrypting specified resources
+
+    - During export creation, user specifies "export encryption prefix", which
+      is an OLD tag prefix, e.g., "export-2017-02-01-encrypt"
+    - During export, if a resource is tagged with a tag that begins with the
+      the "export encryption prefix", then it is encrypted with access
+      determined by the suffix of the tag name.
+    - For example, "export-2017-02-01-encrypt:all" would mean that all users on
+      the OLD instance with known public GPG keys would be able to decrypt.
+    - For example, "export-2017-02-01-encrypt:username1,username2" would mean
+      that only users with the usernames "username1" and "username2" would be
+      able to decrypt that particular resource.
+    - Encryption tagging would have to generalize from OLD file resources to
+      the associated digital/binary file content. Similarly for other resources
+      which are one-to-one associated to binary files, e.g., morphological
+      parsers, corpora.
+
+Requirements:
+
+1. Exports are resources that can be:
+
+   a. Created
+   b. Read (singleton or collection)
+   c. Deleted (if admin)
+
+2. An OLD export is:
+   - a .zip file containing all of the data in an OLD at a particular
+     moment in time.
+   - files are organized according to the bag-it specification
+   - the database is serialized to JSON-LD
+   - the export should be importable into another OLD system
+
+3. Created in a separate thread.
+   - the client must poll the OLD in order to determine when the export is
+     complete.
+   - the export should be saved to disk and be efficiently retrievable (a
+     static asset, with or without authentication required, see
+     http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/assets.html)
+   - checked for consistency and repaired, if necessary
+     how? get all lastmod times for all resources prior to export
+     generation and then re-check them prior to export save?
+
 """
 
+import datetime
+import json
 import logging
 import os
+import pprint
 import queue
+import re
+import shutil
 import threading
 from uuid import uuid4
 
+import bagit
+import inflect
 from sqlalchemy import create_engine
+from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import sessionmaker
 from paste.deploy import appconfig
+from pyld import jsonld
 import transaction
 
-import old.lib.constants as oldc
 import old.lib.helpers as h
+from old.lib.introspectmodel import get_old_schema
 import old.models as old_models
 from old.models.morphologicalparser import Cache
 from old.models import (
@@ -63,6 +151,10 @@ FORMATTER = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 HANDLER.setFormatter(FORMATTER)
 LOGGER.addHandler(HANDLER)
 LOGGER.setLevel(logging.DEBUG)
+
+
+inflect_p = inflect.engine()
+inflect_p.classical()
 
 
 ################################################################################
@@ -119,174 +211,272 @@ def get_local_logger():
     return local_logger
 
 
-################################################################################
-# PHONOLOGY
-################################################################################
-
-
-def compile_phonology(**kwargs):
-    """Compile the export script of a phonology and save it to the db with values
-    that indicate compilation success.
-    """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
-        phonology = dbsession.query(
-            old_models.Phonology).get(kwargs['phonology_id'])
-        phonology.compile(kwargs['timeout'])
-        phonology.datetime_modified = h.now()
-        phonology.modifier_id = kwargs['user_id']
-        transaction.commit()
-
-
-################################################################################
-# MORPHOLOGY
-################################################################################
-
-
-def generate_and_compile_morphology(**kwargs):
-    """Generate a export script for a morphology and (optionally) compile it.
-    :param int kwargs['morphology_id']: id of a morphology.
-    :param bool kwargs['compile']: if True, the script will be generated *and*
-        compiled.
-    :param int kwargs['user_id']: id of the user model performing the
-        generation/compilation.
-    :param float kwargs['timeout']: how many seconds to wait before killing the
-        export compile process.
-    """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
-        morphology = dbsession.query(
-            old_models.Morphology).get(kwargs['morphology_id'])
-        try:
-            morphology.write(oldc.UNKNOWN_CATEGORY)
-        except Exception as error:
-            LOGGER.error('Exception when calling `write` on morphology: %s %s',
-                         error.__class__.__name__, error)
-        if kwargs.get('compile', True):
-            try:
-                morphology.compile(kwargs['timeout'])
-            except Exception as error:
-                LOGGER.error('Exception when calling `compile` on morphology:'
-                             ' %s %s', error.__class__.__name__, error)
-        morphology.generate_attempt = str(uuid4())
-        morphology.modifier_id = kwargs['user_id']
-        morphology.datetime_modified = h.now()
-        transaction.commit()
-
-
-################################################################################
-# MORPHEME LANGUAGE MODEL
-################################################################################
-
-
-def generate_language_model(**kwargs):
-    """Write the requisite files (corpus, vocab, ARPA, LMTrie) of a morpheme LM
-    to disk.
-    :param str kwargs['morpheme_language_model_id']: ``id`` value of a morpheme
-        LM.
-    :param int/float kwargs['timeout']: seconds to allow for ARPA file creation.
-    :param str kwargs['user_id']: ``id`` value of an OLD user.
-    :returns: ``None``; side-effect is to change relevant attributes of LM
-        object.
-    """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
-        langmod = dbsession.query(
-            old_models.MorphemeLanguageModel).get(
-                kwargs['morpheme_language_model_id'])
-        trie_path = langmod.get_file_path('trie')
-        trie_mod_time = langmod.get_modification_time(trie_path)
-        langmod.generate_succeeded = False
-        try:
-            langmod.write_corpus()
-        except Exception as error:
-            LOGGER.error('Exception when calling `write_corpus` on language'
-                         ' model: %s %s', error.__class__.__name__, error)
-            langmod.generate_message = 'Error writing the corpus file. %s' % error
-        try:
-            langmod.write_vocabulary()
-        except Exception as error:
-            LOGGER.error('Exception when calling `write_vocabulary` on language'
-                         ' model: %s %s', error.__class__.__name__, error)
-            langmod.generate_message = 'Error writing the vocabulary file. %s' % error
-        try:
-            langmod.write_arpa(kwargs['timeout'])
-        except Exception as error:
-            LOGGER.error('Exception when calling `write_arpa` on language'
-                         ' model: %s %s', error.__class__.__name__, error)
-            langmod.generate_message = 'Error writing the ARPA file. %s' % error
-        try:
-            langmod.generate_trie()
-        except Exception as error:
-            LOGGER.error('Exception when calling `generate_trie` on language'
-                         ' model: %s %s', error.__class__.__name__, error)
-            langmod.generate_message = 'Error generating the LMTrie instance. %s' % error
-        else:
-            if langmod.get_modification_time(trie_path) != trie_mod_time:
-                langmod.generate_succeeded = True
-                langmod.generate_message = 'Language model successfully generated.'
-            else:
-                langmod.generate_message = 'Error generating the LMTrie instance.'
-        langmod.generate_attempt = str(uuid4())
-        langmod.modifier_id = kwargs['user_id']
-        langmod.datetime_modified = h.now()
-        transaction.commit()
-
-
-def compute_perplexity(**kwargs):
-    """Evaluate the LM by attempting to calculate its perplexity and changing
-    some attribute values to reflect the attempt.
-    """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
-        langmod = dbsession.query(
-            old_models.MorphemeLanguageModel).get(
-                kwargs['morpheme_language_model_id'])
-        timeout = kwargs['timeout']
-        iterations = 5
-        try:
-            langmod.perplexity = langmod.compute_perplexity(timeout, iterations)
-        except Exception as error:
-            LOGGER.error('Exception when calling `comput_perplexity` on'
-                         ' language model: %s %s', error.__class__.__name__,
-                         error)
-            langmod.perplexity = None
-        if langmod.perplexity is None:
-            langmod.perplexity_computed = False
-        else:
-            langmod.perplexity_computed = True
-        langmod.perplexity_attempt = str(uuid4())
-        langmod.modifier_id = kwargs['user_id']
-        langmod.datetime_modified = h.now()
-        transaction.commit()
-
-
-################################################################################
-# MORPHOLOGICAL PARSER (MORPHOPHONOLOGY)
-################################################################################
-
-def generate_and_compile_parser(**kwargs):
-    """Write the parser's morphophonology FST script to file and compile it if
-    ``compile_`` is True.  Generate the language model and pickle it.
-    """
-    config_dir, config_file = os.path.split(kwargs['config_path'])
-    settings = appconfig('config:{}'.format(config_file),
-                         relative_to=config_dir)
+def generate_export(**kwargs):
+    """Create the JSON-LD export. See ``_generate_export`` for actual logic."""
+    settings = kwargs.get('settings')
     engine = create_engine(settings['sqlalchemy.url'])
     dbsession = sessionmaker(bind=engine)()
-    parser = dbsession.query(old_models.MorphologicalParser).get(
-        kwargs['morphological_parser_id'])
-    cache = Cache(parser, settings, get_dbsession_from_settings)
-    parser.cache = cache
-    parser.changed = False
-    parser.write()
-    dbsession.commit()
-    if kwargs.get('compile', True):
-        parser.compile(kwargs['timeout'])
-    parser.modifier_id = kwargs['user_id']
-    parser.datetime_modified = h.now()
-    if parser.changed:
-        parser.cache.clear(persist=True)
-    dbsession.add(parser)
-    dbsession.commit()
+    export = dbsession.query(old_models.Export).get(kwargs['export_id'])
+    export.generate_succeeded = False
+    try:
+        _generate_export(export, settings, dbsession)
+        export.generate_succeeded = True
+        export.generate_message = 'Export successfully generated'
+    except Exception as error:
+        LOGGER.error('Exception when attempting to generate OLD export.')
+        LOGGER.error(error, exc_info=True)
+        export.generate_message = (
+            'Attempt to generate export failed due to an uncaught exception.'
+            ' See logs.')
+    finally:
+        export.generate_attempt = str(uuid4())
+        export.modifier_id = kwargs['user_id']
+        export.datetime_modified = h.now()
+        dbsession.add(export)
+        dbsession.commit()
 
+
+def _generate_export(export, settings, dbsession):
+    """Create the JSON-LD export. The ``export`` param is the Export model.
+
+    Everything goes in exports/; It will look like:
+
+    /exports/
+        |- old-export-<UUID>-<timestamp>/
+            |- db/
+            | - OLD.jsonld
+            | - Form-1.jsonld
+            | - ...
+
+    OLD.jsonld is::
+
+        {
+            "@context": {
+                "OLD": "<IRI dereferences what an OLD instance is>"
+            },
+            "@id": "<IRI for this OLD.jsonld object>",
+            "OLD": {
+                "@context": {
+                    "forms": "<IRI dereferences what an OLD forms
+                                collection is>",
+                    ...
+                },
+                "forms": [
+                    <IRI for Form resource 1>,
+                    <IRI for Form resource 2>,
+                    ...
+                ],
+                ...
+            }
+        }
+
+    Form-1.jsonld is::
+
+        {
+            "@context": {
+                "Form": "<IRI dereferences what an OLD Form is>"
+            },
+            "@id": "<IRI for this Form-1.jsonld object>",
+            "Form": {
+                "@context": {
+                    "transcription": "<IRI dereferences what an OLD
+                                        Form.transcription is>",
+                    ...
+                },
+                "transcription": "nitsikohtaahsi'taki",
+                ...
+            }
+        }
+    """
+
+    # OLD schema is a dict with JSON-LD-compatible schema info
+    old_schema = get_old_schema()
+
+    # All the paths we will need for the export:
+    exports_dir_path = _create_exports_dir(settings)
+    export_path = _create_export_dir(exports_dir_path, export)
+    db_path = _create_db_path(export_path)
+    #export_store_path = _create_store_path(export_path)
+    export_store_path = os.path.join(export_path, 'store')
+
+    # Copy all of the "files" (Files, Parsers, Corpora, etc.) of this OLD
+    # to the export directory.
+    store_path = settings['permanent_store']
+    shutil.copytree(store_path, export_store_path)
+
+    # The IRI/URIs we will need for the "@id" values of the JSON-LD objects
+    old_instance_uri = settings['uri']
+    db_uri_path = db_path.replace(os.path.dirname(exports_dir_path), '')
+    path, leaf = os.path.split(db_uri_path)
+    db_uri_path = os.path.join(path, 'data', leaf)
+    store_uri_path = export_store_path.replace(
+        os.path.dirname(exports_dir_path), '')
+    path, leaf = os.path.split(store_uri_path)
+    store_uri_path = os.path.join(path, 'data', leaf)
+    if old_instance_uri.endswith('/'):
+        old_instance_uri = old_instance_uri[:-1]
+    # Note: the /data is required because bagit will put everything in a
+    # data/ dir.
+    root_iri = '{}{}'.format(old_instance_uri, db_uri_path)
+    root_store_iri = '{}{}'.format(old_instance_uri, store_uri_path)
+
+    # Create the OLD.jsonld root export object
+    old_jsonld_path = os.path.join(db_path, 'OLD.jsonld')
+    old_jsonld = old_schema['OLD']['jsonld'].copy()
+    old_jsonld['@id'] = old_jsonld_path
+
+    # Go through each Collection/Resource pair, adding an array of IRIs to
+    # OLD.jsonld for each resource collection and creating .jsonld files
+    # for each resource instance.
+    coll2rsrc = {term: val['resource'] for term, val in old_schema.items()
+                    if val['entity_type'] == 'old collection'}
+    for coll, rsrc in coll2rsrc.items():
+        rsrcmodel = getattr(old_models, rsrc)
+        idattr = inspect(rsrcmodel).primary_key[0].name
+        rsrc_id2iri = {
+            idtup[0]: _get_jsonld_iri_id(root_iri, rsrc, idtup[0])
+            for idtup in dbsession.query(
+                rsrcmodel).with_entities(getattr(rsrcmodel, idattr)).all()}
+        old_jsonld['OLD'][coll] = list(rsrc_id2iri.values())
+        for id_, rsrc_iri in rsrc_id2iri.items():
+            rsrc_mdl_inst = dbsession.query(rsrcmodel).get(id_)
+            rsrc_jsonld = old_schema[rsrc]['jsonld'].copy()
+            rsrc_jsonld['@id'] = rsrc_iri
+
+            # Insert a representation of each resource attribute into the
+            # Resource's .jsonld object.
+            for attr, term_def in rsrc_jsonld[rsrc]['@context'].items():
+                try:
+                    val = getattr(rsrc_mdl_inst, attr)
+                    rsrc_jsonld[rsrc][attr] = \
+                        _get_rsrc_attr_val_jsonld_repr(
+                            val, term_def, root_iri)
+                except AttributeError:
+                    if attr.endswith('_filedata'):
+                        attr_ctprt = attr[:-9]
+                        val = getattr(rsrc_mdl_inst, attr_ctprt)
+                        print('We want an IRI for attr {} of resource {}'
+                                ' with val {}, given root_store_iri {}'.format(
+                                    attr, rsrc, val, root_store_iri))
+                        rsrc_jsonld[rsrc][attr] = _get_filedata_iri(
+                            rsrc, rsrc_mdl_inst, attr, val, root_store_iri)
+                    else:
+                        raise
+            rsrc_jsonld_path = os.path.join(
+                db_path, rsrc_iri.split('/')[-1])
+
+            # Write the OLD Resource.jsonld to disk in the exports/ subdir
+            with open(rsrc_jsonld_path, 'w') as fileo:
+                fileo.write(
+                    json.dumps(
+                        rsrc_jsonld,
+                        sort_keys=True,
+                        indent=4,
+                        separators=(',', ': ')))
+            # Testing out PyLD's jsonld.normalize here:
+            #normalized = jsonld.normalize(
+            #    rsrc_jsonld, {
+            #        'algorithm': 'URDNA2015',
+            #        'format': 'application/nquads'})
+            #pprint.pprint('\n\nWITHOUT NORMALIZATION')
+            #pprint.pprint(rsrc_jsonld)
+            #pprint.pprint('\n\nWITH NORMALIZATION')
+            #pprint.pprint(normalized)
+
+    # Write the OLD.jsonld to disk in the exports/ subdir
+    with open(old_jsonld_path, 'w') as fileo:
+        fileo.write(
+            json.dumps(
+                old_jsonld,
+                sort_keys=True,
+                indent=4,
+                separators=(',', ': ')))
+    bagit.make_bag(export_path)
+    shutil.make_archive(export_path, 'zip', export_path)
+
+
+def _get_filedata_iri(rsrc_name, rsrc, attr, val, root_store_iri):
+    """Return the IRI for a ``_filedata`` "attribute" of an OLD resource.
+    For example, File resources with filename attributes should have a
+    filename_filedata pseudo-attribute in the JSON-LD export which is an
+    IRI that locates the binary data of the File. This method returns that
+    IRI. For development, the structure of the store/ directories is:
+
+        - corpora
+        - files
+            - reduced_files
+        - morpheme_language_models
+        - morphological_parsers
+        - morphologies
+        - phonologies
+        - users
+            - <username>
+    """
+    dirname = inflect_p.plural(h.camel_case2snake_case(rsrc_name))
+    if dirname == 'files':
+        if attr == 'lossy_filename_filedata':
+            dirname = os.path.join(dirname, 'reduced_files')
+    if dirname == 'corpus_files':
+        subdirname = 'corpus_%s' % rsrc.id
+        dirname = os.path.join('corpora', subdirname)
+    return os.path.join(root_store_iri, dirname, val)
+
+
+def _get_rsrc_attr_val_jsonld_repr(val, term_def, root_iri):
+    """Return a JSON-LD representation of ``val``, which is the value of an OLD
+    resource attribute. If ``val` is another OLD resource, we return the IRI
+    to its own JSON-LD object.
+    """
+    if isinstance(val, list):
+        return [
+            _get_rsrc_attr_val_jsonld_repr(x, term_def, root_iri) for x in val]
+    elif val is None:
+        return val
+    elif isinstance(val, old_models.Model):
+        attr_rsrc = val.__class__.__name__
+        attr_idattr = inspect(val.__class__).primary_key[0].name
+        id_ = getattr(val, attr_idattr)
+        return _get_jsonld_iri_id(root_iri, attr_rsrc, id_)
+    elif isinstance(val, (datetime.date, datetime.datetime)):
+        return val.isoformat()
+    else:
+        return val
+
+
+def _get_jsonld_iri_id(base_path, resource_name, resource_id):
+    """Return a JSON-LD IRI ("@id" value) for an OLD resource of type
+    ``resource_name`` with id ``resource_id`` being served at the base path
+    ``base_path``.
+    """
+    return os.path.join(
+        base_path,
+        '{}-{}.jsonld'.format(resource_name, resource_id))
+
+
+def _create_dir(exports_dir_path):
+    if not os.path.isdir(exports_dir_path):
+        h.make_directory_safely(exports_dir_path)
+
+
+def _create_exports_dir(settings):
+    exports_dir_path = settings['exports_dir']
+    _create_dir(exports_dir_path)
+    return exports_dir_path
+
+
+def _create_export_dir(exports_dir_path, export):
+    export_path = os.path.join(exports_dir_path, export.name)
+    _create_dir(export_path)
+    return export_path
+
+
+def _create_db_path(export_path):
+    db_path = os.path.join(export_path, 'db')
+    _create_dir(db_path)
+    return db_path
+
+
+def _create_store_path(export_path):
+    store__path = os.path.join(export_path, 'store')
+    _create_dir(store__path)
+    return store__path

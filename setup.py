@@ -22,16 +22,20 @@ with open(infopth) as f:
             lines.append(line)
 with open(infopth, 'w') as f:
     f.write(''.join(lines))
+
+# Fix __version__ in old/__init__.py and old/lib/constants.py
 pkgfile = os.path.join(wd, 'old', '__init__.py')
-lines = []
-with open(pkgfile) as f:
-    for line in f:
-        if line.startswith('__version__'):
-            lines.append('__version__ = \'%s\'\n' % VERSION)
-        else:
-            lines.append(line)
-with open(pkgfile, 'w') as f:
-    f.write(''.join(lines))
+constfile = os.path.join(wd, 'old', 'lib', 'constants.py')
+for path in (pkgfile, constfile):
+    lines = []
+    with open(path) as f:
+        for line in f:
+            if line.startswith('__version__'):
+                lines.append('__version__ = \'%s\'\n' % VERSION)
+            else:
+                lines.append(line)
+    with open(path, 'w') as f:
+        f.write(''.join(lines))
 
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'README.rst')) as f:

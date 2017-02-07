@@ -79,7 +79,6 @@ import os
 import pprint
 import shutil
 
-
 import inflect
 from sqlalchemy.orm.attributes import (
     InstrumentedAttribute,
@@ -88,7 +87,7 @@ from sqlalchemy.orm.attributes import (
     ScalarAttributeImpl
 )
 
-import old
+from old.lib.constants import __version__
 from old.lib.utils import (
     to_single_space,
     camel_case2lower_space
@@ -102,7 +101,7 @@ inflect_p.classical()
 
 LOGGER = logging.getLogger(__name__)
 OLD_SCHEMA_URL = 'http://schema.onlinelinguisticdatabase.org/{}'.format(
-    old.__version__)
+    __version__)
 
 
 def get_old_model_classes():
@@ -303,9 +302,13 @@ def introspect_old_schema():
 
     """
     # An entry for the entire OLD.
+    old_docstring = ('The Online Linguistic Database (OLD) is software for'
+        ' linguistic fieldwork.  An OLD (instance) is a specific deployment of'
+        ' the OLD software as a RESTful web service used to document and analyze'
+        ' a particular (usually language-specific) data set.')
     old_schema = {
         'OLD': {
-            'definition': get_model_docstring(old),
+            'definition': old_docstring,
             '@id': '/OLD',
             'entity_type': 'old instance'
         }
@@ -406,9 +409,9 @@ def get_old_inst_html(valdict, old_schema):
         hmn = collname.replace('_', ' ')
         inner_html.append(
             '        <li><a href="/{version}/{coll_url}">{hmn}</a></li>'.format(
-                version=old.__version__, coll_url=valdict['@id'], hmn=hmn))
+                version=__version__, coll_url=valdict['@id'], hmn=hmn))
     inner_html.append('      </ul>')
-    return HTML_TEMPLATE.format(version=old.__version__,
+    return HTML_TEMPLATE.format(version=__version__,
                                 main='\n'.join(inner_html))
 
 
@@ -417,25 +420,25 @@ def get_breadcrumbs(entity_type, **kwargs):
     """
     if entity_type == 'old resource':
         return ' / '.join([
-            '<a href="/{version}/">OLD</a>'.format(version=old.__version__),
+            '<a href="/{version}/">OLD</a>'.format(version=__version__),
             '<a href="/{version}/{coll_iri}">{coll_name}</a>'.format(
-                version=old.__version__, coll_iri=kwargs['coll_iri'],
+                version=__version__, coll_iri=kwargs['coll_iri'],
                 coll_name=kwargs['coll_name']),
             kwargs['resource']
         ])
     elif entity_type == 'old collection':
         return ' / '.join([
-            '<a href="/{version}/">OLD</a>'.format(version=old.__version__),
+            '<a href="/{version}/">OLD</a>'.format(version=__version__),
             kwargs['collection']
         ])
     elif entity_type == 'old resource attribute':
         return ' / '.join([
-            '<a href="/{version}/">OLD</a>'.format(version=old.__version__),
+            '<a href="/{version}/">OLD</a>'.format(version=__version__),
             '<a href="/{version}/{coll_iri}">{coll_name}</a>'.format(
-                version=old.__version__, coll_iri=kwargs['coll_iri'],
+                version=__version__, coll_iri=kwargs['coll_iri'],
                 coll_name=kwargs['coll_name']),
             '<a href="/{version}/{rsrc_iri}">{rsrc_name}</a>'.format(
-                version=old.__version__, rsrc_iri=kwargs['rsrc_iri'],
+                version=__version__, rsrc_iri=kwargs['rsrc_iri'],
                 rsrc_name=kwargs['rsrc_name']),
             kwargs['attribute']
         ])
@@ -463,9 +466,9 @@ def get_resource_html(resource_name, valdict, old_schema):
         hmn = attrname.split('/')[1].replace('_', ' ')
         inner_html.append(
             '        <li><a href="/{version}/{attr_url}">{hmn}</a></li>'.format(
-                version=old.__version__, attr_url=valdict['@id'], hmn=hmn))
+                version=__version__, attr_url=valdict['@id'], hmn=hmn))
     inner_html.append('      </ul>')
-    return HTML_TEMPLATE.format(version=old.__version__,
+    return HTML_TEMPLATE.format(version=__version__,
                                 main='\n'.join(inner_html))
 
 
@@ -479,9 +482,9 @@ def get_collection_html(coll_name, valdict, old_schema):
             'old collection', collection=coll_name) + '</div>',
         '      <p>' +  valdict['definition'] + '</p>',
         '      <p>See <a href="/{version}/{rsrc_url}">{rsrc}</a>.</p>'.format(
-            version=old.__version__, rsrc_url=resource_url, rsrc=resource)
+            version=__version__, rsrc_url=resource_url, rsrc=resource)
     ]
-    return HTML_TEMPLATE.format(version=old.__version__,
+    return HTML_TEMPLATE.format(version=__version__,
                                 main='\n'.join(inner_html))
 
 
@@ -495,13 +498,13 @@ def get_resource_attribute_html(attr_name, valdict, old_schema):
     coll_iri = old_schema[coll_name]['@id']
     inner_html = [
         '      <h1>Attribute {} of OLD Resource <a href="/{}/{}">{}</a></h1>'.format(
-            attr_name, old.__version__, rsrc_iri, rsrc_name),
+            attr_name, __version__, rsrc_iri, rsrc_name),
         '      <div id="bc">' + get_breadcrumbs(
             'old resource attribute', attribute=attr_name, coll_iri=coll_iri,
             coll_name=coll_name, rsrc_iri=rsrc_iri, rsrc_name=rsrc_name) + '</div>',
         '      <p>' +  valdict['definition'] + '</p>',
     ]
-    return HTML_TEMPLATE.format(version=old.__version__,
+    return HTML_TEMPLATE.format(version=__version__,
                                 main='\n'.join(inner_html))
 
 
@@ -633,25 +636,12 @@ def write_schema_html_to_disk(old_schema):
     schemata_path = os.path.join(schemata_parent_path, 'schemata')
     if not os.path.isdir(schemata_path):
         os.makedirs(schemata_path)
-    schema_path = os.path.join(schemata_path, old.__version__)
+    schema_path = os.path.join(schemata_path, __version__)
     if os.path.isdir(schema_path):
         shutil.rmtree(schema_path)
     os.makedirs(schema_path)
     # write CSS
     css_path = os.path.join(schema_path, 'style.css')
-    print('trying to write css to {}'.format(css_path))
-
-    if os.path.isdir(schema_path):
-        print('schema_path {} is a dir!'.format(schema_path))
-    else:
-        print('schema_path {} is NOT a dir!'.format(schema_path))
-
-    if os.path.isfile(css_path):
-        print('css_path {} is a file!'.format(css_path))
-    else:
-        print('css_path {} is NOT a file!'.format(css_path))
-
-
     with open(css_path, 'w') as fileo:
         fileo.write(CSS)
     # write index.html (and redundant OLD/index.html)

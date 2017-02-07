@@ -2,6 +2,9 @@ import os
 import re
 
 
+__version__ = '2.0.0'
+
+
 RSRC_TO_DIR = {
     'file': 'files',
     'files': 'files',
