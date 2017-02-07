@@ -42,7 +42,8 @@ Sprint 1---Basic:
     X access files (.jsonld, media files) over HTTP
     X download entire export as zipped bag (https://en.wikipedia.org/wiki/BagIt)
     X separate export thread
-    - fully public in exports/public/
+    X fully public in exports/public/
+    X fully private in exports/private/
 
 - Options
   - entire data set, fully public
@@ -212,7 +213,9 @@ def get_local_logger():
 
 
 def generate_export(**kwargs):
-    """Create the JSON-LD export. See ``_generate_export`` for actual logic."""
+    """Create the JSON-LD export. This function controls error handling and
+    export *attempt* logic. See ``_generate_export`` for actual export logic.
+    """
     settings = kwargs.get('settings')
     engine = create_engine(settings['sqlalchemy.url'])
     dbsession = sessionmaker(bind=engine)()
@@ -237,7 +240,10 @@ def generate_export(**kwargs):
 
 
 def _generate_export(export, settings, dbsession):
-    """Create the JSON-LD export. The ``export`` param is the Export model.
+    """Create the JSON-LD export. 
+    :param Model export: the Export model.
+    :param dict settings: the settings of the OLD instance
+    :param object dbsession: a SQLAlchemy database session object.
 
     Everything goes in exports/; It will look like:
 
@@ -294,9 +300,12 @@ def _generate_export(export, settings, dbsession):
 
     # All the paths we will need for the export:
     exports_dir_path = _create_exports_dir(settings)
-    export_path = _create_export_dir(exports_dir_path, export)
+    if export.public:
+        exports_type_path = _create_exports_public_dir(exports_dir_path)
+    else:
+        exports_type_path = _create_exports_private_dir(exports_dir_path)
+    export_path = _create_export_dir(exports_type_path, export)
     db_path = _create_db_path(export_path)
-    #export_store_path = _create_store_path(export_path)
     export_store_path = os.path.join(export_path, 'store')
 
     # Copy all of the "files" (Files, Parsers, Corpora, etc.) of this OLD
@@ -306,11 +315,11 @@ def _generate_export(export, settings, dbsession):
 
     # The IRI/URIs we will need for the "@id" values of the JSON-LD objects
     old_instance_uri = settings['uri']
-    db_uri_path = db_path.replace(os.path.dirname(exports_dir_path), '')
+    db_uri_path = db_path.replace(os.path.dirname(exports_type_path), '')
     path, leaf = os.path.split(db_uri_path)
     db_uri_path = os.path.join(path, 'data', leaf)
     store_uri_path = export_store_path.replace(
-        os.path.dirname(exports_dir_path), '')
+        os.path.dirname(exports_type_path), '')
     path, leaf = os.path.split(store_uri_path)
     store_uri_path = os.path.join(path, 'data', leaf)
     if old_instance_uri.endswith('/'):
@@ -453,9 +462,9 @@ def _get_jsonld_iri_id(base_path, resource_name, resource_id):
         '{}-{}.jsonld'.format(resource_name, resource_id))
 
 
-def _create_dir(exports_dir_path):
-    if not os.path.isdir(exports_dir_path):
-        h.make_directory_safely(exports_dir_path)
+def _create_dir(path):
+    if not os.path.isdir(path):
+        h.make_directory_safely(path)
 
 
 def _create_exports_dir(settings):
@@ -464,8 +473,20 @@ def _create_exports_dir(settings):
     return exports_dir_path
 
 
-def _create_export_dir(exports_dir_path, export):
-    export_path = os.path.join(exports_dir_path, export.name)
+def _create_exports_public_dir(exports_dir_path):
+    public_path = os.path.join(exports_dir_path, 'public')
+    _create_dir(public_path)
+    return public_path
+
+
+def _create_exports_private_dir(exports_dir_path):
+    private_path = os.path.join(exports_dir_path, 'private')
+    _create_dir(private_path)
+    return private_path
+
+
+def _create_export_dir(exports_type_path, export):
+    export_path = os.path.join(exports_type_path, export.name)
     _create_dir(export_path)
     return export_path
 

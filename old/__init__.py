@@ -21,6 +21,8 @@ data set.
 
 import datetime
 import logging
+import mimetypes
+import os
 
 from pyramid.authentication import (
     AuthTktAuthenticationPolicy,
@@ -35,9 +37,11 @@ from old.lib.constants import ISO_STRFTIME
 from old.lib.foma_worker import start_foma_worker
 from old.lib.export_worker import start_export_worker
 
+# Necessary so that static view at exports/public/ serves .jsonld files with
+# the correct Content-Type header.
+mimetypes.add_type('application/json', '.jsonld')
 
 LOGGER = logging.getLogger(__name__)
-
 
 __version__ = '2.0.0'
 
@@ -147,6 +151,8 @@ def main(global_config, **settings):
     config.include('pyramid_jinja2')
     config.include('.models')
     config.include('.routes')
+    public_exports_path = os.path.join(settings['exports_dir'], 'public')
+    config.add_static_view(name='public', path=public_exports_path)
     config.add_renderer('json', get_json_renderer())
     config.scan()
     return OLDHeadersMiddleware(config.make_wsgi_app())

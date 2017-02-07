@@ -1435,8 +1435,9 @@ class OrderBySchema(Schema):
 
 class ExportSchema(Schema):
     """ExportSchema is a Schema for validating the data used to create
-    an export (views/exports.py). No validation appears to be necessary at the
-    moment.
+    an export (views/exports.py). At present, users can only indicate whether
+    the export is public or not.
     """
     allow_extra_fields = True
     filter_extra_fields = True
+    public = StringBoolean()

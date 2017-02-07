@@ -255,18 +255,21 @@ class TestExportsView(TestView):
         old_schema = get_old_schema()
         write_schema_html_to_disk(old_schema)
 
-    def test_export_creation(self):
-        """Tests that POST /exports works as expected: it generates .jsonld
-        files in the exports/ directory.
+    def test_public_export_creation(self):
+        """Tests that POST /exports and PUT /exports/<id>/generate work as
+        expected for creating public exports: an Export model is created and
+        the generate request results in the successful generation of the export
+        .jsonld files in the exports/public/ directory.
         """
         dbsession = self.dbsession
         db = self.db = DBUtils(dbsession, self.settings)
 
+        # Create some test data to export.
         self._create_test_data()
-        store_path = self.settings['permanent_store']
 
-        # Create the export model.
-        response = self.app.post(url('create'), '{}', self.json_headers,
+        # Create the public export model.
+        params = json.dumps({'public': True})
+        response = self.app.post(url('create'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = response.json_body
         export_id = resp['id']
@@ -280,7 +283,7 @@ class TestExportsView(TestView):
         generate_attempt = resp['generate_attempt']
         assert resp['generate_succeeded'] is False
 
-        # Poll ``GET /exports/export_id`` until ``generate_attempt`` has changed.
+        # Poll the export until the generation attempt has terminated.
         while True:
             response = self.app.get(
                 url('show', id=export_id), headers=self.json_headers,
@@ -295,14 +298,18 @@ class TestExportsView(TestView):
                     'Waiting for export %d to generate ...', export_id)
             sleep(1)
 
+        # Confirm that the export has been created on disk.
         assert resp['generate_succeeded'] is True
         exports_dir_path = self.settings['exports_dir']
         assert os.path.isdir(exports_dir_path)
-        expected_export_path = os.path.join(exports_dir_path, resp['name'])
+        expected_export_path = os.path.join(
+            exports_dir_path, 'public', resp['name'])
         assert os.path.isdir(expected_export_path)
         db_path = os.path.join(expected_export_path, 'data', 'db')
         assert os.path.isdir(db_path)
 
+        # Confirm that each form in the database has a .jsonld file in the
+        # export
         form_ids = [
             idtup[0] for idtup in
             dbsession.query(old_models.Form)
@@ -312,6 +319,8 @@ class TestExportsView(TestView):
             jsonld_fname = 'Form-{}.jsonld'.format(id_)
             path = os.path.join(db_path, jsonld_fname)
             assert os.path.isfile(path)
+
+        # Confirm that the first form's .jsonld export is a JSON-LD file.
         target_form = dbsession.query(old_models.Form).get(form_ids[0])
         target_jsonld_path = os.path.join(
             db_path, 'Form-{}.jsonld'.format(form_ids[0]))
@@ -331,3 +340,152 @@ class TestExportsView(TestView):
             'db/'
             'User-{}.jsonld'.format(resp['name'], target_form.enterer_id))
         assert enterer_path in target_jsonld['Form']['enterer']
+
+        # Confirm that the files of this JSON-LD export are publically
+        # accessible (i.e., without a password)
+        url_path = '/public/{}'.format(target_path)
+        response = self.app.get(url_path)
+        assert response.content_type == 'application/json'
+        jsonld_form = response.json_body
+
+        # Confirm that the "@id" references within the Form's JSON-LD are
+        # accurate. Note that the value of the 'speaker' attribute in the
+        # Form's JSON-LD will actually be something like
+        # 'https://app.onlinelinguisticdatabase.org/testold/public/old-export-c58d24cb-780e-4fd3-8e9b-b12de22a59f5-1486529284/data/db/Speaker-1.jsonld',
+        # However, in the context of the test, the domain would be something
+        # like localhost:9000 so we can't actually query that very URL.
+        speaker_url = jsonld_form['Form']['speaker']
+        old_instance_uri = self.settings['uri']
+        assert speaker_url.startswith(old_instance_uri)
+        speaker_url = speaker_url.replace(old_instance_uri, '', 1)
+        if speaker_url[0] != '/':
+            speaker_url = '/' + speaker_url
+        response = self.app.get(speaker_url)
+        assert response.content_type == 'application/json'
+        jsonld_speaker = response.json_body
+        assert jsonld_speaker['Speaker']['dialect'] == 'dialect 1'
+
+    def test_private_export_creation(self):
+        """Tests that POST /exports and PUT /exports/<id>/generate work as
+        expected for creating private exports: an Export model is created and
+        the generate request results in the successful generation of the export
+        .jsonld files in the exports/private/ directory.
+        """
+        dbsession = self.dbsession
+        db = self.db = DBUtils(dbsession, self.settings)
+
+        # Create some test data to export.
+        self._create_test_data()
+
+        # Create the private export model.
+        params = json.dumps({'public': False})
+        response = self.app.post(url('create'), params, self.json_headers,
+                                 self.extra_environ_admin)
+        resp = response.json_body
+        export_id = resp['id']
+
+        # Generate the export.
+        response = self.app.put(
+            '/exports/{id}/generate'.format(id=export_id),
+            headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        resp = response.json_body
+        generate_attempt = resp['generate_attempt']
+        assert resp['generate_succeeded'] is False
+
+        # Poll the export until the generation attempt has terminated.
+        while True:
+            response = self.app.get(
+                url('show', id=export_id), headers=self.json_headers,
+                extra_environ=self.extra_environ_admin)
+            resp = response.json_body
+            if generate_attempt != resp['generate_attempt']:
+                LOGGER.debug(
+                    'Generate attempt for export %d has terminated.', export_id)
+                break
+            else:
+                LOGGER.debug(
+                    'Waiting for export %d to generate ...', export_id)
+            sleep(1)
+
+        # Confirm that the export has been created on disk.
+        assert resp['generate_succeeded'] is True
+        exports_dir_path = self.settings['exports_dir']
+        assert os.path.isdir(exports_dir_path)
+        expected_export_path = os.path.join(
+            exports_dir_path, 'private', resp['name'])
+        assert os.path.isdir(expected_export_path)
+        db_path = os.path.join(expected_export_path, 'data', 'db')
+        assert os.path.isdir(db_path)
+
+        # Confirm that each form in the database has a .jsonld file in the
+        # export
+        form_ids = [
+            idtup[0] for idtup in
+            dbsession.query(old_models.Form)
+            .with_entities(old_models.Form.id).all()]
+        assert len(form_ids) == len(FORMS)
+        for id_ in form_ids:
+            jsonld_fname = 'Form-{}.jsonld'.format(id_)
+            path = os.path.join(db_path, jsonld_fname)
+            assert os.path.isfile(path)
+
+        # Confirm that the first form's .jsonld export is a JSON-LD file.
+        target_form = dbsession.query(old_models.Form).get(form_ids[0])
+        target_jsonld_path = os.path.join(
+            db_path, 'Form-{}.jsonld'.format(form_ids[0]))
+        with open(target_jsonld_path) as filei:
+            target_jsonld = json.loads(filei.read())
+        assert '@context' in target_jsonld
+        assert '@context' in target_jsonld['Form']
+        target_path = (
+            '{}/'
+            'data/'
+            'db/'
+            'Form-{}.jsonld'.format(resp['name'], form_ids[0]))
+        assert target_path in target_jsonld['@id']
+        enterer_path = (
+            '{}/'
+            'data/'
+            'db/'
+            'User-{}.jsonld'.format(resp['name'], target_form.enterer_id))
+        assert enterer_path in target_jsonld['Form']['enterer']
+
+        # Confirm that the files of this JSON-LD export are not publically
+        # accessible (i.e., they require session-based password authentication)
+        url_path = '/private/{}'.format(target_path)
+        response = self.app.get(url_path, status=401)
+        assert response.content_type == 'application/json'
+        assert response.json_body['error'] == (
+            'Authentication is required to access this resource.')
+        response = self.app.get(
+            url_path,
+            headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        jsonld_form = response.json_body
+        assert response.content_type == 'application/json'
+        assert 'Form' in jsonld_form
+
+        # Confirm that the "@id" references within the Form's JSON-LD are
+        # accurate. Note that the value of the 'speaker' attribute in the
+        # Form's JSON-LD will actually be something like
+        # 'https://app.onlinelinguisticdatabase.org/testold/private/old-export-c58d24cb-780e-4fd3-8e9b-b12de22a59f5-1486529284/data/db/Speaker-1.jsonld',
+        # However, in the context of the test, the domain would be something
+        # like localhost:9000 so we can't actually query that very URL.
+        speaker_url = jsonld_form['Form']['speaker']
+        old_instance_uri = self.settings['uri']
+        assert speaker_url.startswith(old_instance_uri)
+        speaker_url = speaker_url.replace(old_instance_uri, '', 1)
+        if speaker_url[0] != '/':
+            speaker_url = '/' + speaker_url
+        response = self.app.get(speaker_url, status=401)
+        assert response.content_type == 'application/json'
+        assert response.json_body['error'] == (
+            'Authentication is required to access this resource.')
+        response = self.app.get(
+            speaker_url,
+            headers=self.json_headers,
+            extra_environ=self.extra_environ_admin)
+        assert response.content_type == 'application/json'
+        jsonld_speaker = response.json_body
+        assert jsonld_speaker['Speaker']['dialect'] == 'dialect 1'

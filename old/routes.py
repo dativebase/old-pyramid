@@ -654,6 +654,16 @@ def includeme(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
 
+    config.add_route('private_exports',
+            '/private/{path:.+}',
+                     request_method='GET')
+    config.add_view('old.views.exports.Exports',
+                    attr='private_exports',
+                    route_name='private_exports',
+                    request_method='GET',
+                    renderer='json',
+                    decorator=authenticate)
+
     ###########################################################################
     # Phonology Special Routing
     ###########################################################################

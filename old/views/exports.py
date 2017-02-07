@@ -96,6 +96,7 @@ Requirements:
 import datetime
 import json
 import logging
+import mimetypes
 import os
 import pprint
 import re
@@ -105,6 +106,8 @@ from uuid import uuid4
 import bagit
 from formencode.validators import Invalid
 from pyld import jsonld
+import pyramid.httpexceptions as exc
+from pyramid.response import FileResponse
 from sqlalchemy import bindparam
 from sqlalchemy.sql import asc, or_
 from sqlalchemy.orm import subqueryload
@@ -137,9 +140,11 @@ class Exports(Resources):
     """Generate responses to requests on export resources."""
 
     def generate(self):
-        """After creating the export database model, the user must request this
-        action in order to generate the actual export .zip directory on disk in
-        a separate thread.
+        """After creating the export database model, the user must issue a PUT
+        request to /exports/<id>/generate in order to call this method and
+        generate the actual export on disk. This triggers export creation in a
+        separate thread. The user must then poll GET /exports/<id> until the
+        generate_attempt attribute of the export has changed.
         """
         export, id_ = self._model_from_id(eager=True)
         if not export:
@@ -155,6 +160,23 @@ class Exports(Resources):
             }
         })
         return export
+
+    def private_exports(self):
+        """Private exports require authentication prior to access. This method
+        handles GET requests to /private/-prefixed paths.
+        """
+        path = self.request.matchdict['path']
+        LOGGER.debug('path provided to private_exports: %s', path)
+        exports_dir_path = self.request.registry.settings['exports_dir']
+        path = os.path.join(exports_dir_path, 'private', path)
+        if os.path.isfile(path):
+            filetype = mimetypes.guess_type(path, strict=False)[0]
+            return FileResponse(
+                path,
+                request=self.request,
+                content_type=filetype)
+        else:
+            raise exc.HTTPNotFound()
 
     # Export resources CANNOT be updated:
     def update(self):
@@ -177,7 +199,8 @@ class Exports(Resources):
         timestamp = int(now.timestamp())
         name = 'old-export-{}-{}'.format(UUID, timestamp)
         user_model = self.logged_in_user
-        return {
+        user_data = self._get_user_data(data)
+        user_data.update({
             'UUID': UUID,
             'datetime_entered': now,
             'enterer': user_model,
@@ -185,10 +208,11 @@ class Exports(Resources):
             'generate_succeeded': False,
             'generate_message': '',
             'generate_attempt': str(uuid4())
-        }
+        })
+        return user_data
 
     def _get_user_data(self, data):
-        return {}
+        return {'public': data['public']}
 
     def _get_update_data(self, user_data):
         return {}

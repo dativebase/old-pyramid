@@ -367,6 +367,11 @@ def introspect_old_schema():
 
 CSS = '''
 
+body {
+    font-family: monospace;
+    font-size: 15pt;
+}
+
 div#main {
     width: 50%;
     margin: 1em auto 1em auto;

@@ -45,6 +45,11 @@ class Export(Base):
                 primary_key=True)
     UUID = Column(Unicode(36))
     name = Column(Unicode(255), doc='The name of the export.')
+    public = Column(
+        Boolean, default=False,
+        doc='A public export is made accessible on the Internet for all to'
+        ' access. By default, OLD exports are not public. A non-public export is'
+        ' accessible only to account holders of the OLD it is a part of.')
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation(
         'User', primaryjoin='Export.enterer_id==User.id',
