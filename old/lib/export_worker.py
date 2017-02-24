@@ -14,11 +14,38 @@
 
 """OLD JSON-LD/BagIt Export
 
-This module contains some multithreading worker and queue logic for
-long-running processes related to the creation of OLD exports.
+The exports created are "zipped bags" (.zip files conforming to the BagIt
+specification) containing the files on disk of an OLD as well as a
+representation of the data set as a set of JSON-LD files.
 
-The export worker can only run a callable that is a global in
-:mod:`old.lib.export_worker` and which takes keyword arguments.  Example usage::
+This module contains the multithreading worker and queue logic for
+the long-running processes needed for the creation of OLD exports.
+
+1. Exports are resources that can be:
+
+   a. Created
+   b. Read (singleton or collection)
+   c. Deleted (if admin)
+
+2. An OLD export is:
+   - a .zip file containing all of the data in an OLD at a particular
+     moment in time.
+   - files are organized according to the bag-it specification
+   - a representation of the database as JSON-LD (linked data)
+   - (importable into another OLD system; TODO)
+
+3. Created in a separate thread.
+   - the client must poll the OLD in order to determine when the export is
+     complete.
+   - the export should be saved to disk and be efficiently retrievable (a
+     static asset, with or without authentication required, see
+     http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/assets.html)
+   - checked for consistency and repaired, if necessary
+     how? get all lastmod times for all resources prior to export
+     generation and then re-check them prior to export save? TODO (to consider).
+
+The export worker can only run callables that are global in
+:mod:`old.lib.export_worker` and which take keyword arguments. Example usage::
 
     from old.lib.export_worker import EXPORT_WORKER_Q
     EXPORT_WORKER_Q.put({
@@ -35,83 +62,6 @@ Cf. http://www.chrismoos.com/2009/03/04/pylons-worker-threads.
 
 For an introduction to Python threading, see
 http://www.ibm.com/developerworks/aix/library/au-threadingpython/.
-
-Sprint 1---Basic:
-
-    X export of entire data set
-    X access files (.jsonld, media files) over HTTP
-    X download entire export as zipped bag (https://en.wikipedia.org/wiki/BagIt)
-    X separate export thread
-    X fully public in exports/public/
-    X fully private in exports/private/
-
-- Options
-  - entire data set, fully public
-  - entire data set, fully private
-  - entire data set, fully public, private parts encrypted
-  - partial data set, fully public, private parts removed
-
-- Public vs Private exports in distinct directories:
-
-  - exports/public/
-  - exports/private/
-
-  - The server will be configured to serve everything in exports/public/
-    openly. In contrast, access to exports/private/ would be routed through the
-    standard OLD/Pyramid auth mechanism.
-
-- Directory structure and archive of entire export (.7z, .tar.gz, .zip)?
-  - choose one or offer several options?
-
-- BagIt Specification Conformance
-  - https://en.wikipedia.org/wiki/BagIt
-  - https://github.com/LibraryOfCongress/bagit-python
-
-- Export type "Partially Encrypted":
-
-  - GnuPG encryption private/public key-based encryption
-  - No encryption is the default
-  - Special tags used for encrypting specified resources
-
-    - During export creation, user specifies "export encryption prefix", which
-      is an OLD tag prefix, e.g., "export-2017-02-01-encrypt"
-    - During export, if a resource is tagged with a tag that begins with the
-      the "export encryption prefix", then it is encrypted with access
-      determined by the suffix of the tag name.
-    - For example, "export-2017-02-01-encrypt:all" would mean that all users on
-      the OLD instance with known public GPG keys would be able to decrypt.
-    - For example, "export-2017-02-01-encrypt:username1,username2" would mean
-      that only users with the usernames "username1" and "username2" would be
-      able to decrypt that particular resource.
-    - Encryption tagging would have to generalize from OLD file resources to
-      the associated digital/binary file content. Similarly for other resources
-      which are one-to-one associated to binary files, e.g., morphological
-      parsers, corpora.
-
-Requirements:
-
-1. Exports are resources that can be:
-
-   a. Created
-   b. Read (singleton or collection)
-   c. Deleted (if admin)
-
-2. An OLD export is:
-   - a .zip file containing all of the data in an OLD at a particular
-     moment in time.
-   - files are organized according to the bag-it specification
-   - the database is serialized to JSON-LD
-   - the export should be importable into another OLD system
-
-3. Created in a separate thread.
-   - the client must poll the OLD in order to determine when the export is
-     complete.
-   - the export should be saved to disk and be efficiently retrievable (a
-     static asset, with or without authentication required, see
-     http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/assets.html)
-   - checked for consistency and repaired, if necessary
-     how? get all lastmod times for all resources prior to export
-     generation and then re-check them prior to export save?
 
 """
 
@@ -135,6 +85,8 @@ from paste.deploy import appconfig
 from pyld import jsonld
 import transaction
 
+from old.lib.constants import __version__
+from old.lib.dbutils import DBUtils
 import old.lib.helpers as h
 from old.lib.introspectmodel import get_old_schema
 import old.models as old_models
@@ -219,10 +171,11 @@ def generate_export(**kwargs):
     settings = kwargs.get('settings')
     engine = create_engine(settings['sqlalchemy.url'])
     dbsession = sessionmaker(bind=engine)()
+    db = DBUtils(dbsession, settings)
     export = dbsession.query(old_models.Export).get(kwargs['export_id'])
     export.generate_succeeded = False
     try:
-        _generate_export(export, settings, dbsession)
+        _generate_export(export, settings, dbsession, db)
         export.generate_succeeded = True
         export.generate_message = 'Export successfully generated'
     except Exception as error:
@@ -239,11 +192,13 @@ def generate_export(**kwargs):
         dbsession.commit()
 
 
-def _generate_export(export, settings, dbsession):
-    """Create the JSON-LD export. 
+def _generate_export(export, settings, dbsession, db):
+    """Create the JSON-LD export.
     :param Model export: the Export model.
     :param dict settings: the settings of the OLD instance
     :param object dbsession: a SQLAlchemy database session object.
+    :param object db: a DBUtils instance: convenience class for getting stuff
+        from the db.
 
     Everything goes in exports/; It will look like:
 
@@ -307,6 +262,7 @@ def _generate_export(export, settings, dbsession):
     export_path = _create_export_dir(exports_type_path, export)
     db_path = _create_db_path(export_path)
     export_store_path = os.path.join(export_path, 'store')
+    app_set = db.current_app_set
 
     # Copy all of the "files" (Files, Parsers, Corpora, etc.) of this OLD
     # to the export directory.
@@ -329,16 +285,32 @@ def _generate_export(export, settings, dbsession):
     root_iri = '{}{}'.format(old_instance_uri, db_uri_path)
     root_store_iri = '{}{}'.format(old_instance_uri, store_uri_path)
 
+    # Add ontology/data dictionary namespaces (e.g., dc, foaf, prov)
+    # the OLD schema
+    old_schema = _add_namespaces(old_schema, root_iri)
+
     # Create the OLD.jsonld root export object
     old_jsonld_path = os.path.join(db_path, 'OLD.jsonld')
     old_jsonld = old_schema['OLD']['jsonld'].copy()
-    old_jsonld['@id'] = old_jsonld_path
+    # old_jsonld['@id'] = old_jsonld_path
+    old_jsonld['@id'] = ""  # possible because @base in @context equals old_jsonld_path
 
     # Go through each Collection/Resource pair, adding an array of IRIs to
     # OLD.jsonld for each resource collection and creating .jsonld files
     # for each resource instance.
     coll2rsrc = {term: val['resource'] for term, val in old_schema.items()
-                    if val['entity_type'] == 'old collection'}
+                 if val['entity_type'] == 'old collection'}
+    # Collect stats on the enterers, elicitors, modifiers, speakers for
+    # dc:creator and dc:contributor attributes.
+    enterers_dict = {}
+    elicitors_dict = {}
+    modifiers_dict = {}
+    speakers_dict = {}
+    # Used to collect stats on the newest and oldest resource
+    # creation/modification datetimes; these values are used to populate
+    # provenance values (PROV ontology)
+    oldest_datetime = None
+    newest_datetime = None
     for coll, rsrc in coll2rsrc.items():
         rsrcmodel = getattr(old_models, rsrc)
         idattr = inspect(rsrcmodel).primary_key[0].name
@@ -352,11 +324,35 @@ def _generate_export(export, settings, dbsession):
             rsrc_jsonld = old_schema[rsrc]['jsonld'].copy()
             rsrc_jsonld['@id'] = rsrc_iri
 
+            # Update the dataset-wide oldest and newest datetime values, if
+            # this resources is the oldest or newest one seen.
+            for datetime_attr in ('datetime_entered', 'datetime_modified'):
+                inst_datetime = getattr(rsrc_mdl_inst, datetime_attr, None)
+                if inst_datetime:
+                    if (    oldest_datetime is None or
+                            inst_datetime < oldest_datetime):
+                        oldest_datetime = inst_datetime
+                    if (    newest_datetime is None or
+                            inst_datetime > newest_datetime):
+                        newest_datetime = inst_datetime
+
             # Insert a representation of each resource attribute into the
             # Resource's .jsonld object.
             for attr, term_def in rsrc_jsonld[rsrc]['@context'].items():
                 try:
                     val = getattr(rsrc_mdl_inst, attr)
+                    # for dc:creator and dc:contributor
+                    if val and attr in ('enterer', 'elicitor', 'modifier',
+                                        'speaker'):
+                        aggr = locals()[attr + 's_dict']
+                        record = aggr.get(val.id)
+                        if record:
+                            record['attribution_count'] += 1
+                        else:
+                            aggr[val.id] = {
+                                'attribution_count': 1,
+                                'name': _get_person_full_name(val)
+                            }
                     rsrc_jsonld[rsrc][attr] = \
                         _get_rsrc_attr_val_jsonld_repr(
                             val, term_def, root_iri)
@@ -375,6 +371,7 @@ def _generate_export(export, settings, dbsession):
                 db_path, rsrc_iri.split('/')[-1])
 
             # Write the OLD Resource.jsonld to disk in the exports/ subdir
+            # TODO: the entire db should just be in one OLD.jsonld file
             with open(rsrc_jsonld_path, 'w') as fileo:
                 fileo.write(
                     json.dumps(
@@ -392,6 +389,72 @@ def _generate_export(export, settings, dbsession):
             #pprint.pprint('\n\nWITH NORMALIZATION')
             #pprint.pprint(normalized)
 
+    # Dublin Core contributor computed as all speakers and
+    # elicitors/enterers/modifiers, in that order, secondarily ordered by
+    # weighted resource attribution count.
+    dc_contributors = _get_dc_contributors(enterers_dict, elicitors_dict,
+                                           modifiers_dict, speakers_dict)
+    dc_creators = _get_dc_creators(speakers_dict, elicitors_dict)
+    # Add dc:contributors and dc:creators to the export model as JSON arrays
+    export.dc_contributor = json.dumps(dc_contributors)
+    export.dc_creator = json.dumps(dc_creators)
+
+    # Put dc:contributors and dc:creators into OLD.jsonld
+    old_jsonld['OLD']['dc:creator'] = dc_creators
+    old_jsonld['OLD']['dc:contributor'] = dc_contributors
+
+    # removed dcterms:bibliographicCitation until that term set is used...
+    # TODO: it should be used (or something like it) because
+    # ``_get_dc_bib_cit`` returns a useful string.
+    # if not export.dc_bibliographic_citation:
+    #     # TODO: is ``old_jsonld['@id']`` the actual URI of the data set? It
+    #     # needs to be ...
+    #     export.dc_bibliographic_citation = _get_dc_bib_cit(
+    #         dc_creators, export, old_jsonld['@id'])
+    # old_jsonld['OLD']['dc:bibliographicCitation'] = (
+    #     export.dc_bibliographic_citation)
+
+    # Provenance metadata (PROV ontology)
+    now = h.now()
+    if oldest_datetime is None:
+        oldest_datetime = now
+    if newest_datetime is None:
+        newest_datetime = now
+    old_jsonld = _add_provenance_md(old_jsonld, export, oldest_datetime,
+                                    newest_datetime, old_instance_uri, app_set)
+
+    # dc:date http://purl.org/dc/elements/1.1/date
+    if not export.dc_date:
+        if oldest_datetime == newest_datetime:
+            export.dc_date = h.utc_datetime2xsd(newest_datetime)
+        else:
+            export.dc_date = 'Between {} and {}.'.format(
+                h.utc_datetime2xsd(oldest_datetime),
+                h.utc_datetime2xsd(newest_datetime))
+    old_jsonld['OLD']['dc:date'] = export.dc_date
+
+    # Add the remaining dc: term values to the OLD export object.
+    for dc_term in ('publisher', 'description', 'format', 'identifier',
+                    'relation', 'coverage', 'rights', 'type', 'title'):
+        val = getattr(export, 'dc_{}'.format(dc_term), None)
+        if val:
+            old_jsonld['OLD']['dc:{}'.format(dc_term)] = val
+
+    # dc_language and dc_subject may be a user-supplied strings or
+    # auto-generated lists of strings (e.g., ISO 639-3 language Id values for
+    # dc_language).
+    for dc_term in ('language', 'subject'):
+        val = getattr(export, 'dc_{}'.format(dc_term), None)
+        if val:
+            try:
+                val_loaded = json.loads(val)
+            except ValueError:
+                pass
+            if isinstance(val_loaded, list):
+                old_jsonld['OLD']['dc:{}'.format(dc_term)] = val_loaded
+            else:
+                old_jsonld['OLD']['dc:{}'.format(dc_term)] = val
+
     # Write the OLD.jsonld to disk in the exports/ subdir
     with open(old_jsonld_path, 'w') as fileo:
         fileo.write(
@@ -400,8 +463,147 @@ def _generate_export(export, settings, dbsession):
                 sort_keys=True,
                 indent=4,
                 separators=(',', ': ')))
-    bagit.make_bag(export_path)
+
+    # BagIt! Add the export model's BagIt-specific metadata elements, if they
+    # are populated
+    bag_params = {}
+    for attr in ('source_organization', 'organization_address', 'contact_name',
+                 'contact_phone', 'contact_email'):
+        val = getattr(export, attr, None)
+        if val:
+            key = '-'.join([x.capitalize() for x in attr.split('_')])
+            bag_params[key] = val
+    bagit.make_bag(export_path, bag_params)
+
+    # ZipIt!
     shutil.make_archive(export_path, 'zip', export_path)
+
+
+def _add_provenance_md(old_jsonld, export, oldest_datetime, newest_datetime,
+                       old_instance_uri, app_set):
+    """Add dataset provenance information using PROV ontology: "This export was
+    created by an activity of export creation, which started at datetime X and
+    ended at datetime Y, and which used a software agent, i.e., a specific OLD
+    instance.
+    """
+    jsonld_type = old_jsonld.get('@type')
+    if jsonld_type:
+        if isinstance(jsonld_type, list):
+            jsonld_type.append('prov:Entity')
+        else:
+            old_jsonld['@type'] = [jsonld_type, 'prov:Entity']
+    old_jsonld['@type'] = ['prov:Entity']
+    dataset_creation_activity = {'@id': 'dataset-creation-activity'}
+    old_jsonld['prov:wasGeneratedBy'] = dataset_creation_activity
+    dataset_creation_activity['@type'] = 'prov:Activity'
+    dataset_creation_activity['prov:generated'] = old_jsonld['@id']
+    dataset_creation_activity['prov:startedAtTime'] = {
+        "@value": h.utc_datetime2xsd(oldest_datetime),
+        "@type": "xsd:dateTime"
+    }
+    dataset_creation_activity['prov:endedAtTime'] = {
+        "@value": h.utc_datetime2xsd(newest_datetime),
+        "@type": "xsd:dateTime"
+    }
+    old_instance_foaf_name = h.get_old_instance_descriptive_name(
+        app_set, old_instance_uri, __version__)
+    old_instance = {
+        '@id': 'old-application-instance',
+        '@type': 'prov:SoftwareAgent',
+        'foaf:name': old_instance_foaf_name
+    }
+    dataset_creation_activity['prov:used'] = old_instance
+    return old_jsonld
+
+
+def _get_dc_creators(speakers, elicitors):
+    """Return a list of Dublin Core creators as strings (first name, last
+    name). These are creators of the data set qua export. Speakers are
+    listed first, then elicitors. Both are sorted by their attribution count,
+    from greatest to least.
+    """
+    # Get a list of speaker names, sorted by number of speaker attributions from
+    # greatest to least.
+    speakers_list = sorted(speakers.keys(),
+                           key=lambda id_: speakers[id_]['attribution_count'],
+                           reverse=True)
+    speakers_list = [speakers[id_]['name'] for id_ in speakers_list]
+    # Get a list of elicitor names, sorted by number of elicitor attributions
+    # from greatest to least.
+    elicitors_list = sorted(elicitors.keys(),
+                            key=lambda id_: elicitors[id_]['attribution_count'],
+                            reverse=True)
+    elicitors_list = [elicitors[id_]['name'] for id_ in elicitors_list]
+    return speakers_list + elicitors_list
+
+
+def _get_dc_bib_cit(dc_creators, export, dataset_uri):
+    """Return a bibliographic citation for the export. Something like
+    "Robertson Bob, et al. 2017. Data Set of Linguistic Data on Language
+    Blackfoot (bla) (created by the Online Linguistic Database).
+    http://app.onlinelinguisticdatabase.org/blaold/exports/public/old-export-8641d84d-a4bd-4f16-8bbc-342a36e34edb-1487807629/OLD.jsonld".
+    """
+    author = _get_author_from_creators_list(dc_creators)
+    return '{}. {}. {}. {}.'.format(author, h.now().year, export.dc_title,
+                                    dataset_uri)
+
+
+def _get_author_from_creators_list(creators_list):
+    """Given a list of data set creators (like ``['Bob Robertson', 'Jane
+    Jackowski']``), return a string suitable for a citation, e.g.,
+    ``'Robertson, Bob, and Jane Jackowski'``.
+    WARNING: this is very naive about name formats and will fail with multiple
+    first names, multiple last names, titles, etc.
+    """
+    if len(creators_list) == 0:
+        return ''
+    elif len(creators_list) == 1:
+        first_name, last_name = creators_list[0].split()
+        return '{}, {}'.format(last_name, first_name)
+    elif len(creators_list) == 2:
+        first_author, second_author = creators_list
+        first_name, last_name = first_author.split()
+        first_author = '{}, {}'.format(last_name, first_name)
+        return '{}, and {}'.format(first_author, second_author)
+    else:
+        first_name, last_name = creators_list[0].split()
+        return '{}, {}, et al'.format(last_name, first_name)
+
+
+def _get_dc_contributors(enterers, elicitors, modifiers, speakers):
+    """Return a list of Dublin Core contributors as strings (first name, last
+    name). These are contributors to the data set qua export.  Speakers are
+    listed first, then elicitor/enterer/modifier users using a weighted sorting
+    approach where each elicitor attribution is worth 2 points and each
+    enterer/modifier attribution is worth 1.
+    """
+    # Get a list of speaker ids, sorted by number of speaker attributions from
+    # greatest to least.
+    speakers_list = sorted(speakers.keys(),
+                           key=lambda id_: speakers[id_]['attribution_count'],
+                           reverse=True)
+    speakers_list = [speakers[id_]['name'] for id_ in speakers_list]
+    # Each elicitor attribution is worth two points:
+    users = {}
+    for id_, info in elicitors.items():
+        score = info['attribution_count'] * 2
+        users[id_] = {'score': score, 'name': info['name']}
+    # Each enterer/modifier attribution is worth one point:
+    for user_dict in (enterers, modifiers):
+        for id_, info in user_dict.items():
+            existing_user_info = users.get(id_)
+            if existing_user_info:
+                existing_user_info['score'] += info['attribution_count']
+            else:
+                users[id_] = {
+                    'score': info['attribution_count'],
+                    'name': info['name']
+                }
+    users_list = sorted(users.keys(),
+                        key=lambda id_: users[id_]['score'],
+                        reverse=True)
+    users_list = [users[id_]['name'] for id_ in users_list]
+    return speakers_list + users_list
 
 
 def _get_filedata_iri(rsrc_name, rsrc, attr, val, root_store_iri):
@@ -486,7 +688,7 @@ def _create_exports_private_dir(exports_dir_path):
 
 
 def _create_export_dir(exports_type_path, export):
-    export_path = os.path.join(exports_type_path, export.name)
+    export_path = os.path.join(exports_type_path, export.dc_identifier)
     _create_dir(export_path)
     return export_path
 
@@ -498,6 +700,86 @@ def _create_db_path(export_path):
 
 
 def _create_store_path(export_path):
-    store__path = os.path.join(export_path, 'store')
-    _create_dir(store__path)
-    return store__path
+    store_path = os.path.join(export_path, 'store')
+    _create_dir(store_path)
+    return store_path
+
+
+def _get_person_full_name(person_model):
+    """Given a User or Speaker model, return their full name, e.g., 'Jane
+    Doe'.
+    """
+    return '%s %s' % (person_model.first_name, person_model.last_name)
+
+
+def _add_namespaces(old_schema, root_iri):
+    """Add the namespaces of various ontologies and data dictionaries (e.g.,
+    dc, foaf, prov) to the OLD schema.
+    """
+    # The following line causes allows for relative URIs for resource objects
+    # even if the export is served at another URL later.
+    old_schema['OLD']['jsonld']['@context']['@base'] = root_iri
+    old_schema['OLD']['jsonld']['@context']['dc'] = (
+        'http://purl.org/dc/elements/1.1/')
+    old_schema['OLD']['jsonld']['@context']['dcterms'] = (
+        'http://purl.org/dc/terms/')
+    old_schema['OLD']['jsonld']['@context']['prov'] = (
+        'http://www.w3.org/ns/prov#')
+    old_schema['OLD']['jsonld']['@context']['foaf'] = (
+        'http://xmlns.com/foaf/0.1/')
+    old_schema['OLD']['jsonld']['@context']['xsd'] = (
+        'http://www.w3.org/2001/XMLSchema#')
+    old_schema['OLD']['jsonld']['@context']['lime'] = (
+        'http://art.uniroma2.it/ontologies/lime#')
+    return old_schema
+
+
+# The following is a draft of how the OLD JSON-LD export ought to look.
+# Development in the future can run the test script and compare it to this.
+TEST_EXPORT = {
+    "@context": {
+        #"OLD": "http://schema.onlinelinguisticdatabase.org/2.0.0/OLD",
+        "dc": "http://purl.org/dc/terms/",
+        #"export": "https://app.onlinelinguisticdatabase.org/testold/public/old-export-064bf372-598f-4007-9d96-487f9db96f06-1487675109/data/db#",
+        "@base": "https://app.onlinelinguisticdatabase.org/testold/public/old-export-064bf372-598f-4007-9d96-487f9db96f06-1487675109/data/db/OLD.jsonld",
+        "foaf": "http://xmlns.com/foaf/0.1/",
+        "dcat": "https://www.w3.org/TR/vocab-dcat/",
+        "prov": "http://www.w3.org/ns/prov#",
+        "xsd": "http://www.w3.org/2001/XMLSchema#",
+        "lime": "http://art.uniroma2.it/ontologies/lime#"
+    },
+    "@id": "",
+    "@type": [
+        "dcat:DataSet",
+        "prov:Entity",
+        "lime:LinguisticResource"
+    ],
+    "dc:contributor": [
+        "Speaker Mcspeakerson",
+        "Contributor Contributor",
+        "Admin Admin"
+    ],
+    "dc:creator": [
+        "Speaker Mcspeakerson",
+        "Contributor Contributor"
+    ],
+    "dc:title": "old-export-064bf372-598f-4007-9d96-487f9db96f06-1487675109",
+    "prov:wasGeneratedBy": {
+        "@id": "dataset-creation-activity",
+        "@type": "prov:Activity",
+        "prov:endedAtTime": {
+            "@type": "xsd:dateTime",
+            "@value": "2013-01-25T00:00:00Z"
+        },
+        "prov:generated": "export.OLD.jsonld",
+        "prov:startedAtTime": {
+            "@type": "xsd:dateTime",
+            "@value": "2011-01-25T00:00:00Z"
+        },
+        "prov:used": {
+            "@id": "old-application-instance",
+            "@type": "prov:SoftwareAgent",
+            "foaf:name": "Blackfoot OLD instance running OLD v1.2.1 at app.onlinelinguisticdatabase.org/blaold/"
+        }
+    }
+}

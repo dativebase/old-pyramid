@@ -100,6 +100,9 @@ inflect_p.classical()
 
 
 LOGGER = logging.getLogger(__name__)
+
+# TODO: this isn't really a schema. The URL here should be changed and it
+# should be an OWL ontology.
 OLD_SCHEMA_URL = 'http://schema.onlinelinguisticdatabase.org/{}'.format(
     __version__)
 

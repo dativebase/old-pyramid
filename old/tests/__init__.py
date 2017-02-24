@@ -290,6 +290,26 @@ class TestView(TestCase):
             'form_search': '',
             'tags': []
         }
+        self.export_create_params = {
+            'public': False,
+            'source_organization': '',
+            'organization_address': '',
+            'contact_name': '',
+            'contact_phone': '',
+            'contact_email': '',
+            'dc_contributor': '',
+            'dc_creator': '',
+            'dc_publisher': '',
+            'dc_date': '',
+            'dc_description': '',
+            'dc_relation': '',
+            'dc_coverage': '',
+            'dc_language': '',
+            'dc_rights': '',
+            'dc_subject': '',
+            'dc_title': '',
+            'dc_type': ''
+        }
         self.file_create_params = {
             'name': '',
             'description': '',

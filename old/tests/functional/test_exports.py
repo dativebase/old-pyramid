@@ -97,6 +97,11 @@ class TestExportsView(TestView):
     def _create_test_data(self):
         # Add some test data to the database.
         application_settings = omb.generate_default_application_settings()
+        application_settings.object_language_name = 'Blackfoot'
+        application_settings.object_language_id = 'bla'
+        application_settings.metalanguage_name = 'English'
+        application_settings.metalanguage_id = 'eng'
+
         self.dbsession.add(application_settings)
         self.dbsession.commit()
         users = self.db.get_users()
@@ -268,7 +273,9 @@ class TestExportsView(TestView):
         self._create_test_data()
 
         # Create the public export model.
-        params = json.dumps({'public': True})
+        params = self.export_create_params.copy()
+        params['public'] = True
+        params = json.dumps(params)
         response = self.app.post(url('create'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = response.json_body
@@ -303,7 +310,7 @@ class TestExportsView(TestView):
         exports_dir_path = self.settings['exports_dir']
         assert os.path.isdir(exports_dir_path)
         expected_export_path = os.path.join(
-            exports_dir_path, 'public', resp['name'])
+            exports_dir_path, 'public', resp['dc_identifier'])
         assert os.path.isdir(expected_export_path)
         db_path = os.path.join(expected_export_path, 'data', 'db')
         assert os.path.isdir(db_path)
@@ -320,6 +327,11 @@ class TestExportsView(TestView):
             path = os.path.join(db_path, jsonld_fname)
             assert os.path.isfile(path)
 
+        # Print the OLD.jsonld file for debugging
+        old_jsonld_path = os.path.join(db_path, 'OLD.jsonld')
+        with open(old_jsonld_path) as filei:
+            print(filei.read())
+
         # Confirm that the first form's .jsonld export is a JSON-LD file.
         target_form = dbsession.query(old_models.Form).get(form_ids[0])
         target_jsonld_path = os.path.join(
@@ -332,13 +344,13 @@ class TestExportsView(TestView):
             '{}/'
             'data/'
             'db/'
-            'Form-{}.jsonld'.format(resp['name'], form_ids[0]))
+            'Form-{}.jsonld'.format(resp['dc_identifier'], form_ids[0]))
         assert target_path in target_jsonld['@id']
         enterer_path = (
             '{}/'
             'data/'
             'db/'
-            'User-{}.jsonld'.format(resp['name'], target_form.enterer_id))
+            'User-{}.jsonld'.format(resp['dc_identifier'], target_form.enterer_id))
         assert enterer_path in target_jsonld['Form']['enterer']
 
         # Confirm that the files of this JSON-LD export are publically
@@ -378,7 +390,9 @@ class TestExportsView(TestView):
         self._create_test_data()
 
         # Create the private export model.
-        params = json.dumps({'public': False})
+        params = self.export_create_params.copy()
+        params['public'] = False
+        params = json.dumps(params)
         response = self.app.post(url('create'), params, self.json_headers,
                                  self.extra_environ_admin)
         resp = response.json_body
@@ -413,7 +427,7 @@ class TestExportsView(TestView):
         exports_dir_path = self.settings['exports_dir']
         assert os.path.isdir(exports_dir_path)
         expected_export_path = os.path.join(
-            exports_dir_path, 'private', resp['name'])
+            exports_dir_path, 'private', resp['dc_identifier'])
         assert os.path.isdir(expected_export_path)
         db_path = os.path.join(expected_export_path, 'data', 'db')
         assert os.path.isdir(db_path)
@@ -442,13 +456,13 @@ class TestExportsView(TestView):
             '{}/'
             'data/'
             'db/'
-            'Form-{}.jsonld'.format(resp['name'], form_ids[0]))
+            'Form-{}.jsonld'.format(resp['dc_identifier'], form_ids[0]))
         assert target_path in target_jsonld['@id']
         enterer_path = (
             '{}/'
             'data/'
             'db/'
-            'User-{}.jsonld'.format(resp['name'], target_form.enterer_id))
+            'User-{}.jsonld'.format(resp['dc_identifier'], target_form.enterer_id))
         assert enterer_path in target_jsonld['Form']['enterer']
 
         # Confirm that the files of this JSON-LD export are not publically

@@ -1440,4 +1440,36 @@ class ExportSchema(Schema):
     """
     allow_extra_fields = True
     filter_extra_fields = True
+
     public = StringBoolean()
+
+    # BagIt metadata
+    source_organization = UnicodeString(max=510)
+    organization_address = UnicodeString(max=510)
+    contact_name = UnicodeString(max=510)
+    contact_phone = UnicodeString(max=510)
+    contact_email = UnicodeString(max=510)
+
+    # Dublin Core Metadata Element Set Version 1.1 (dc:)
+    dc_contributor = UnicodeString()
+    dc_creator = UnicodeString()
+    dc_publisher = UnicodeString(max=510)
+    dc_date = UnicodeString(max=510)
+    dc_description = UnicodeString(max=510)
+    # dc_identifier = UnicodeString(max=510) #  not user-specifiable
+    dc_relation = UnicodeString(max=510)
+    dc_coverage = UnicodeString(max=510)
+    # dc_format = UnicodeString(max=510)  # not user-specifiable
+    dc_language = UnicodeString(max=510)
+    dc_rights = UnicodeString()
+    dc_subject = UnicodeString(max=510)
+    dc_title = UnicodeString(max=510)
+    dc_type = UnicodeString(max=510)
+
+    # DCTERMS: dcterms: http://purl.org/dc/terms/ --- HOLDING OFF ON THESE for now
+    # dcterms_accrual_method = UnicodeString(max=510)
+    # dcterms_replaces = UnicodeString(max=510)
+    # dcterms_bibliographic_citation = UnicodeString(max=510)
+    # dcterms_rights_holder = UnicodeString(max=510)
+    # dcterms_references = UnicodeString(max=510)
+    # dcterms_license

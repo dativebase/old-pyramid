@@ -93,23 +93,15 @@ Requirements:
 
 """
 
-import datetime
 import json
 import logging
 import mimetypes
 import os
-import pprint
-import re
-import shutil
 from uuid import uuid4
 
-import bagit
-from formencode.validators import Invalid
-from pyld import jsonld
 import pyramid.httpexceptions as exc
 from pyramid.response import FileResponse
-from sqlalchemy import bindparam
-from sqlalchemy.sql import asc, or_
+from sqlalchemy.sql import asc, desc, or_, and_
 from sqlalchemy.orm import subqueryload
 from sqlalchemy.inspection import inspect
 
@@ -119,6 +111,7 @@ from old.lib.constants import (
     JSONDecodeErrorResponse,
     UNAUTHORIZED_MSG,
     UNKNOWN_CATEGORY,
+    __version__,
 )
 from old.lib.dbutils import get_last_modified
 import old.lib.helpers as h
@@ -191,28 +184,215 @@ class Exports(Resources):
     # generated, we should maybe warn them of that prior to creating a new one...
 
     def _get_create_data(self, data):
-        """User supplies no data when creating an export. All data are based on
-        logged-in user and date of creation request.
-        """
-        now = h.now()
-        UUID = str(uuid4())
-        timestamp = int(now.timestamp())
-        name = 'old-export-{}-{}'.format(UUID, timestamp)
-        user_model = self.logged_in_user
+        """Get the data required to create a new export as a dict."""
         user_data = self._get_user_data(data)
+
+        # Add default (BagIt & DC) metadata values. In some cases, the user can
+        # supply these values but in other cases they are always system-generated.
+
+        UUID = str(uuid4())
+        now = h.now()
+        created_timestamp = int(now.timestamp())
+        created_xsd = h.utc_datetime2xsd(now)
+        user_model = self.logged_in_user
+        lang_name = self.db.current_app_set.get_object_language_rep()
+
+        # BagIt metadata
+
+        # Source-Organization defaults to export creator's affiliation
+        if not user_data['source_organization'] and user_model.affiliation:
+            user_data['source_organization'] = user_model.affiliation
+        # Contact-Name defaults to export creator's full name
+        if not user_data['contact_name']:
+            user_data['contact_name'] = '{} {}'.format(
+                user_model.first_name, user_model.last_name)
+        # Contact-Email defaults to export creator's email
+        if not user_data['contact_name']:
+            user_data['contact_email'] = user_model.email
+
+        # Dublin Core (dc) metadata about the export / the data set
+
+        # dc:identifier is always system-generated. Should we include the
+        # ISO 639-3 language code of the object language in this id (if
+        # available)?
+        user_data['dc_identifier'] = 'old-export-{}-{}'.format(
+            UUID, created_timestamp)
+
+        # Create a default dc:title if the user has not supplied one.
+        if not user_data['dc_title'].strip():
+            if lang_name:
+                user_data['dc_title'] = (
+                    'Data Set of Linguistic Data on Language {} (created by the'
+                    ' Online Linguistic Database)'.format(lang_name))
+            else:
+                user_data['dc_title'] = (
+                    'Data Set of Linguistic Data {} (created by the Online'
+                    ' Linguistic Database)'.format(UUID))
+
+        # Create a default dc:description if the user has not supplied one.
+        if not user_data['dc_description'].strip():
+            if lang_name:
+                user_data['dc_description'] = (
+                    'A data set of linguistic data on language {}. This data set'
+                    ' was created using the Online Linguistic Database (OLD),'
+                    ' software for linguistic fieldwork, language documentation'
+                    ' and linguistic analysis. The data set was exported to its'
+                    ' present state on {}.'.format(lang_name, created_xsd))
+            else:
+                user_data['dc_description'] = (
+                    'A data set of linguistic data. This data set'
+                    ' was created using the Online Linguistic Database (OLD),'
+                    ' software for linguistic fieldwork, language documentation'
+                    ' and linguistic analysis. The data set was exported to its'
+                    ' present state on {}.'.format(created_xsd))
+
+        # Note: at present, the user cannot manually specify DC contributor or
+        # creator values. These values are automatically generated during
+        # export generation from the speakers, elicitors, enterers and
+        # modifiers of the resources in the data set.
+
+        # dc_publisher defaults to string describing this OLD instance.
+        app_set = self.db.current_app_set
+        old_instance_uri = self.request.registry.settings['uri']
+        old_instance_name = h.get_old_instance_descriptive_name(
+            app_set, old_instance_uri, __version__)
+        if not user_data['dc_publisher']:
+            user_data['dc_publisher'] = old_instance_name
+
+        # TODO: implement dcterms_accrual_method
+        # Create a default dcterms:accrualMethod if the user has not supplied
+        # one. Here we reference the OLD instance used to build the data set.
+        # if not user_data['accrual_method']:
+        #     user_data['accrual_method'] = (
+        #         'Resources (items) were added to this data set by means of the'
+        #         ' {}.'.format(old_instance_name))
+
+        # Note: dc_date is valuated in export_worker.py at the same time as the
+        # prov: metadata.
+
+        # Create a default dc:relation if the user has not supplied one. Here
+        # we reference the URI of the most recent public exported data set of
+        # the current OLD.
+        # TODO: currently just references the dc:identifier. We need this to be
+        # the actual URI for dereferencing the exported data set.
+        # TODO: this will/can be more accurately modelled in future work via
+        # dcterms:replaces
+        if not user_data['dc_relation'] and user_data['public']:
+            Export = old_models.Export
+            last_public_generated_export = self.request.dbsession.query(
+                Export).filter(and_(
+                    Export.public == True,
+                    Export.generate_succeeded == True)).order_by(
+                        desc(Export.datetime_modified)).first()
+            if last_public_generated_export:
+                user_data['dc_relation'] = last_public_generated_export.dc_identifier
+
+        user_data['dc_format'] = 'Zipped Bag (BagIt) containing JSON-LD.'
+
+        # TODO: Use library of congress controlled vocabulary items or for more
+        # domain/linguistics-specific controlled vocabulary items
+        if not user_data['dc_subject']:
+            user_data['dc_subject'] = json.dumps([
+                'linguistics',
+                'language docmentation',
+                'linguistic fieldwork',
+                'linguistic analysis'
+            ])
+
+        # Note: dc:bibliographicCitation is populated in export_worker.py if
+        # the user does not supply it.
+
+        # dc:language, if not supplied by the export creator, is a JSON array
+        # of ISO 639-3 language Ids (object and meta), hopefully, or at the
+        # very least their human-readable names.
+        if not user_data['dc_language']:
+            norm_obj_lang_id = self._get_normative_language_id(
+                'object', self.db.current_app_set)
+            norm_meta_lang_id = self._get_normative_language_id(
+                'meta', self.db.current_app_set)
+            languages = [lid for lid in [norm_obj_lang_id, norm_meta_lang_id]
+                         if lid]
+            if languages:
+                user_data['dc_language'] = json.dumps(languages)
+
+        # dc:rights, if not supplied by the export creator, is by default
+        # a CC BY-SA license (if export is public) i.e., Creative Commons, by
+        # attribution, share-alike license, which means that the rights
+        # holder(s) assert copyright and only require that they be attributed
+        # for their work and that others who reuse their work must do so under
+        # the same license. This is the most restrictive of the "Free
+        # Cultural Works" licenses. See
+        # https://creativecommons.org/share-your-work/public-domain/freeworks/
+        # for discussion.
+        # https://creativecommons.org/licenses/by-sa/3.0/legalcode
+        # TODO: this will/can be more accurately modelled in future work via
+        # dcterms:license.
+        if not user_data['dc_rights']:
+            user_data['dc_rights'] = (
+                'https://creativecommons.org/licenses/by-sa/3.0/legalcode')
+
+        # Note: the model already defaults dc_type to the literal "Dataset"
+
+        """
+        'dc_subject': data['dc_subject'],
+        """
+
         user_data.update({
             'UUID': UUID,
             'datetime_entered': now,
             'enterer': user_model,
-            'name': name,
             'generate_succeeded': False,
             'generate_message': '',
             'generate_attempt': str(uuid4())
         })
         return user_data
 
+    # TODO: will generate override a user-supplied dc_contributor value?
+    # TODO: will generate override a user-supplied dc_creator value?
+
     def _get_user_data(self, data):
-        return {'public': data['public']}
+        return {
+            'public': data['public'],
+            # BagIt metadata
+            'source_organization': data['source_organization'],
+            'organization_address': data['organization_address'],
+            'contact_name': data['contact_name'],
+            'contact_phone': data['contact_phone'],
+            'contact_email': data['contact_email'],
+            # Dublin Core Metadata Element Set Version 1.1 (dc:)
+            'dc_contributor': data['dc_contributor'],
+            'dc_creator': data['dc_creator'],
+            'dc_publisher': data['dc_publisher'],
+            'dc_date': data['dc_date'],
+            'dc_description': data['dc_description'],
+            'dc_relation': data['dc_relation'],
+            'dc_coverage': data['dc_coverage'],
+            'dc_language': data['dc_language'],
+            'dc_rights': data['dc_rights'],
+            'dc_subject': data['dc_subject'],
+            'dc_title': data['dc_title'],
+            'dc_type': data['dc_type']
+        }
 
     def _get_update_data(self, user_data):
         return {}
+
+    def _get_normative_language_id(self, lang_type, app_set):
+        """Attempt to return the ISO 639-3 3-character language Id for the language
+        of type ``lang_type``, i.e., the object language or the metalanguage. If Id
+        is unavailable, return the language name. If that is unavailable, return
+        the empty string.
+        """
+        if lang_type == 'object':
+            lang_id = app_set.object_language_id
+            lang_name = app_set.object_language_name.strip()
+        else:
+            lang_id = app_set.metalanguage_id
+            lang_name = app_set.metalanguage_name.strip()
+        Language = old_models.Language
+        language_model = self.request.dbsession.query(
+            Language).filter(Language.Id == lang_id).first()
+        if language_model:
+            return lang_id
+        else:
+            return lang_name

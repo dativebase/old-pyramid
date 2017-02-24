@@ -262,6 +262,22 @@ class ApplicationSettings(Base):
                         self.phonemic_inventory.split(',')))
         return getattr(self, attr)
 
+    def get_object_language_rep(self):
+        """Return a string representation of the object language name, ideally
+        something like "English (eng)".
+        """
+        result = ''
+        obj_lang_name = self.object_language_name
+        obj_lang_id = self.object_language_id
+        if obj_lang_name and obj_lang_id:
+            result = '{} ({})'.format(obj_lang_name, obj_lang_id)
+        elif obj_lang_id:
+            result = obj_lang_id
+        elif obj_lang_name:
+            result = obj_lang_name
+        return result
+
+
 def _get_regex_validator(input_list):
     """Returns a regex that matches only strings composed of zero or more
     of the graphemes in the inventory (plus the space character).

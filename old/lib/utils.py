@@ -343,6 +343,10 @@ def round_datetime(dt):
     return dt
 
 
+def utc_datetime2xsd(utc_datetime):
+    return '{}Z'.format(utc_datetime.replace(microsecond=0).isoformat())
+
+
 def datetime_string2datetime(datetime_string, rdbms_name=None,
                              mysql_engine=None):
     """Parse an ISO 8601-formatted datetime into a Python datetime object.
@@ -810,4 +814,12 @@ def chunker(sequence, size):
     """
     return (sequence[position:position + size] for position in
             range(0, len(sequence), size))
+
+
+def get_old_instance_descriptive_name(app_set, old_instance_uri, old_version):
+    """Return a string that describes/names this OLD instance."""
+    lang_name = app_set.get_object_language_rep()
+    return (
+        '{} Online Linguistic Database instance (running OLD version {}) at URL'
+        ' {}'.format(lang_name, old_version, old_instance_uri)).strip()
 
