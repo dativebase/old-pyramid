@@ -4,6 +4,7 @@ that involves the SQLA session should be moved here.
 """
 
 from collections import namedtuple
+import os
 import re
 from uuid import UUID
 
@@ -552,3 +553,30 @@ class DBUtils:
                 '([%s])' % ''.join([esc_RE_meta_chars(d) for d in
                                     morpheme_delimiters])).split
         return morpheme_splitter
+
+    def get_normative_language_id(self, lang_type, app_set,
+                                  force_lang_id=False):
+        """Attempt to return the ISO 639-3 3-character language Id for the
+        language of type ``lang_type``, i.e., the object language or the
+        metalanguage. If Id is unavailable, return the language name. If that
+        is unavailable, return the empty string.
+        """
+        if lang_type == 'object':
+            lang_id = app_set.object_language_id
+            lang_name = app_set.object_language_name.strip()
+        else:
+            lang_id = app_set.metalanguage_id
+            lang_name = app_set.metalanguage_name.strip()
+        # Here we test to make sure that the lang_id is an actual ISO 639-3
+        # 3-char language Id in the database. However, if we are testing we
+        # will not have the ISO database fully populated; hence the following
+        # hack:
+        if lang_id and force_lang_id:
+            return lang_id, True
+        Language = old_models.Language
+        language_model = self.request.dbsession.query(
+            Language).filter(Language.Id == lang_id).first()
+        if language_model:
+            return lang_id, True
+        else:
+            return lang_name, False

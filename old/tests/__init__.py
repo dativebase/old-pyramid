@@ -308,7 +308,7 @@ class TestView(TestCase):
             'dc_rights': '',
             'dc_subject': '',
             'dc_title': '',
-            'dc_type': ''
+            'dc_type': 'Dataset'
         }
         self.file_create_params = {
             'name': '',

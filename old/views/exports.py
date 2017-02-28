@@ -294,7 +294,7 @@ class Exports(Resources):
         if not user_data['dc_subject']:
             user_data['dc_subject'] = json.dumps([
                 'linguistics',
-                'language docmentation',
+                'language documentation',
                 'linguistic fieldwork',
                 'linguistic analysis'
             ])
@@ -305,15 +305,24 @@ class Exports(Resources):
         # dc:language, if not supplied by the export creator, is a JSON array
         # of ISO 639-3 language Ids (object and meta), hopefully, or at the
         # very least their human-readable names.
+        # http://www.lexvo.org/page/iso639-3/bla
         if not user_data['dc_language']:
-            norm_obj_lang_id = self._get_normative_language_id(
-                'object', self.db.current_app_set)
-            norm_meta_lang_id = self._get_normative_language_id(
-                'meta', self.db.current_app_set)
+            force_lang_id = False
+            sett_file = os.path.basename(
+                self.request.registry.settings.get('__file__', ''))
+            if sett_file == 'test.ini':
+                force_lang_id = True
+            norm_obj_lang_id, isiso = self.db.get_normative_language_id(
+                'object', self.db.current_app_set, force_lang_id)
+            norm_meta_lang_id, isiso = self.db.get_normative_language_id(
+                'meta', self.db.current_app_set, force_lang_id)
             languages = [lid for lid in [norm_obj_lang_id, norm_meta_lang_id]
                          if lid]
             if languages:
                 user_data['dc_language'] = json.dumps(languages)
+
+        # 'http://dbpedia.org/resource/classes#
+        # dbpedia:language dbpedia:iso6393Code "bla"
 
         # dc:rights, if not supplied by the export creator, is by default
         # a CC BY-SA license (if export is public) i.e., Creative Commons, by
@@ -343,7 +352,8 @@ class Exports(Resources):
             'enterer': user_model,
             'generate_succeeded': False,
             'generate_message': '',
-            'generate_attempt': str(uuid4())
+            'generate_attempt': ''
+            #'generate_attempt': str(uuid4())
         })
         return user_data
 
@@ -376,23 +386,3 @@ class Exports(Resources):
 
     def _get_update_data(self, user_data):
         return {}
-
-    def _get_normative_language_id(self, lang_type, app_set):
-        """Attempt to return the ISO 639-3 3-character language Id for the language
-        of type ``lang_type``, i.e., the object language or the metalanguage. If Id
-        is unavailable, return the language name. If that is unavailable, return
-        the empty string.
-        """
-        if lang_type == 'object':
-            lang_id = app_set.object_language_id
-            lang_name = app_set.object_language_name.strip()
-        else:
-            lang_id = app_set.metalanguage_id
-            lang_name = app_set.metalanguage_name.strip()
-        Language = old_models.Language
-        language_model = self.request.dbsession.query(
-            Language).filter(Language.Id == lang_id).first()
-        if language_model:
-            return lang_id
-        else:
-            return lang_name
