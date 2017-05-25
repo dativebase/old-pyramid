@@ -733,6 +733,8 @@ def _generate_export(export, settings, dbsession, db):
                         val = json.loads(val)
                     except ValueError:
                         continue
+                    if not val:
+                        continue
                     for wordref in val:
                         for morphsetref in wordref:
                             if len(morphsetref) > 0:

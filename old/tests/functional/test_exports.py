@@ -353,6 +353,7 @@ class TestExportsView(TestView):
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
+        export_dc_id = resp['dc_identifier']
         generate_attempt = resp['generate_attempt']
         assert resp['generate_succeeded'] is False
 
@@ -420,14 +421,18 @@ class TestExportsView(TestView):
             'db/'
             'User-{}.jsonld'.format(resp['dc_identifier'], target_form.enterer_id))
         assert enterer_path in target_jsonld['Form']['enterer']
+        """
 
         # Confirm that the files of this JSON-LD export are publically
         # accessible (i.e., without a password)
-        url_path = '/public/{}'.format(target_path)
+        old_jsonld_path = '{}/OLD.jsonld'.format(
+            os.path.join(export_dc_id, 'data', 'objects', 'db'))
+        url_path = '/public/{}'.format(old_jsonld_path)
         response = self.app.get(url_path)
         assert response.content_type == 'application/json'
         jsonld_form = response.json_body
 
+        """
         # Confirm that the "@id" references within the Form's JSON-LD are
         # accurate. Note that the value of the 'speaker' attribute in the
         # Form's JSON-LD will actually be something like

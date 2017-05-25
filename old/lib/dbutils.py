@@ -215,7 +215,7 @@ def get_last_modified(result):
     if 'items' in result:
         result = result['items']
     if result:
-        return sorted(r.datetime_modified for r in result)[-1]\
+        return sorted(r['datetime_modified'] for r in result)[-1]\
             .strftime('%a, %d %b %Y %H:%M:%S GMT')
     return None
 
@@ -574,7 +574,7 @@ class DBUtils:
         if lang_id and force_lang_id:
             return lang_id, True
         Language = old_models.Language
-        language_model = self.request.dbsession.query(
+        language_model = self.dbsession.query(
             Language).filter(Language.Id == lang_id).first()
         if language_model:
             return lang_id, True
