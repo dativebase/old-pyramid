@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 # Set the version of this OLD using the version variable here. The following
 # lines then modify the info.py controller so that it stores the appropriate
 # version.
-VERSION = '2.0.0'
+VERSION = '2.1.0'
 p = re.compile('(^\s*[\'"]version[\'"]:\s*[\'"])([0-9\.]+)([\'"].*$)')
 wd = os.path.dirname(os.path.realpath(__file__))
 infopth = os.path.join(wd, 'old', 'views', 'info.py')
