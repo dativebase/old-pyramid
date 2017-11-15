@@ -38,13 +38,29 @@ site`_, or the `Dative app`_ for more information.
 Installation
 ===============================================================================
 
+Docker
+-------------------------------------------------------------------------------
+
+The OLD comes with a Dockerfile that can install and run the OLD on a docker
+container. *Warning*: this is still under development. First install docker.
+Then move to the directory containing the Dockerfile file and build the docker
+image by running::
+
+    $ docker build -t old:v1 .
+
+Then run the container::
+
+    $ docker run -d -p 8001:6543 old:v1
+
+Now an OLD should be available at http://127.0.0.1:8001.
+
 
 Install via Vagrant/Ansible
 -------------------------------------------------------------------------------
 
-The easiest way to install the OLD is to do so on a virtual machine using the
-Dative/OLD Vagrant/Ansible deploy scripts at
-https://github.com/dativebase/deploy-dative-old::
+The easiest way to install the OLD and all of its dependencies (as well as
+Dative) is to do so on a virtual machine using the `Dative/OLD Vagrant/Ansible
+deploy scripts`_::
 
     $ git clone git@github.com:dativebase/deploy-dative-old.git
     $ cd deploy-dative-old/playbooks/dative-old
@@ -141,3 +157,4 @@ The tests can also be run with tox using specific Python versions::
 .. _`Pyramid`: https://trypyramid.com/
 .. _`Pylons`: http://upcoming.pylonsproject.org/about-pylons-framework.html
 .. _`Pylons OLD source`: https://github.com/dativebase/old
+.. _`Dative/OLD Vagrant/Ansible deploy scripts`: https://github.com/dativebase/deploy-dative-old
