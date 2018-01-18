@@ -1,12 +1,15 @@
+dist: trusty
+group: deprecated-2017Q2
 language: python
-sudo: required
+cache: pip
 
-python:
-  - "3.4"
-#  - "3.5"
+before_script:
+  - pip install tox
 
-# For instructions on installing OS dependencies, see:
-# - https://docs.travis-ci.com/user/installing-dependencies/
+script: tox
+
+notifications:
+  email: false
 
 services:
   - mysql
@@ -16,8 +19,41 @@ before_install:
   - mysql -u root -e "CREATE USER 'old'@'localhost' IDENTIFIED BY 'demo';"
   - mysql -u root -e "GRANT ALL PRIVILEGES ON oldtests.* TO 'old'@'localhost';"
 
-# command to install dependencies
-install: "pip install -r requirements/test-oursql.txt -e \".[testing]\""
+matrix:
+  fast_finish: true
+  include:
 
-# command to run tests
-script: pytest old/tests -v
+    - python: "3.4"
+      env: TOXENV=py34
+
+    - python: "3.5"
+      env: TOXENV=py35
+
+    - python: "3.6"
+      env: TOXENV=py36
+
+    - python: "3.4"
+      env: TOXENV=py34-pylint
+
+    - python: "3.5"
+      env: TOXENV=py35-pylint
+
+    - python: "3.6"
+      env: TOXENV=py36-pylint
+
+  allow_failures:
+
+    - python: "3.5"
+      env: TOXENV=py35
+
+    - python: "3.6"
+      env: TOXENV=py36
+
+    - python: "3.4"
+      env: TOXENV=py34-pylint
+
+    - python: "3.5"
+      env: TOXENV=py35-pylint
+
+    - python: "3.6"
+      env: TOXENV=py36-pylint
