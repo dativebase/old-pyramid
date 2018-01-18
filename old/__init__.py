@@ -50,15 +50,10 @@ class OLDHeadersMiddleware(object):
             if dict(headers).get('Content-Type') == 'text/html; charset=utf-8':
                 new_headers['Content-Type'] = 'application/json'
 
-            # CORS stuff. See http://stackoverflow.com/questions/2771974/modify-headers-in-pylons-using-middleware
-            try:
-                origin = environ.get('HTTP_ORIGIN')
-            except Exception as error:
-                LOGGER.error(
-                    'Exception when calling `environ.get(\'HTTP_ORIGIN\')`: %s'
-                    ' %s', error.__class__.__name__, error)
-
-                origin = 'http://dativebeta.lingsync.org'
+            # CORS stuff. See
+            # http://stackoverflow.com/questions/2771974/
+            # modify-headers-in-pylons-using-middleware
+            origin = environ.get('HTTP_ORIGIN')
             # In the test case, there will be no origin. So we set it to
             # *anything* here, so that WebTest's lint.py doesn't choke on
             # `None`.
