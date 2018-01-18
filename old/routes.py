@@ -186,9 +186,8 @@ def authenticate(func):
             LOGGER.info('User authenticated: %s %s %s', user['first_name'],
                         user['last_name'], user['id'])
             return func(context, request)
-        else:
-            LOGGER.info('No user; failed to authenticate.')
-            return UNAUTHENTICATED_RESP
+        LOGGER.info('No user; failed to authenticate.')
+        return UNAUTHENTICATED_RESP
     return wrapper
 
 
@@ -321,27 +320,7 @@ def cors(request):
     return request.response
 
 
-def includeme(config):
-
-    config.add_route('info', '/', request_method='GET')
-    config.add_view('old.views.info.Info',
-                    attr='index',
-                    route_name='info',
-                    request_method='GET',
-                    renderer='json')
-
-    # CORS preflight OPTIONS requests: don't interfere with them
-    # TODO: test if this works.
-    config.add_route('cors_proceed', '/*garbage', request_method='OPTIONS')
-    config.add_view(cors,
-                    route_name='cors_proceed',
-                    request_method='OPTIONS')
-
-
-    ###########################################################################
-    # Corpora Special Routing
-    ###########################################################################
-
+def _corpora_special_routing(config):
     # To search across corpora, you need to issue a SEARCH/POST
     # /corpora/searchcorpora request.
     config.add_route('search_corpora',
@@ -353,7 +332,6 @@ def includeme(config):
                     request_method=('POST', 'SEARCH'),
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('new_search_corpora',
                      '/corpora/new_search_corpora',
                      request_method='GET')
@@ -363,7 +341,6 @@ def includeme(config):
                     request_method='GET',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('corpora_word_category_sequences',
                      '/corpora/{id}/get_word_category_sequences',
                      request_method='GET')
@@ -373,7 +350,6 @@ def includeme(config):
                     request_method='GET',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('corpus_serve_file',
                      '/corpora/{id}/servefile/{file_id}',
                      request_method='GET')
@@ -383,7 +359,6 @@ def includeme(config):
                     request_method='GET',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('corpus_tgrep2',
                      '/corpora/{id}/tgrep2',
                      request_method=('POST', 'SEARCH'))
@@ -393,7 +368,6 @@ def includeme(config):
                     request_method=('POST', 'SEARCH'),
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('corpus_writetofile',
                      '/corpora/{id}/writetofile',
                      request_method='PUT')
@@ -405,10 +379,8 @@ def includeme(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
 
-    ###########################################################################
-    # Files Special Routing
-    ###########################################################################
 
+def _files_special_routing(config):
     config.add_route('serve_file',
                      '/files/{id}/serve',
                      request_method='GET')
@@ -418,7 +390,6 @@ def includeme(config):
                     request_method='GET',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('serve_reduced_file',
                      '/files/{id}/serve_reduced',
                      request_method='GET')
@@ -429,10 +400,8 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
-    ###########################################################################
-    # Forms Special Routing
-    ###########################################################################
 
+def _forms_special_routing(config):
     config.add_route('remember_forms',
                      '/forms/remember',
                      request_method='POST')
@@ -442,7 +411,6 @@ def includeme(config):
                     request_method='POST',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('update_morpheme_references',
                      '/forms/update_morpheme_references',
                      request_method='PUT')
@@ -453,19 +421,15 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate, authorize(['administrator'])))
 
-    ###########################################################################
-    # Authentication Routing
-    ###########################################################################
 
+def _authentication_routing(config):
     config.add_route('authenticate', '/login/authenticate')
     config.add_route('logout', '/login/logout')
     config.add_route('email_reset_password', '/login/email_reset_password',
                      request_method='POST')
 
-    ###########################################################################
-    # Morpheme Language Model Special Routing
-    ###########################################################################
 
+def _mlm_special_routing(config):
     config.add_route('morpheme_lm_compute_perplexity',
                      '/morphemelanguagemodels/{id}/compute_perplexity',
                      request_method='PUT')
@@ -476,7 +440,6 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
-
     config.add_route('generate_morpheme_lm',
                      '/morphemelanguagemodels/{id}/generate',
                      request_method='PUT')
@@ -487,7 +450,6 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
-
     config.add_route('morpheme_lm_get_probabilities',
                      '/morphemelanguagemodels/{id}/get_probabilities',
                      request_method='PUT')
@@ -497,7 +459,6 @@ def includeme(config):
                     request_method='PUT',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('morpheme_lm_serve_arpa',
                      '/morphemelanguagemodels/{id}/serve_arpa',
                      request_method='GET')
@@ -508,10 +469,8 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
-    ###########################################################################
-    # Morphological Parser Special Routing
-    ###########################################################################
 
+def _mp_special_routing(config):
     config.add_route('mparser_apply_down',
                      '/morphologicalparsers/{id}/applydown',
                      request_method='PUT')
@@ -521,7 +480,6 @@ def includeme(config):
                     request_method='PUT',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('mparser_apply_up',
                      '/morphologicalparsers/{id}/applyup',
                      request_method='PUT')
@@ -531,7 +489,6 @@ def includeme(config):
                     request_method='PUT',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('mparser_export',
                      '/morphologicalparsers/{id}/export',
                      request_method='GET')
@@ -542,7 +499,6 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
-
     config.add_route('mparser_generate',
                      '/morphologicalparsers/{id}/generate',
                      request_method='PUT')
@@ -553,7 +509,6 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
-
     config.add_route('mparser_generate_and_compile',
                      '/morphologicalparsers/{id}/generate_and_compile',
                      request_method='PUT')
@@ -564,7 +519,6 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
-
     config.add_route('mparser_parse',
                      '/morphologicalparsers/{id}/parse',
                      request_method='PUT')
@@ -574,7 +528,6 @@ def includeme(config):
                     request_method='PUT',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('mparser_servecompiled',
                      '/morphologicalparsers/{id}/servecompiled',
                      request_method='GET')
@@ -586,10 +539,8 @@ def includeme(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
 
-    ###########################################################################
-    # Morphology Special Routing
-    ###########################################################################
 
+def _morphology_special_routing(config):
     config.add_route('morphology_servecompiled',
                      '/morphologies/{id}/servecompiled',
                      request_method='GET')
@@ -599,7 +550,6 @@ def includeme(config):
                     request_method='GET',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('morphology_applydown',
                      '/morphologies/{id}/applydown',
                      request_method='PUT')
@@ -609,7 +559,6 @@ def includeme(config):
                     request_method='PUT',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('morphology_applyup',
                      '/morphologies/{id}/applyup',
                      request_method='PUT')
@@ -619,7 +568,6 @@ def includeme(config):
                     request_method='PUT',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('morphology_generate',
                      '/morphologies/{id}/generate',
                      request_method='PUT')
@@ -630,7 +578,6 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
-
     config.add_route('morphology_generate_and_compile',
                      '/morphologies/{id}/generate_and_compile',
                      request_method='PUT')
@@ -642,10 +589,8 @@ def includeme(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
 
-    ###########################################################################
-    # Phonology Special Routing
-    ###########################################################################
 
+def _phonology_special_routing(config):
     config.add_route('phonology_applydown',
                      '/phonologies/{id}/applydown',
                      request_method='PUT')
@@ -655,7 +600,6 @@ def includeme(config):
                     request_method='PUT',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('phonology_phonologize',
                      '/phonologies/{id}/phonologize',
                      request_method='PUT')
@@ -665,7 +609,6 @@ def includeme(config):
                     request_method='PUT',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('phonology_compile',
                      '/phonologies/{id}/compile',
                      request_method='PUT')
@@ -676,7 +619,6 @@ def includeme(config):
                     renderer='json',
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
-
     config.add_route('phonology_servecompiled',
                      '/phonologies/{id}/servecompiled',
                      request_method='GET')
@@ -686,7 +628,6 @@ def includeme(config):
                     request_method='GET',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('phonology_runtests',
                      '/phonologies/{id}/runtests',
                      request_method='GET')
@@ -698,10 +639,8 @@ def includeme(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
 
-    ###########################################################################
-    # Remembered Forms Special "Resource"
-    ###########################################################################
 
+def _rf_special_routing(config):
     # Pylons: controller='rememberedforms', action='show'
     config.add_route('show_remembered_forms',
                      '/rememberedforms/{id}',
@@ -712,7 +651,6 @@ def includeme(config):
                     request_method='GET',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('remembered_forms_update',
                      '/rememberedforms/{id}',
                      request_method='PUT')
@@ -725,7 +663,6 @@ def includeme(config):
                                authorize(
                                    ['administrator', 'contributor', 'viewer'],
                                    user_id_is_args1=True)))
-
     config.add_route('search_remembered_forms',
                      '/rememberedforms/{id}',
                      request_method='SEARCH')
@@ -735,7 +672,6 @@ def includeme(config):
                     request_method='SEARCH',
                     renderer='json',
                     decorator=authenticate)
-
     config.add_route('search_remembered_forms_post',
                      '/rememberedforms/{id}/search',
                      request_method='POST')
@@ -746,10 +682,29 @@ def includeme(config):
                     renderer='json',
                     decorator=authenticate)
 
-    ###########################################################################
-    # REST Resource Routes
-    ###########################################################################
 
+def includeme(config):
+    config.add_route('info', '/', request_method='GET')
+    config.add_view('old.views.info.Info',
+                    attr='index',
+                    route_name='info',
+                    request_method='GET',
+                    renderer='json')
+    # CORS preflight OPTIONS requests: don't interfere with them
+    # TODO: test if this works.
+    config.add_route('cors_proceed', '/*garbage', request_method='OPTIONS')
+    config.add_view(cors,
+                    route_name='cors_proceed',
+                    request_method='OPTIONS')
+    _corpora_special_routing(config)
+    _files_special_routing(config)
+    _forms_special_routing(config)
+    _authentication_routing(config)
+    _mlm_special_routing(config)
+    _mp_special_routing(config)
+    _morphology_special_routing(config)
+    _phonology_special_routing(config)
+    _rf_special_routing(config)
     # See ``RESOURCES`` for config and ``add_resource`` for implementation.
     for member_name, rsrc_config in RESOURCES.items():
         add_resource(config, member_name, rsrc_config)
