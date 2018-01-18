@@ -1,5 +1,5 @@
-.. image:: https://travis-ci.org/jrwdunham/old-pyramid.svg?branch=master
-    :target: https://travis-ci.org/jrwdunham/old-pyramid
+.. image:: https://travis-ci.org/dativebase/old-pyramid.svg?branch=master
+    :target: https://travis-ci.org/dativebase/old-pyramid
 
 ================================================================================
   The Online Linguistic Database (OLD)
@@ -44,9 +44,9 @@ Install via Vagrant/Ansible
 
 The easiest way to install the OLD is to do so on a virtual machine using the
 Dative/OLD Vagrant/Ansible deploy scripts at
-https://github.com/jrwdunham/deploy-dative-old::
+https://github.com/dativebase/deploy-dative-old::
 
-    $ git clone git@github.com:jrwdunham/deploy-dative-old.git
+    $ git clone git@github.com:dativebase/deploy-dative-old.git
     $ cd deploy-dative-old/playbooks/dative-old
     $ ansible-galaxy install -f -p roles/ -r requirements.yml
     $ vagrant up
@@ -65,7 +65,7 @@ environment, clone the OLD source, and use pip to install its dependencies::
 
     $ virtualenv -p /path/to/python3/executable env
     $ source env/bin/activate
-    $ git clone git@github.com:jrwdunham/old-pyramid.git
+    $ git clone git@github.com:dativebase/old-pyramid.git
     $ cd old-pyramid
     $ pip install -r requirements.txt -e .
 
@@ -101,11 +101,9 @@ Documentation`_.
 For Developers
 ================================================================================
 
-To run the tests::
-
-    $ pytest old/tests -v
-
-To run tests with MySQL, first make sure that there is a MySQL database called
+To run tests you must have MySQL v. 5.6 or greater installed. (The tests are
+not guaranteed to pass currently with SQLite or earlier versions of MySQL.) If
+MySQL is installed, make sure that there is a MySQL database called
 ``oldtests`` accessible to the user ``old``::
 
     mysql> CREATE DATABASE oldtests
@@ -114,23 +112,32 @@ To run tests with MySQL, first make sure that there is a MySQL database called
     mysql> CREATE USER 'old'@'localhost' IDENTIFIED BY 'demo';
     mysql> GRANT ALL PRIVILEGES ON oldtests.* TO 'old'@'localhost';
 
-Then make sure that the test config file ``test.ini`` has the SQLite line
-commented out and the MySQL (with oursql driver) lines un-commented, and then
-run ``pytest``::
+Make sure that the test config file ``test.ini`` has the SQLite line commented
+out and the MySQL (with oursql driver) lines un-commented::
 
     #sqlalchemy.url = sqlite:///%(here)s/test-old.sqlite
     sqlalchemy.url = mysql+oursql://old:demo@localhost:3306/oldtests
     sqlalchemy.pool_recycle = 3600
     $ pytest
 
+Then run the tests::
+
+    $ pytest old/tests -v
+
+The tests can also be run with tox using specific Python versions::
+
+    $ tox -e py34
+    $ tox -e py35
+    $ tox -e py36
+
 
 .. _`OLD Web Site`: http://www.onlinelinguisticdatabase.org/
 .. _`Official OLD Documentation`: http://online-linguistic-database.readthedocs.org/en/latest/
 .. _`Dative`: http://www.dative.ca/
-.. _`Dative source code`: https://github.com/jrwdunham/dative/
+.. _`Dative source code`: https://github.com/dativebase/dative
 .. _`Dative's web site`: http://www.dative.ca/
 .. _`Dative app`: http://app.dative.ca/
 .. _`Pyramid web framework`: http://www.pylonsproject.org/
 .. _`Pyramid`: https://trypyramid.com/
 .. _`Pylons`: http://upcoming.pylonsproject.org/about-pylons-framework.html
-.. _`Pylons OLD source`: https://github.com/jrwdunham/old/
+.. _`Pylons OLD source`: https://github.com/dativebase/old
