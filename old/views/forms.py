@@ -781,13 +781,13 @@ class Forms(Resources):
                 # splits on delimiters while retaining them
                 morpheme_and_delimiter_splitter = '(%s)' % morpheme_splitter
                 # e.g., ['chien', 's']
-                mb_word_morphemes_list = re.split(
+                mb_word_morphemes_list = _split(
                     morpheme_and_delimiter_splitter, mb_word)[::2]
                 # e.g., ['dog', 'PL']
-                mg_word_morphemes_list = re.split(
+                mg_word_morphemes_list = _split(
                     morpheme_and_delimiter_splitter, mg_word)[::2]
                 # e.g., ['chien', '-', 's']
-                sc_word_analysis = re.split(
+                sc_word_analysis = _split(
                     morpheme_and_delimiter_splitter, sc_word)
                 for j, morpheme in enumerate(mb_word_morphemes_list):
                     gloss = mg_word_morphemes_list[j]
@@ -997,6 +997,17 @@ def join(bgc, morpheme_delimiters, bgc_delimiter):
     return bgc_delimiter.join(bgc)
 
 
+def _split(pattern, string):
+    """Split string ``string`` into a list of strings using regex ``pattern``.
+    As of Python 3.5, ``re.split`` will raise ``ValueError`` if ``pattern`` is
+    an empty string, hence this function.
+    """
+    try:
+        return re.split(pattern, string)
+    except ValueError:
+        return [string]
+
+
 def morphemic_analysis_is_consistent(**kwargs):
     """Determine whether a morphemic analysis is consistent.
 
@@ -1015,9 +1026,9 @@ def morphemic_analysis_is_consistent(**kwargs):
         return (kwargs['morpheme_break'] != '' and
                 kwargs['morpheme_gloss'] != '' and
                 len(kwargs['mb_words']) == len(kwargs['mg_words']) and
-                [len(re.split(kwargs['morpheme_splitter'], mbw)) for mbw in
+                [len(_split(kwargs['morpheme_splitter'], mbw)) for mbw in
                 kwargs['mb_words']] ==
-                [len(re.split(kwargs['morpheme_splitter'], mgw)) for mgw in
+                [len(_split(kwargs['morpheme_splitter'], mgw)) for mgw in
                 kwargs['mg_words']])
     except Exception as error:
         LOGGER.debug('error in morphemic_analysis_is_consistent')
@@ -1056,10 +1067,10 @@ def get_break_gloss_category(morpheme_delimiters, morpheme_break,
         delimiters = [' '] + morpheme_delimiters
         splitter = '([%s])' % ''.join([h.esc_RE_meta_chars(d) for d in
                                        delimiters])
-        mb_split = filter(None, re.split(splitter, morpheme_break))
-        mg_split = filter(None, re.split(splitter, morpheme_gloss))
+        mb_split = filter(None, _split(splitter, morpheme_break))
+        mg_split = filter(None, _split(splitter, morpheme_gloss))
         sc_split = filter(
-            None, re.split(splitter, syntactic_category_string))
+            None, _split(splitter, syntactic_category_string))
         break_gloss_category = zip(mb_split, mg_split, sc_split)
         return ''.join([join(bgc, delimiters, bgc_delimiter) for bgc in
                         break_gloss_category])
