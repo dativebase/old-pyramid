@@ -22,6 +22,7 @@ seemed like more trouble than it's worth.
 import json
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from .meta import Base, now
 
@@ -44,8 +45,8 @@ class CollectionBackup(Base):
     contents = Column(UnicodeText)
     html = Column(UnicodeText)
     date_elicited = Column(Date)
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     speaker = Column(UnicodeText)
     source = Column(UnicodeText)
     elicitor = Column(UnicodeText)

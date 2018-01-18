@@ -179,23 +179,6 @@ class TestFormsSearchView(TestView):
     def setUp(self):
         self.default_setup()
 
-    def get_timestamp_isoformat(self, timestamp, db):
-        """Return the timestamp in ISO 8601 format, but also in the form that
-        datetimes are stored in in the database. At present, this function is
-        sensitive to the RDBMS and the MySQL engine type. It may also need to be
-        made sensitive to the platform (i.e., Linux, vs. Mac, vs. Windows).
-        """
-        RDBMSName = h.get_RDBMS_name(self.settings)
-        MYSQL_ENGINE = old_models.Model.__table_args__.get('mysql_engine')
-        system = platform.system() # Will be 'Darwin' on Mac OS X
-        if RDBMSName == 'mysql':
-            if MYSQL_ENGINE == 'InnoDB' or system == 'Darwin':
-                return h.round_datetime(timestamp).isoformat()
-            else:
-                return timestamp.isoformat().split('.')[0]
-        else:
-            return timestamp.isoformat()
-
     # There are 24 distinct forms search tests (a-x).  Aside from the
     # requirement that the initialize "test" needs to run first, these create
     # tests do not need to be executed in the order determined by their names;
@@ -927,14 +910,14 @@ class TestFormsSearchView(TestView):
 
         # = datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '=', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '=', TODAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == 49
 
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '=', self.get_timestamp_isoformat(YESTERDAY_TIMESTAMP, db)]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '=', YESTERDAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -942,13 +925,13 @@ class TestFormsSearchView(TestView):
 
         # != datetime -- *NOTE:* the NULL datetime_entered values will not be counted.
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '!=', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '!=', TODAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == 50
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '!=', self.get_timestamp_isoformat(YESTERDAY_TIMESTAMP, db)]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '!=', YESTERDAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -956,7 +939,7 @@ class TestFormsSearchView(TestView):
 
         # To get what one really wants (perhaps), test for NULL too:
         query = {'query': {'filter':
-            ['or', [['Form', 'datetime_entered', '!=', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)],
+            ['or', [['Form', 'datetime_entered', '!=', TODAY_TIMESTAMP.isoformat()],
                 ['Form', 'datetime_entered', '=', None]]]}}
         json_query = json.dumps(query)
         response = self.app.post(url('search_post'), json_query,
@@ -966,7 +949,7 @@ class TestFormsSearchView(TestView):
 
         # < datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '<', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '<', TODAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -974,7 +957,7 @@ class TestFormsSearchView(TestView):
 
         # <= datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_modified', '<=', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)]}})
+            {'query': {'filter': ['Form', 'datetime_modified', '<=', TODAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -982,7 +965,7 @@ class TestFormsSearchView(TestView):
 
         # > datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '>', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '>', TODAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -998,7 +981,7 @@ class TestFormsSearchView(TestView):
 
         # >= datetime
         json_query = json.dumps(
-            {'query': {'filter': ['Form', 'datetime_entered', '>=', self.get_timestamp_isoformat(YESTERDAY_TIMESTAMP, db)]}})
+            {'query': {'filter': ['Form', 'datetime_entered', '>=', YESTERDAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -1103,7 +1086,7 @@ class TestFormsSearchView(TestView):
         # in_ on a datetime.  This will raise a TypeError ('datetime.datetime' object is
         # not iterable) that is caught in _get_filter_expression
         json_query = json.dumps({'query': {'filter':
-            ['Form', 'datetime_modified', 'in', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)]}})
+            ['Form', 'datetime_modified', 'in', TODAY_TIMESTAMP.isoformat()]}})
         response = self.app.request(url('search'), method='SEARCH', body=json_query.encode('utf8'),
             headers=self.json_headers, environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -1114,7 +1097,7 @@ class TestFormsSearchView(TestView):
         # in_ on a list of datetimes works (SQLAQueryBuilder generates a list of datetime objects)
         json_query = json.dumps({'query': {'filter':
             ['Form', 'datetime_modified', 'in',
-                [self.get_timestamp_isoformat(TODAY_TIMESTAMP, db), self.get_timestamp_isoformat(YESTERDAY_TIMESTAMP, db)]]}})
+                [TODAY_TIMESTAMP.isoformat(), YESTERDAY_TIMESTAMP.isoformat()]]}})
         response = self.app.request(url('search'), method='SEARCH', body=json_query.encode('utf8'),
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = response.json_body
@@ -1279,7 +1262,7 @@ class TestFormsSearchView(TestView):
 
         # translation.datetime_modified
         json_query = json.dumps({'query': {'filter':
-            ['Translation', 'datetime_modified', '>', self.get_timestamp_isoformat(YESTERDAY_TIMESTAMP, db)]}})
+            ['Translation', 'datetime_modified', '>', YESTERDAY_TIMESTAMP.isoformat()]}})
         response = self.app.request(url('search'), method='SEARCH', body=json_query.encode('utf8'),
             headers=self.json_headers, environ=self.extra_environ_admin)
         resp = response.json_body
@@ -1412,14 +1395,14 @@ class TestFormsSearchView(TestView):
 
         # file.datetime_modified
         json_query = json.dumps({'query': {'filter':
-            ['File', 'datetime_modified', '>', self.get_timestamp_isoformat(YESTERDAY_TIMESTAMP, db)]}})
+            ['File', 'datetime_modified', '>', YESTERDAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == 20  # All forms with a file attached
 
         json_query = json.dumps({'query': {'filter':
-            ['File', 'datetime_modified', '<', self.get_timestamp_isoformat(YESTERDAY_TIMESTAMP, db)]}})
+            ['File', 'datetime_modified', '<', YESTERDAY_TIMESTAMP.isoformat()]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -1599,7 +1582,7 @@ class TestFormsSearchView(TestView):
                 ['Translation', 'transcription', 'like', '%1%'],
                 ['not', ['Form', 'morpheme_break', 'regex', '[18][5-7]']],
                 ['or', [
-                    ['Form', 'datetime_modified', '=', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)],
+                    ['Form', 'datetime_modified', '=', TODAY_TIMESTAMP.isoformat()],
                     ['Form', 'date_elicited', '=', JAN1.isoformat()]]]]]}})
         response = self.app.post(url('search_post'), json_query,
                         self.json_headers, self.extra_environ_admin)
@@ -1653,8 +1636,8 @@ class TestFormsSearchView(TestView):
                 ['Form', 'morpheme_break', 'like', '%9%'],
                 ['not', ['Translation', 'transcription', 'like', '%6%']],
                 ['or', [
-                    ['Form', 'datetime_entered', '<', self.get_timestamp_isoformat(TODAY_TIMESTAMP, db)],
-                    ['Form', 'datetime_modified', '>', self.get_timestamp_isoformat(YESTERDAY_TIMESTAMP, db)],
+                    ['Form', 'datetime_entered', '<', TODAY_TIMESTAMP.isoformat()],
+                    ['Form', 'datetime_modified', '>', YESTERDAY_TIMESTAMP.isoformat()],
                     ['not', ['Form', 'date_elicited', 'in', [JAN1.isoformat(), JAN3.isoformat()]]],
                     ['and', [
                         ['Form', 'enterer', 'id', 'regex', '[135680]'],

@@ -20,6 +20,7 @@ seemed like more trouble than it's worth.
 """
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from .meta import Base, now
 import json
@@ -46,8 +47,8 @@ class PhonologyBackup(Base):
     script = Column(UnicodeText)
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     compile_succeeded = Column(Boolean, default=False)
     compile_message = Column(Unicode(255))
     compile_attempt = Column(Unicode(36))

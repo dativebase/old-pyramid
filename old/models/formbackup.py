@@ -20,6 +20,7 @@ seemed like more trouble than it's worth.
 """
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from .meta import Base, now
 import json
@@ -52,8 +53,8 @@ class FormBackup(Base):
     speaker_comments = Column(UnicodeText)
     grammaticality = Column(Unicode(255))
     date_elicited = Column(Date)
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     syntactic_category_string = Column(Unicode(510))
     morpheme_break_ids = Column(UnicodeText)
     morpheme_gloss_ids = Column(UnicodeText)

@@ -15,6 +15,7 @@
 """Translation model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
@@ -29,4 +30,4 @@ class Translation(Base):
     transcription = Column(UnicodeText, nullable=False)
     grammaticality = Column(Unicode(255))
     form_id = Column(Integer, ForeignKey('form.id'))
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)

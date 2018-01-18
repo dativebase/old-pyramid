@@ -15,6 +15,7 @@
 """Form model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -27,7 +28,7 @@ class FormFile(Base):
     id = Column(Integer, Sequence('formfile_seq_id', optional=True), primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
     file_id = Column(Integer, ForeignKey('file.id'))
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class FormTag(Base):
@@ -37,7 +38,7 @@ class FormTag(Base):
     id = Column(Integer, Sequence('formtag_seq_id', optional=True), primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
     tag_id = Column(Integer, ForeignKey('tag.id'))
-    datetime_modified = Column(DateTime(), default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class CollectionForm(Base):
@@ -47,7 +48,7 @@ class CollectionForm(Base):
     id = Column(Integer, Sequence('collectionform_seq_id', optional=True), primary_key=True)
     collection_id = Column(Integer, ForeignKey('collection.id'))
     form_id = Column(Integer, ForeignKey('form.id'))
-    datetime_modified = Column(DateTime(), default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class Form(Base):
@@ -68,8 +69,8 @@ class Form(Base):
     speaker_comments = Column(UnicodeText)
     grammaticality = Column(Unicode(255))
     date_elicited = Column(Date)
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     syntactic_category_string = Column(Unicode(510))
     morpheme_break_ids = Column(UnicodeText)
     morpheme_gloss_ids = Column(UnicodeText)

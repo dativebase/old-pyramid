@@ -4,6 +4,7 @@ import logging
 import re
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
 
@@ -25,7 +26,7 @@ class ApplicationSettingsUser(Base):
     applicationsettings_id = Column(
         Integer, ForeignKey('applicationsettings.id'))
     user_id = Column(Integer, ForeignKey('user.id'))
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class ApplicationSettings(Base):
@@ -68,7 +69,7 @@ class ApplicationSettings(Base):
     output_orthography = relation(
         'Orthography',
         primaryjoin='ApplicationSettings.output_orthography_id==Orthography.id')
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     unrestricted_users = relation(
         'User', secondary=ApplicationSettingsUser.__table__)
 

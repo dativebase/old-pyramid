@@ -1,6 +1,7 @@
 """Collection model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -13,7 +14,7 @@ class CollectionFile(Base):
             primary_key=True)
     collection_id = Column(Integer, ForeignKey('collection.id'))
     file_id = Column(Integer, ForeignKey('file.id'))
-    datetime_modified = Column(DateTime(), default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class CollectionTag(Base):
@@ -24,7 +25,7 @@ class CollectionTag(Base):
             primary_key=True)
     collection_id = Column(Integer, ForeignKey('collection.id'))
     tag_id = Column(Integer, ForeignKey('tag.id'))
-    datetime_modified = Column(DateTime(), default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class Collection(Base):
@@ -54,8 +55,8 @@ class Collection(Base):
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     modifier = relation('User', primaryjoin='Collection.modifier_id==User.id')
     date_elicited = Column(Date)
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     tags = relation('Tag', secondary=CollectionTag.__table__)
     files = relation('File', secondary=CollectionFile.__table__, backref='collections')
     # forms attribute is defined in a relation/backref in the form model

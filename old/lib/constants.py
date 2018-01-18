@@ -210,4 +210,4 @@ JSONDecodeErrorResponse = {
 # ISO datetime format string. Use this instead of isoformat because we want to
 # ignore milliseconds on purpose. Reason: stupid MySQL doesn't support them in
 # standard versions.
-ISO_STRFTIME = '%Y-%m-%dT%H:%M:%S'
+ISO_STRFTIME = '%Y-%m-%dT%H:%M:%S.%f'

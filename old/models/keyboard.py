@@ -16,6 +16,7 @@
 characters."""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -38,8 +39,8 @@ class Keyboard(Base):
     enterer = relation('User', primaryjoin='Keyboard.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     modifier = relation('User', primaryjoin='Keyboard.modifier_id==User.id')
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
     def get_dict(self):
         """Return a Python dictionary representation of the Keyboard.  This

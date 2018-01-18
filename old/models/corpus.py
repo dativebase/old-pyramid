@@ -15,6 +15,7 @@
 """Corpus model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -29,7 +30,7 @@ class CorpusForm(Base):
             primary_key=True)
     corpus_id = Column(Integer, ForeignKey('corpus.id'))
     form_id = Column(Integer, ForeignKey('form.id'))
-    datetime_modified = Column(DateTime(), default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class CorpusTag(Base):
@@ -40,7 +41,7 @@ class CorpusTag(Base):
             primary_key=True)
     corpus_id = Column(Integer, ForeignKey('corpus.id'))
     tag_id = Column(Integer, ForeignKey('tag.id'))
-    datetime_modified = Column(DateTime(), default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 # Keeper is a unicode filter factory -- taken from The Python Cookbook
@@ -76,8 +77,8 @@ class Corpus(Base):
     modifier = relation('User', primaryjoin='Corpus.modifier_id==User.id')
     form_search_id = Column(Integer, ForeignKey('formsearch.id', ondelete='SET NULL'))
     form_search = relation('FormSearch')
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     tags = relation('Tag', secondary=CorpusTag.__table__)
     forms = relation('Form', secondary=CorpusForm.__table__, backref='corpora')
 
@@ -149,8 +150,8 @@ class CorpusFile(Base):
     creator = relation('User', primaryjoin='CorpusFile.creator_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     modifier = relation('User', primaryjoin='CorpusFile.modifier_id==User.id')
-    datetime_modified = Column(DateTime, default=now)
-    datetime_created = Column(DateTime)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
+    datetime_created = Column(mysql.DATETIME(fsp=6))
     restricted = Column(Boolean)
 
     def get_dict(self):

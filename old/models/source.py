@@ -15,6 +15,7 @@
 """Source model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -34,7 +35,7 @@ class Source(Base):
     file = relation('File')
     crossref_source_id = Column(Integer, ForeignKey('source.id', ondelete='SET NULL'))
     crossref_source = relation('Source', remote_side=[id])
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
     # BibTeX data structure
     type = Column(Unicode(20))

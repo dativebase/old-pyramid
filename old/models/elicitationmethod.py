@@ -15,6 +15,7 @@
 """ElicitationMethod model"""
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
@@ -28,4 +29,4 @@ class ElicitationMethod(Base):
     id = Column(Integer, Sequence('elicitationmethod_seq_id', optional=True), primary_key=True)
     name = Column(Unicode(255))
     description = Column(UnicodeText)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)

@@ -1557,7 +1557,7 @@ class TestCollectionsView(TestView):
         assert modifier['first_name'] == my_contributor_first_name
         backed_up_speaker = json.loads(backed_up_collection.speaker)
         assert backed_up_speaker['first_name'] == speaker_first_name
-        assert backed_up_collection.datetime_entered.strftime("%Y-%m-%dT%H:%M:%S") == resp['datetime_entered']
+        assert backed_up_collection.datetime_entered.strftime("%Y-%m-%dT%H:%M:%S.%f") == resp['datetime_entered']
         assert backed_up_collection.UUID == resp['UUID']
         assert response.content_type == 'application/json'
 

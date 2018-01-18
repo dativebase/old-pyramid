@@ -522,8 +522,6 @@ class TestRememberedformsView(TestView):
         administrator_remembered_forms = [f for f in forms if f['id'] % 2 == 0 and f['id'] > 25]
         RDBMSName = h.get_RDBMS_name(self.settings)
         _today_timestamp = today_timestamp
-        if RDBMSName == 'mysql' and mysql_engine == 'InnoDB':
-            _today_timestamp = h.round_datetime(today_timestamp)
 
         # The query we will use over and over again
         json_query = json.dumps({'query': {'filter': [
@@ -531,8 +529,8 @@ class TestRememberedformsView(TestView):
                 ['Translation', 'transcription', 'like', '%1%'],
                 ['not', ['Form', 'morpheme_break', 'regex', '[18][5-7]']],
                 ['or', [
-                    ['Form', 'datetime_modified', '=', today_timestamp.isoformat().split('.')[0]],
-                    ['Form', 'date_elicited', '=', jan1.isoformat().split('.')[0]]]]]]}})
+                    ['Form', 'datetime_modified', '=', today_timestamp.isoformat()],
+                    ['Form', 'date_elicited', '=', jan1.isoformat()]]]]]}})
 
         # A slight variation on the above query so that searches on the admin's
         # remembered forms will return some values
@@ -541,27 +539,27 @@ class TestRememberedformsView(TestView):
                 ['Translation', 'transcription', 'like', '%8%'],
                 ['not', ['Form', 'morpheme_break', 'regex', '[18][5-7]']],
                 ['or', [
-                    ['Form', 'datetime_modified', '=', today_timestamp.isoformat().split('.')[0]],
-                    ['Form', 'date_elicited', '=', jan1.isoformat().split('.')[0]]]]]]}})
+                    ['Form', 'datetime_modified', '=', today_timestamp.isoformat()],
+                    ['Form', 'date_elicited', '=', jan1.isoformat()]]]]]}})
 
         # The expected output of the above query on each of the user's remembered forms list
         result_set_viewer = [
             f for f in viewer_remembered_forms if
             '1' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morpheme_break']) and
-            (_today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
+            (_today_timestamp.isoformat() == f['datetime_modified'] or
             (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
         result_set_contributor = [
             f for f in contributor_remembered_forms if
             '1' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morpheme_break']) and
-            (_today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
+            (_today_timestamp.isoformat() == f['datetime_modified'] or
             (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
         result_set_administrator = [
             f for f in administrator_remembered_forms if
             '8' in ' '.join([g['transcription'] for g in f['translations']]) and
             not re.search('[18][5-7]', f['morpheme_break']) and
-            (_today_timestamp.isoformat().split('.')[0] == f['datetime_modified'].split('.')[0] or
+            (_today_timestamp.isoformat() == f['datetime_modified'] or
             (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
 
         # Search the viewer's remembered forms as the viewer
@@ -574,9 +572,10 @@ class TestRememberedformsView(TestView):
 
         # Perform the same search as above on the contributor's remembered forms,
         # as the contributor.
-        response = self.app.request('/rememberedforms/%d' % contributor_id,
-                        method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
-                        environ=self.extra_environ_contrib_appset)
+        response = self.app.request(
+            '/rememberedforms/%d' % contributor_id, method='SEARCH',
+            body=json_query.encode('utf8'), headers=self.json_headers,
+            environ=self.extra_environ_contrib_appset)
         resp = response.json_body
 
         assert [f['id'] for f in result_set_contributor] == (

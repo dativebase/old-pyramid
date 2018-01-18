@@ -14,6 +14,7 @@
 
 """Corpus backup model"""
 
+from sqlalchemy.dialects import mysql
 from sqlalchemy import Column, Sequence
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
@@ -46,8 +47,8 @@ class CorpusBackup(Base):
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
     form_search = Column(UnicodeText)
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     tags = Column(UnicodeText)
 
     def vivify(self, corpus_dict):

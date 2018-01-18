@@ -15,6 +15,7 @@
 """Speaker model"""
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
@@ -32,7 +33,7 @@ class Speaker(Base):
     markup_language = Column(Unicode(100))
     page_content = Column(UnicodeText)
     html = Column(UnicodeText)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
     def get_dict(self):
         return {

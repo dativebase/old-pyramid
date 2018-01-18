@@ -15,6 +15,7 @@
 """Phonology model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -36,8 +37,8 @@ class Phonology(PhonologyFST, Base):
     enterer = relation('User', primaryjoin='Phonology.enterer_id==User.id')
     modifier_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     modifier = relation('User', primaryjoin='Phonology.modifier_id==User.id')
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     compile_succeeded = Column(Boolean, default=False)
     compile_message = Column(Unicode(255))
     compile_attempt = Column(Unicode(36))

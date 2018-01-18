@@ -932,7 +932,7 @@ class TestCorporaView(TestView):
         assert corpus_count == original_corpus_count + 1
 
         # Update the corpus as the admin.
-        sleep(1)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
+        sleep(3)    # sleep for a second to ensure that MySQL could register a different datetime_modified for the update
         orig_backup_count = dbsession.query(CorpusBackup).count()
         params = self.corpus_create_params.copy()
         params.update({
@@ -957,7 +957,12 @@ class TestCorporaView(TestView):
         backup = dbsession.query(CorpusBackup).filter(
             CorpusBackup.UUID==str(resp['UUID'])).order_by(
             desc(CorpusBackup.id)).first()
-        assert backup.datetime_modified.strftime(oldc.ISO_STRFTIME) == original_datetime_modified
+        print('backup.datetime_modified')
+        print(backup.datetime_modified)
+        print('original_datetime_modified')
+        print(original_datetime_modified)
+        assert backup.datetime_modified.strftime(oldc.ISO_STRFTIME) == (
+            original_datetime_modified)
         assert backup.content == test_corpus_content
         assert json.loads(backup.modifier)['first_name'] == 'Admin'
         assert response.content_type == 'application/json'

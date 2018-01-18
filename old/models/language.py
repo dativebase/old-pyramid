@@ -15,6 +15,7 @@
 """Language model"""
 
 from sqlalchemy import Column
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Unicode, DateTime
 from .meta import Base, now
 
@@ -33,7 +34,7 @@ class Language(Base):
     Type = Column(Unicode(1))
     Ref_Name = Column(Unicode(150))
     Comment = Column(Unicode(150))
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
     def get_dict(self):
         return {

@@ -15,6 +15,7 @@
 """FormSearch model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -34,7 +35,7 @@ class FormSearch(Base):
     description = Column(UnicodeText)
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation('User')
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
     def get_dict(self):
         return {

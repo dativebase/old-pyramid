@@ -15,6 +15,7 @@
 """Morpheme language model backup model"""
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean, Float
 from .meta import Base, now
 import json
@@ -37,8 +38,8 @@ class MorphemeLanguageModelBackup(Base):
     corpus = Column(UnicodeText)
     enterer = Column(UnicodeText)
     modifier = Column(UnicodeText)
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     generate_succeeded = Column(Boolean, default=False)
     generate_message = Column(Unicode(255))
     generate_attempt = Column(Unicode(36)) # a UUID

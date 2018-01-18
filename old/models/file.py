@@ -15,6 +15,7 @@
 """File model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Float
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -29,7 +30,7 @@ class FileTag(Base):
     id = Column(Integer, Sequence('filetag_seq_id', optional=True), primary_key=True)
     file_id = Column(Integer, ForeignKey('file.id'))
     tag_id = Column(Integer, ForeignKey('tag.id'))
-    datetime_modified = Column(DateTime(), default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class File(Base):
@@ -56,8 +57,8 @@ class File(Base):
     size = Column(Integer)
     description = Column(UnicodeText)
     date_elicited = Column(Date)
-    datetime_entered = Column(DateTime)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_entered = Column(mysql.DATETIME(fsp=6))
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     enterer_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))
     enterer = relation('User', primaryjoin='File.enterer_id==User.id')
     elicitor_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'))

@@ -15,6 +15,7 @@
 """User model"""
 
 from sqlalchemy import Column, Sequence, ForeignKey
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from sqlalchemy.orm import relation
 from .meta import Base, now
@@ -29,7 +30,7 @@ class UserForm(Base):
             primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
     user_id = Column(Integer, ForeignKey('user.id'))
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class User(Base):
@@ -60,7 +61,7 @@ class User(Base):
         ondelete='SET NULL'))
     output_orthography = relation('Orthography',
         primaryjoin='User.output_orthography_id==Orthography.id')
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
     remembered_forms = relation('Form', secondary=UserForm.__table__,
             backref='memorizers')
 

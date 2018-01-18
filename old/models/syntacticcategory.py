@@ -15,6 +15,7 @@
 """SyntacticCategory model"""
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
@@ -33,7 +34,7 @@ class SyntacticCategory(Base):
     name = Column(Unicode(255))
     type = Column(Unicode(60))
     description = Column(UnicodeText)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
     def get_dict(self):
         return {

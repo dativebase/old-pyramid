@@ -15,6 +15,7 @@
 """Orthography model"""
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from .meta import Base, now
 
@@ -30,4 +31,4 @@ class Orthography(Base):
     orthography = Column(UnicodeText)
     lowercase = Column(Boolean, default=False)
     initial_glottal_stops = Column(Boolean, default=True)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)

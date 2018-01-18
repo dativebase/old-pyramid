@@ -15,6 +15,7 @@
 """Page model"""
 
 from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
 from .meta import Base, now
 
@@ -32,4 +33,4 @@ class Page(Base):
     markup_language = Column(Unicode(100))
     content = Column(UnicodeText)
     html = Column(UnicodeText)
-    datetime_modified = Column(DateTime, default=now)
+    datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
