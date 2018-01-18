@@ -68,20 +68,17 @@ def add_SEARCH_to_web_test_valid_methods():
     webtest.lint.valid_methods = tuple(new_valid_methods)
 
 
-try:
-    CONFIG_FILE = 'test.ini'
-    SETTINGS = appconfig('config:{}'.format(CONFIG_FILE), relative_to='.')
-    CONFIG = {
-        '__file__': SETTINGS['__file__'],
-        'here': SETTINGS['here']
-    }
-    APP = webtest.TestApp(main(CONFIG, **SETTINGS))
-    dburl = SETTINGS['sqlalchemy.url']
-    engine = create_engine(dburl)
-    session_factory = sessionmaker(bind=engine)
-    Session = scoped_session(session_factory)
-except:
-    pass
+CONFIG_FILE = 'test.ini'
+SETTINGS = appconfig('config:{}'.format(CONFIG_FILE), relative_to='.')
+CONFIG = {
+    '__file__': SETTINGS['__file__'],
+    'here': SETTINGS['here']
+}
+APP = webtest.TestApp(main(CONFIG, **SETTINGS))
+dburl = SETTINGS['sqlalchemy.url']
+engine = create_engine(dburl)
+session_factory = sessionmaker(bind=engine)
+Session = scoped_session(session_factory)
 
 
 class TestView(TestCase):
