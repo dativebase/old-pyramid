@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  mysql:
+    image: "percona:5.6"
+    user: "old"
+    environment:
+      MYSQL_ROOT_PASSWORD: "12345"
+    volumes:
+      - "mysql_data:/var/lib/mysql"
+    expose:
+      - "3306"
+    ports:
+      - "62001:3306"
+  old:
+    build: .
+    environment:
+        SQLALCHEMY_URL: "mysql+oursql://old:12345@<host>[:<port>]/<dbname>"
+    ports:
+      - "8001:6543"
+    depends_on:
+      - mysql

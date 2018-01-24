@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 
 from pyramid.authentication import (
     AuthTktAuthenticationPolicy,
@@ -111,9 +112,16 @@ class OLDHeadersMiddleware(object):
         return self.app(environ, custom_start_response)
 
 
+def expandvars_dict(settings):
+    """Expands all environment variables in a settings dictionary."""
+    return {key: os.path.expandvars(value) for key, value in settings.iteritems()}
+
+
+
 def main(global_config, **settings):
     """This function returns a Pyramid WSGI application."""
     start_foma_worker()
+    settings = expandvars_dict(settings)
     config = Configurator(settings=settings)
     config.include('pyramid_beaker')
     config.include('pyramid_jinja2')

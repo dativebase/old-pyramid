@@ -8,11 +8,9 @@ ADD requirements.txt /usr/src/old/requirements.txt
 ADD requirements /usr/src/old/requirements
 RUN pip install -r /usr/src/old/requirements/test.txt
 
-ADD . /usr/src/old/
-RUN rm /usr/src/old/old.sqlite
+ADD old /usr/src/old/old
+ADD config-env.ini /usr/src/old/config-env.ini
 RUN pip install -e /usr/src/old/
 
-RUN initialize_old_db /usr/src/old/development.ini
-
 WORKDIR /usr/src/old
-ENTRYPOINT pserve development.ini
+ENTRYPOINT pserve config-env.ini
