@@ -68,6 +68,8 @@ class TestApplicationsettingsView(TestView):
         orthography2_id = orthography2.id
         orthography2_orthography = orthography2.orthography
         self.dbsession.commit()
+        self.dbsession.expunge_all()
+        self.dbsession.close()
 
         params = self.application_settings_create_params.copy()
         params.update({
@@ -90,7 +92,7 @@ class TestApplicationsettingsView(TestView):
         params = json.dumps(params)
 
         response = self.app.post(url('create'), params,
-                                    self.json_headers, self.extra_environ_admin)
+                                 self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert resp['object_language_name'] == 'test_create object language name'
         assert resp['morpheme_break_is_orthographic'] is False

@@ -20,13 +20,7 @@ from time import sleep
 import pytest
 
 import old.lib.helpers as h
-from old.models import (
-    Tag,
-    Form,
-    get_engine,
-    get_session_factory,
-    get_tm_session,
-)
+from old.models import Tag, Form
 from old.tests import TestView
 
 
@@ -214,7 +208,7 @@ class TestTagsView(TestView):
 
     def test_new(self):
         """Tests that GET /tags/new returns an empty JSON object."""
-        response = self.app.get('/tags/new', headers=self.json_headers,
+        response = self.app.get(url('new'), headers=self.json_headers,
                                 extra_environ=self.extra_environ_contrib)
         resp = response.json_body
         assert resp == {}

@@ -52,20 +52,13 @@ import threading
 from uuid import uuid4
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from paste.deploy import appconfig
-import transaction
 
 import old.lib.constants as oldc
 import old.lib.helpers as h
 import old.models as old_models
 from old.models.morphologicalparser import Cache
-from old.models import (
-    get_engine,
-    get_session_factory,
-    get_tm_session,
-)
-
 
 LOGGER = logging.getLogger(__name__)
 HANDLER = logging.FileHandler('fomaworker.log')
@@ -110,16 +103,8 @@ def start_foma_worker():
 
 
 def get_dbsession_from_settings(settings):
-    engine = get_engine(settings)
-    session_factory = get_session_factory(engine)
-    return get_tm_session(session_factory, transaction.manager)
-
-
-def get_dbsession(config_path):
-    config_dir, config_file = os.path.split(config_path)
-    settings = appconfig('config:{}'.format(config_file),
-                         relative_to=config_dir)
-    return get_dbsession_from_settings(settings)
+    return scoped_session(
+        old_models.get_session_factory(old_models.get_engine(settings)))
 
 
 def get_local_logger():
@@ -138,14 +123,16 @@ def compile_phonology(**kwargs):
     """Compile the foma script of a phonology and save it to the db with values
     that indicate compilation success.
     """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
+    try:
+        dbsession = get_dbsession_from_settings(kwargs['settings'])()
         phonology = dbsession.query(
             old_models.Phonology).get(kwargs['phonology_id'])
         phonology.compile(kwargs['timeout'])
         phonology.datetime_modified = h.now()
         phonology.modifier_id = kwargs['user_id']
-        transaction.commit()
+    finally:
+        dbsession.commit()
+        dbsession.close()
 
 
 ################################################################################
@@ -163,8 +150,8 @@ def generate_and_compile_morphology(**kwargs):
     :param float kwargs['timeout']: how many seconds to wait before killing the
         foma compile process.
     """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
+    try:
+        dbsession = get_dbsession_from_settings(kwargs['settings'])()
         morphology = dbsession.query(
             old_models.Morphology).get(kwargs['morphology_id'])
         try:
@@ -181,7 +168,9 @@ def generate_and_compile_morphology(**kwargs):
         morphology.generate_attempt = str(uuid4())
         morphology.modifier_id = kwargs['user_id']
         morphology.datetime_modified = h.now()
-        transaction.commit()
+    finally:
+        dbsession.commit()
+        dbsession.close()
 
 
 ################################################################################
@@ -199,8 +188,8 @@ def generate_language_model(**kwargs):
     :returns: ``None``; side-effect is to change relevant attributes of LM
         object.
     """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
+    try:
+        dbsession = get_dbsession_from_settings(kwargs['settings'])()
         langmod = dbsession.query(
             old_models.MorphemeLanguageModel).get(
                 kwargs['morpheme_language_model_id'])
@@ -240,15 +229,17 @@ def generate_language_model(**kwargs):
         langmod.generate_attempt = str(uuid4())
         langmod.modifier_id = kwargs['user_id']
         langmod.datetime_modified = h.now()
-        transaction.commit()
+    finally:
+        dbsession.commit()
+        dbsession.close()
 
 
 def compute_perplexity(**kwargs):
     """Evaluate the LM by attempting to calculate its perplexity and changing
     some attribute values to reflect the attempt.
     """
-    with transaction.manager:
-        dbsession = get_dbsession(kwargs['config_path'])
+    try:
+        dbsession = get_dbsession_from_settings(kwargs['settings'])()
         langmod = dbsession.query(
             old_models.MorphemeLanguageModel).get(
                 kwargs['morpheme_language_model_id'])
@@ -257,7 +248,7 @@ def compute_perplexity(**kwargs):
         try:
             langmod.perplexity = langmod.compute_perplexity(timeout, iterations)
         except Exception as error:
-            LOGGER.error('Exception when calling `comput_perplexity` on'
+            LOGGER.error('Exception when calling `compute_perplexity` on'
                          ' language model: %s %s', error.__class__.__name__,
                          error)
             langmod.perplexity = None
@@ -268,7 +259,9 @@ def compute_perplexity(**kwargs):
         langmod.perplexity_attempt = str(uuid4())
         langmod.modifier_id = kwargs['user_id']
         langmod.datetime_modified = h.now()
-        transaction.commit()
+    finally:
+        dbsession.commit()
+        dbsession.close()
 
 
 ################################################################################
@@ -282,20 +275,23 @@ def generate_and_compile_parser(**kwargs):
     config_dir, config_file = os.path.split(kwargs['config_path'])
     settings = appconfig('config:{}'.format(config_file),
                          relative_to=config_dir)
-    engine = create_engine(settings['sqlalchemy.url'])
-    dbsession = sessionmaker(bind=engine)()
-    parser = dbsession.query(old_models.MorphologicalParser).get(
-        kwargs['morphological_parser_id'])
-    cache = Cache(parser, settings, get_dbsession_from_settings)
-    parser.cache = cache
-    parser.changed = False
-    parser.write()
-    dbsession.commit()
-    if kwargs.get('compile', True):
-        parser.compile(kwargs['timeout'])
-    parser.modifier_id = kwargs['user_id']
-    parser.datetime_modified = h.now()
-    if parser.changed:
-        parser.cache.clear(persist=True)
-    dbsession.add(parser)
-    dbsession.commit()
+    try:
+        dbsession = get_dbsession_from_settings(kwargs['settings'])
+        parser = dbsession.query(old_models.MorphologicalParser).get(
+            kwargs['morphological_parser_id'])
+        cache = Cache(parser, kwargs['settings'], get_dbsession_from_settings)
+        parser.cache = cache
+        parser.changed = False
+        parser.write()
+        dbsession.commit()
+        if kwargs.get('compile', True):
+            parser.compile(kwargs['timeout'])
+        parser.modifier_id = kwargs['user_id']
+        parser.datetime_modified = h.now()
+        #parser.changed = True  # TESTS SHOULD PASS WITHOUT THIS!
+        if parser.changed:
+            parser.cache.clear(persist=True)
+        dbsession.add(parser)
+    finally:
+        dbsession.commit()
+        dbsession.close()

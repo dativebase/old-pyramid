@@ -22,7 +22,6 @@ from old.models import (
 LOGGER = logging.getLogger(__name__)
 
 
-@view_config(route_name='authenticate', renderer='json')
 def login(request):
     schema = LoginSchema()
     try:
@@ -71,13 +70,11 @@ def not_authenticated(request):
     return {'error': 'The username and password provided are not valid.'}
 
 
-@view_config(route_name='logout', renderer='json')
 def logout(request):
     request.session.delete()
     return {'authenticated': False}
 
 
-@view_config(route_name='email_reset_password', renderer='json')
 def email_reset_password(request):
     """Reset the user's password and email them a new one.
     :URL: ``POST /login/email_reset_password``

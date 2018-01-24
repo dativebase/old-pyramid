@@ -104,7 +104,7 @@ def add_resource(config, member_name, rsrc_config=None):
     if rsrc_config.get('history', False):
         route_name, path, request_method, attr = (
             '{}_history'.format(member_name),
-            '/{}/{{id}}/history'.format(collection_name),
+            '/{{old_name}}/{}/{{id}}/history'.format(collection_name),
             'GET',
             'history'
         )
@@ -122,7 +122,7 @@ def add_resource(config, member_name, rsrc_config=None):
         route_name = '{}_{}'.format(action, member_name)
         if action == 'index':
             route_name = '{}_{}'.format(action, collection_name)
-        path = '/{}'.format(collection_name)
+        path = '{{old_name}}/{}'.format(collection_name)
         if action == 'new':
             path = '{}/new'.format(path)
         elif action == 'edit':
@@ -271,17 +271,17 @@ def get_auth_decorators(resource, action):
 CORPORA_SEARCH_CONFIG = (
     (
         'search_corpus_forms',
-        '/corpora/{id}',
+        '{old_name}/corpora/{id}',
         'SEARCH',
         'search'
     ), (
         'search_corpus_forms_post',
-        '/corpora/{id}/search',
+        '{old_name}/corpora/{id}/search',
         'POST',
         'search'
     ), (
         'new_search_corpus_forms',
-        '/corpora/new_search',
+        '{old_name}/corpora/new_search',
         'GET',
         'new_searchx'
     )
@@ -298,17 +298,17 @@ def get_search_config(collection_name):
     return (
         (
             'search_{}'.format(collection_name),
-            '/{}'.format(collection_name),
+            '/{{old_name}}/{}'.format(collection_name),
             'SEARCH',
             'search'
         ), (
             'search_{}_post'.format(collection_name),
-            '/{}/search'.format(collection_name),
+            '/{{old_name}}/{}/search'.format(collection_name),
             'POST',
             'search'
         ), (
             'new_search_{}'.format(collection_name),
-            '/{}/new_search'.format(collection_name),
+            '/{{old_name}}/{}/new_search'.format(collection_name),
             'GET',
             'new_search'
         )
@@ -324,7 +324,7 @@ def _corpora_special_routing(config):
     # To search across corpora, you need to issue a SEARCH/POST
     # /corpora/searchcorpora request.
     config.add_route('search_corpora',
-                     '/corpora/searchcorpora',
+                     '/{old_name}/corpora/searchcorpora',
                      request_method=('POST', 'SEARCH'))
     config.add_view('old.views.corpora.Corpora',
                     attr='search_corpora',
@@ -333,7 +333,7 @@ def _corpora_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('new_search_corpora',
-                     '/corpora/new_search_corpora',
+                     '/{old_name}/corpora/new_search_corpora',
                      request_method='GET')
     config.add_view('old.views.corpora.Corpora',
                     attr='new_search_corpora',
@@ -342,7 +342,7 @@ def _corpora_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('corpora_word_category_sequences',
-                     '/corpora/{id}/get_word_category_sequences',
+                     '/{old_name}/corpora/{id}/get_word_category_sequences',
                      request_method='GET')
     config.add_view('old.views.corpora.Corpora',
                     attr='get_word_category_sequences',
@@ -351,7 +351,7 @@ def _corpora_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('corpus_serve_file',
-                     '/corpora/{id}/servefile/{file_id}',
+                     '/{old_name}/corpora/{id}/servefile/{file_id}',
                      request_method='GET')
     config.add_view('old.views.corpora.Corpora',
                     attr='servefile',
@@ -360,7 +360,7 @@ def _corpora_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('corpus_tgrep2',
-                     '/corpora/{id}/tgrep2',
+                     '/{old_name}/corpora/{id}/tgrep2',
                      request_method=('POST', 'SEARCH'))
     config.add_view('old.views.corpora.Corpora',
                     attr='tgrep2',
@@ -369,7 +369,7 @@ def _corpora_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('corpus_writetofile',
-                     '/corpora/{id}/writetofile',
+                     '/{old_name}/corpora/{id}/writetofile',
                      request_method='PUT')
     config.add_view('old.views.corpora.Corpora',
                     attr='writetofile',
@@ -382,7 +382,7 @@ def _corpora_special_routing(config):
 
 def _files_special_routing(config):
     config.add_route('serve_file',
-                     '/files/{id}/serve',
+                     '/{old_name}/files/{id}/serve',
                      request_method='GET')
     config.add_view('old.views.files.Files',
                     attr='serve',
@@ -391,7 +391,7 @@ def _files_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('serve_reduced_file',
-                     '/files/{id}/serve_reduced',
+                     '/{old_name}/files/{id}/serve_reduced',
                      request_method='GET')
     config.add_view('old.views.files.Files',
                     attr='serve_reduced',
@@ -403,7 +403,7 @@ def _files_special_routing(config):
 
 def _forms_special_routing(config):
     config.add_route('remember_forms',
-                     '/forms/remember',
+                     '/{old_name}/forms/remember',
                      request_method='POST')
     config.add_view('old.views.forms.Forms',
                     attr='remember',
@@ -412,7 +412,7 @@ def _forms_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('update_morpheme_references',
-                     '/forms/update_morpheme_references',
+                     '/{old_name}/forms/update_morpheme_references',
                      request_method='PUT')
     config.add_view('old.views.forms.Forms',
                     attr='update_morpheme_references',
@@ -423,15 +423,25 @@ def _forms_special_routing(config):
 
 
 def _authentication_routing(config):
-    config.add_route('authenticate', '/login/authenticate')
-    config.add_route('logout', '/login/logout')
-    config.add_route('email_reset_password', '/login/email_reset_password',
+    config.add_route('authenticate', '/{old_name}/login/authenticate')
+    config.add_view('old.views.auth.login',
+                    route_name='authenticate',
+                    renderer='json')
+    config.add_route('logout', '/{old_name}/login/logout')
+    config.add_view('old.views.auth.logout',
+                    route_name='logout',
+                    renderer='json')
+    config.add_route('email_reset_password',
+                     '/{old_name}/login/email_reset_password',
                      request_method='POST')
+    config.add_view('old.views.auth.email_reset_password',
+                    route_name='email_reset_password',
+                    renderer='json')
 
 
 def _mlm_special_routing(config):
     config.add_route('morpheme_lm_compute_perplexity',
-                     '/morphemelanguagemodels/{id}/compute_perplexity',
+                     '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity',
                      request_method='PUT')
     config.add_view('old.views.morphemelanguagemodels.Morphemelanguagemodels',
                     attr='compute_perplexity',
@@ -441,7 +451,7 @@ def _mlm_special_routing(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
     config.add_route('generate_morpheme_lm',
-                     '/morphemelanguagemodels/{id}/generate',
+                     '/{old_name}/morphemelanguagemodels/{id}/generate',
                      request_method='PUT')
     config.add_view('old.views.morphemelanguagemodels.Morphemelanguagemodels',
                     attr='generate',
@@ -451,7 +461,7 @@ def _mlm_special_routing(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
     config.add_route('morpheme_lm_get_probabilities',
-                     '/morphemelanguagemodels/{id}/get_probabilities',
+                     '/{old_name}/morphemelanguagemodels/{id}/get_probabilities',
                      request_method='PUT')
     config.add_view('old.views.morphemelanguagemodels.Morphemelanguagemodels',
                     attr='get_probabilities',
@@ -460,7 +470,7 @@ def _mlm_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('morpheme_lm_serve_arpa',
-                     '/morphemelanguagemodels/{id}/serve_arpa',
+                     '/{old_name}/morphemelanguagemodels/{id}/serve_arpa',
                      request_method='GET')
     config.add_view('old.views.morphemelanguagemodels.Morphemelanguagemodels',
                     attr='serve_arpa',
@@ -472,7 +482,7 @@ def _mlm_special_routing(config):
 
 def _mp_special_routing(config):
     config.add_route('mparser_apply_down',
-                     '/morphologicalparsers/{id}/applydown',
+                     '/{old_name}/morphologicalparsers/{id}/applydown',
                      request_method='PUT')
     config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
                     attr='applydown',
@@ -481,7 +491,7 @@ def _mp_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('mparser_apply_up',
-                     '/morphologicalparsers/{id}/applyup',
+                     '/{old_name}/morphologicalparsers/{id}/applyup',
                      request_method='PUT')
     config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
                     attr='applyup',
@@ -490,7 +500,7 @@ def _mp_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('mparser_export',
-                     '/morphologicalparsers/{id}/export',
+                     '/{old_name}/morphologicalparsers/{id}/export',
                      request_method='GET')
     config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
                     attr='export',
@@ -500,7 +510,7 @@ def _mp_special_routing(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
     config.add_route('mparser_generate',
-                     '/morphologicalparsers/{id}/generate',
+                     '/{old_name}/morphologicalparsers/{id}/generate',
                      request_method='PUT')
     config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
                     attr='generate',
@@ -510,7 +520,7 @@ def _mp_special_routing(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
     config.add_route('mparser_generate_and_compile',
-                     '/morphologicalparsers/{id}/generate_and_compile',
+                     '/{old_name}/morphologicalparsers/{id}/generate_and_compile',
                      request_method='PUT')
     config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
                     attr='generate_and_compile',
@@ -520,7 +530,7 @@ def _mp_special_routing(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
     config.add_route('mparser_parse',
-                     '/morphologicalparsers/{id}/parse',
+                     '/{old_name}/morphologicalparsers/{id}/parse',
                      request_method='PUT')
     config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
                     attr='parse',
@@ -529,7 +539,7 @@ def _mp_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('mparser_servecompiled',
-                     '/morphologicalparsers/{id}/servecompiled',
+                     '/{old_name}/morphologicalparsers/{id}/servecompiled',
                      request_method='GET')
     config.add_view('old.views.morphologicalparsers.Morphologicalparsers',
                     attr='servecompiled',
@@ -542,7 +552,7 @@ def _mp_special_routing(config):
 
 def _morphology_special_routing(config):
     config.add_route('morphology_servecompiled',
-                     '/morphologies/{id}/servecompiled',
+                     '/{old_name}/morphologies/{id}/servecompiled',
                      request_method='GET')
     config.add_view('old.views.morphologies.Morphologies',
                     attr='servecompiled',
@@ -551,7 +561,7 @@ def _morphology_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('morphology_applydown',
-                     '/morphologies/{id}/applydown',
+                     '/{old_name}/morphologies/{id}/applydown',
                      request_method='PUT')
     config.add_view('old.views.morphologies.Morphologies',
                     attr='applydown',
@@ -560,7 +570,7 @@ def _morphology_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('morphology_applyup',
-                     '/morphologies/{id}/applyup',
+                     '/{old_name}/morphologies/{id}/applyup',
                      request_method='PUT')
     config.add_view('old.views.morphologies.Morphologies',
                     attr='applyup',
@@ -569,7 +579,7 @@ def _morphology_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('morphology_generate',
-                     '/morphologies/{id}/generate',
+                     '/{old_name}/morphologies/{id}/generate',
                      request_method='PUT')
     config.add_view('old.views.morphologies.Morphologies',
                     attr='generate',
@@ -579,7 +589,7 @@ def _morphology_special_routing(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
     config.add_route('morphology_generate_and_compile',
-                     '/morphologies/{id}/generate_and_compile',
+                     '/{old_name}/morphologies/{id}/generate_and_compile',
                      request_method='PUT')
     config.add_view('old.views.morphologies.Morphologies',
                     attr='generate_and_compile',
@@ -592,7 +602,7 @@ def _morphology_special_routing(config):
 
 def _phonology_special_routing(config):
     config.add_route('phonology_applydown',
-                     '/phonologies/{id}/applydown',
+                     '/{old_name}/phonologies/{id}/applydown',
                      request_method='PUT')
     config.add_view('old.views.phonologies.Phonologies',
                     attr='applydown',
@@ -601,7 +611,7 @@ def _phonology_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('phonology_phonologize',
-                     '/phonologies/{id}/phonologize',
+                     '/{old_name}/phonologies/{id}/phonologize',
                      request_method='PUT')
     config.add_view('old.views.phonologies.Phonologies',
                     attr='applydown',
@@ -610,7 +620,7 @@ def _phonology_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('phonology_compile',
-                     '/phonologies/{id}/compile',
+                     '/{old_name}/phonologies/{id}/compile',
                      request_method='PUT')
     config.add_view('old.views.phonologies.Phonologies',
                     attr='compile',
@@ -620,7 +630,7 @@ def _phonology_special_routing(config):
                     decorator=(authenticate,
                                authorize(['administrator', 'contributor'])))
     config.add_route('phonology_servecompiled',
-                     '/phonologies/{id}/servecompiled',
+                     '/{old_name}/phonologies/{id}/servecompiled',
                      request_method='GET')
     config.add_view('old.views.phonologies.Phonologies',
                     attr='servecompiled',
@@ -629,7 +639,7 @@ def _phonology_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('phonology_runtests',
-                     '/phonologies/{id}/runtests',
+                     '/{old_name}/phonologies/{id}/runtests',
                      request_method='GET')
     config.add_view('old.views.phonologies.Phonologies',
                     attr='runtests',
@@ -643,7 +653,7 @@ def _phonology_special_routing(config):
 def _rf_special_routing(config):
     # Pylons: controller='rememberedforms', action='show'
     config.add_route('show_remembered_forms',
-                     '/rememberedforms/{id}',
+                     '/{old_name}/rememberedforms/{id}',
                      request_method='GET')
     config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='show',
@@ -652,7 +662,7 @@ def _rf_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('remembered_forms_update',
-                     '/rememberedforms/{id}',
+                     '/{old_name}/rememberedforms/{id}',
                      request_method='PUT')
     config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='update',
@@ -664,7 +674,7 @@ def _rf_special_routing(config):
                                    ['administrator', 'contributor', 'viewer'],
                                    user_id_is_args1=True)))
     config.add_route('search_remembered_forms',
-                     '/rememberedforms/{id}',
+                     '/{old_name}/rememberedforms/{id}',
                      request_method='SEARCH')
     config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='search',
@@ -673,7 +683,7 @@ def _rf_special_routing(config):
                     renderer='json',
                     decorator=authenticate)
     config.add_route('search_remembered_forms_post',
-                     '/rememberedforms/{id}/search',
+                     '/{old_name}/rememberedforms/{id}/search',
                      request_method='POST')
     config.add_view('old.views.rememberedforms.Rememberedforms',
                     attr='search',
@@ -684,7 +694,7 @@ def _rf_special_routing(config):
 
 
 def includeme(config):
-    config.add_route('info', '/', request_method='GET')
+    config.add_route('info', '/{old_name}/', request_method='GET')
     config.add_view('old.views.info.Info',
                     attr='index',
                     route_name='info',
@@ -692,7 +702,7 @@ def includeme(config):
                     renderer='json')
     # CORS preflight OPTIONS requests: don't interfere with them
     # TODO: test if this works.
-    config.add_route('cors_proceed', '/*garbage', request_method='OPTIONS')
+    config.add_route('cors_proceed', '/{old_name}/*garbage', request_method='OPTIONS')
     config.add_view(cors,
                     route_name='cors_proceed',
                     request_method='OPTIONS')

@@ -459,7 +459,7 @@ def get_HTML_from_contents(contents, markup_language):
 
 
 def generate_salt():
-    return str(uuid4().hex).encode('utf8')
+    return uuid4().hex
 
 
 def encrypt_password(password, salt):

@@ -54,12 +54,12 @@ if not 'PhonologyFST' in dir(parser):
 
 CONFIG_FILE = 'config.pickle'
 CONFIG_PATH = os.path.join(SCRIPT_DIR, CONFIG_FILE)
-# CONFIG = pickle.load(open(CONFIG_PATH, 'rb'))
 CACHE_FILE = 'cache.pickle'
 CACHE_PATH = os.path.join(SCRIPT_DIR, CACHE_FILE)
 
 def get_config():
-    return pickle.load(open(CONFIG_PATH, 'rb'))
+    with open(CONFIG_PATH, 'rb') as filei:
+        return pickle.load(filei)
 
 def get_phonology():
     return parser.PhonologyFST(

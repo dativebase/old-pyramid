@@ -220,7 +220,7 @@ class MorphemeLanguageModel(LanguageModel, Base):
                 os.remove(path)
             except Exception:
                 pass
-        perplexities = filter(None, perplexities)
+        perplexities = list(filter(None, perplexities))
         if perplexities:
             return sum(perplexities) / len(perplexities)
         else:

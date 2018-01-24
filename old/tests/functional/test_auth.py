@@ -16,12 +16,22 @@ import json
 import logging
 
 from old.lib.dbutils import DBUtils
+from old.lib.constants import OLD_NAME_DFLT
 import old.models as old_models
 import old.models.modelbuilders as omb
 from old.tests import TestView
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def url(route_name):
+    return {
+        'authenticate': '/{}/login/authenticate'.format(OLD_NAME_DFLT),
+        'logout': '/{}/login/logout'.format(OLD_NAME_DFLT),
+        'email_reset_password': '/{}/login/email_reset_password'.format(
+            OLD_NAME_DFLT)
+    }.get(route_name, '')
 
 
 class TestLogin(TestView):
@@ -34,7 +44,7 @@ class TestLogin(TestView):
         # Invalid username & password
         params = json.dumps({'username': 'x', 'password': 'x'})
         response = self.app.post(
-            '/login/authenticate',
+            url('authenticate'),
             params, self.json_headers, status=401)
         resp = response.json_body
         assert (resp['error'] == 'The username and password provided are'
@@ -44,7 +54,7 @@ class TestLogin(TestView):
         # Valid username & password
         params = json.dumps({'username': 'admin', 'password': 'adminA_1'})
         response = self.app.post(
-            '/login/authenticate',
+            url('authenticate'),
             params, self.json_headers)
         resp = response.json_body
         assert resp['authenticated'] is True
@@ -52,7 +62,7 @@ class TestLogin(TestView):
 
         # Invalid POST params
         params = json.dumps({'usernamex': 'admin', 'password': 'admin'})
-        response = self.app.post('/login/authenticate',
+        response = self.app.post(url('authenticate'),
                                     params, self.json_headers, status=400)
         resp = response.json_body
         assert resp['errors']['username'] == 'Missing value'
@@ -62,7 +72,7 @@ class TestLogin(TestView):
         """Tests that GET /login/logout logs the user out."""
 
         # Logout while logged in.
-        response = self.app.get('/login/logout', headers=self.json_headers,
+        response = self.app.get(url('logout'), headers=self.json_headers,
                                 extra_environ=self.extra_environ_admin)
         resp = response.json_body
         assert resp['authenticated'] is False
@@ -72,7 +82,7 @@ class TestLogin(TestView):
         # Note: used to expect 401 Unauthorized here. However, that's just
         # annoying. If you logout, you logout successfully, even if you
         # were never logged in.
-        response = self.app.get('/login/logout', headers=self.json_headers)
+        response = self.app.get(url('logout'), headers=self.json_headers)
         resp = response.json_body
         # assert (resp['error'] == 'Authentication is required to access this'
         #         ' resource.')
@@ -112,7 +122,7 @@ class TestLogin(TestView):
             'password': 'contributorC_1'
         })
         response = self.app.post(
-            '/login/authenticate', params, self.json_headers)
+            url('authenticate'), params, self.json_headers)
         resp = response.json_body
         assert resp['authenticated'] is True
         assert response.content_type == 'application/json'
@@ -126,7 +136,7 @@ class TestLogin(TestView):
         to_address = test_email_to or contributor_email
         params = json.dumps({'username': 'contributor'})
         response = self.app.post(
-            '/login/email_reset_password',
+            url('email_reset_password'),
             params, self.json_headers, status=[200, 500])
         resp = response.json_body
         assert (response.status_int == 200 and
@@ -153,7 +163,7 @@ class TestLogin(TestView):
                 'password': 'contributorC_1'
             })
             response = self.app.post(
-                '/login/authenticate', params, self.json_headers,
+                url('authenticate'), params, self.json_headers,
                 status=401)
             resp = response.json_body
             assert (resp['error'] == 'The username and password provided'
@@ -166,7 +176,7 @@ class TestLogin(TestView):
                 'password': new_password
             })
             response = self.app.post(
-                '/login/authenticate', params, self.json_headers)
+                url('authenticate'), params, self.json_headers)
             resp = response.json_body
             assert resp['authenticated'] is True
             assert response.content_type == 'application/json'
@@ -180,7 +190,7 @@ class TestLogin(TestView):
                 'password': 'contributorC_1'
             })
             response = self.app.post(
-                '/login/authenticate', params, self.json_headers)
+                url('authenticate'), params, self.json_headers)
             resp = response.json_body
             assert resp['authenticated'] is True
             assert response.content_type == 'application/json'
@@ -188,7 +198,7 @@ class TestLogin(TestView):
         # Invalid username.
         params = json.dumps({'username': 'badusername'})
         response = self.app.post(
-            '/login/email_reset_password', params, self.json_headers,
+            url('email_reset_password'), params, self.json_headers,
             status=400)
         resp = response.json_body
         assert resp['error'] == 'The username provided is not valid.'
@@ -197,7 +207,7 @@ class TestLogin(TestView):
         # Invalid POST parameters.
         params = json.dumps({'badparam': 'irrelevant'})
         response = self.app.post(
-            '/login/email_reset_password', params, self.json_headers,
+            url('email_reset_password'), params, self.json_headers,
             status=400)
         resp = response.json_body
         assert resp['errors']['username'] == 'Missing value'

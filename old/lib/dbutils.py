@@ -203,7 +203,7 @@ def add_pagination(query, paginator):
 
 def get_model_names():
     return [mn for mn in dir(old_models) if mn[0].isupper()
-            and mn not in ('Model', 'Base', 'Session', 'Engine')]
+            and mn not in ('LOGGER', 'Model', 'Base', 'Session', 'Engine')]
 
 
 def get_last_modified(result):

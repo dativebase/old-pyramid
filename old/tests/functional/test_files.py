@@ -90,10 +90,12 @@ class TestFilesView(TestView):
         extra_environ = {'test.authentication.id': contributor_id}
 
         wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
-        wav_file_base64_encoded = b64encode(open(wav_file_path, 'rb').read()).decode('utf8')
+        with open(wav_file_path, 'rb') as f:
+            wav_file_base64_encoded = b64encode(f.read()).decode('utf8')
 
         jpg_file_path = os.path.join(self.test_files_path, 'old_test.jpg')
-        jpg_file_base64_encoded = b64encode(open(jpg_file_path, 'rb').read()).decode('utf8')
+        with open(jpg_file_path, 'rb') as f:
+            jpg_file_base64_encoded = b64encode(f.read()).decode('utf8')
 
         # Create the restricted file.
         params = self.file_create_params_base64.copy()
@@ -309,9 +311,12 @@ class TestFilesView(TestView):
         wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
         wav_file_size = os.path.getsize(wav_file_path)
         params = self.file_create_params_base64.copy()
+
+        with open(wav_file_path, 'rb') as f:
+            wav_file_base64 = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': 'old_test.wav',
-            'base64_encoded_file': b64encode(open(wav_file_path, 'rb').read()).decode('utf8')
+            'base64_encoded_file': wav_file_base64
         })
         params = json.dumps(params)
         response = self.app.post(url('create'), params, self.json_headers,
@@ -328,7 +333,9 @@ class TestFilesView(TestView):
         # Create a test image file.
         jpg_file_path = os.path.join(self.test_files_path, 'old_test.jpg')
         jpg_file_size = os.path.getsize(jpg_file_path)
-        jpg_file_base64 = b64encode(open(jpg_file_path, 'rb').read()).decode('utf8')
+        with open(jpg_file_path, 'rb') as f:
+            jpg_file_base64 = b64encode(f.read()).decode('utf8')
+
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': 'old_test.jpg',
@@ -424,9 +431,11 @@ class TestFilesView(TestView):
         wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
         wav_file_size = os.path.getsize(wav_file_path)
         params = self.file_create_params_base64.copy()
+        with open(wav_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': '\u201Cold te\u0301st\u201D.wav',
-            'base64_encoded_file': b64encode(open(wav_file_path, 'rb').read()).decode('utf8'),
+            'base64_encoded_file': base64_encoded_file,
             'tags': [restricted_tag_id]
         })
         params = json.dumps(params)
@@ -454,7 +463,8 @@ class TestFilesView(TestView):
         # to be WAV
         files_dir_list = os.listdir(self.files_path)
         html_file_path = os.path.join(self.test_files_path, 'illicit.html')
-        html_file_base64 = b64encode(open(html_file_path, 'rb').read()).decode('utf8')
+        with open(html_file_path, 'rb') as f:
+            html_file_base64 = b64encode(f.read()).decode('utf8')
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': 'pretend_its_wav.wav',
@@ -823,9 +833,11 @@ class TestFilesView(TestView):
         wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
         wav_file_size = os.path.getsize(wav_file_path)
         params = self.file_create_params_base64.copy()
+        with open(wav_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': 'old_test.wav',
-            'base64_encoded_file': b64encode(open(wav_file_path, 'rb').read()).decode('utf8')
+            'base64_encoded_file': base64_encoded_file
         })
         params = json.dumps(params)
         response = self.app.post(url('create'), params, self.json_headers,
@@ -874,7 +886,8 @@ class TestFilesView(TestView):
         # associate it to a restricted form -- expect to fail.
         jpg_file_path = os.path.join(self.test_files_path, 'old_test.jpg')
         jpg_file_size = os.path.getsize(jpg_file_path)
-        jpg_file_base64 = b64encode(open(jpg_file_path, 'rb').read()).decode('utf8')
+        with open(jpg_file_path, 'rb') as f:
+            jpg_file_base64 = b64encode(f.read()).decode('utf8')
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': 'old_test.jpg',
@@ -892,7 +905,8 @@ class TestFilesView(TestView):
         # associate it to an unrestricted form -- expect to succeed.
         jpg_file_path = os.path.join(self.test_files_path, 'old_test.jpg')
         jpg_file_size = os.path.getsize(jpg_file_path)
-        jpg_file_base64 = b64encode(open(jpg_file_path, 'rb').read()).decode('utf8')
+        with open(jpg_file_path, 'rb') as f:
+            jpg_file_base64 = b64encode(f.read()).decode('utf8')
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': 'old_test.jpg',
@@ -911,7 +925,8 @@ class TestFilesView(TestView):
         # associate it to a restricted form -- expect (a) to succeed and (b) to
         # find that the file is now restricted.
         jpg_file_path = os.path.join(self.test_files_path, 'old_test.jpg')
-        jpg_file_base64 = b64encode(open(jpg_file_path, 'rb').read()).decode('utf8')
+        with open(jpg_file_path, 'rb') as f:
+            jpg_file_base64 = b64encode(f.read()).decode('utf8')
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': 'old_test.jpg',
@@ -999,10 +1014,11 @@ class TestFilesView(TestView):
         if os.path.exists(long_wav_file_path):
             long_wav_file_size = os.path.getsize(long_wav_file_path)
             params = self.file_create_params_base64.copy()
+            with open(long_wav_file_path, 'rb') as f:
+                base64_encoded_file = b64encode(f.read()).decode('utf8')
             params.update({
                 'filename': long_wav_filename,
-                'base64_encoded_file': b64encode(
-                    open(long_wav_file_path, 'rb').read()).decode('utf8')
+                'base64_encoded_file': base64_encoded_file
             })
             params = json.dumps(params)
             response = self.app.post(
@@ -1027,10 +1043,11 @@ class TestFilesView(TestView):
             old_reduced_dir_list = os.listdir(self.reduced_files_path)
             medium_wav_file_size = os.path.getsize(medium_wav_file_path)
             params = self.file_create_params_base64.copy()
+            with open(medium_wav_file_path, 'rb') as f:
+                base64_encoded_file = b64encode(f.read()).decode('utf8')
             params.update({
                 'filename': medium_wav_filename,
-                'base64_encoded_file': b64encode(
-                    open(medium_wav_file_path, 'rb').read()).decode('utf8')
+                'base64_encoded_file': base64_encoded_file
             })
             params = json.dumps(params)
             response = self.app.post(
@@ -1191,11 +1208,13 @@ class TestFilesView(TestView):
         params = self.file_create_params_base64.copy()
 
         original_name = 'test_update_name.wav'
+        with open(wav_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': original_name,
             'tags': [restricted_tag.id],
             'description': 'description',
-            'base64_encoded_file': b64encode(open(wav_file_path, 'rb').read()).decode('utf8')
+            'base64_encoded_file': base64_encoded_file
         })
         params = json.dumps(params)
         response = self.app.post(url('create'), params, self.json_headers,
@@ -1493,9 +1512,11 @@ class TestFilesView(TestView):
         jpg_file_path = os.path.join(self.test_files_path, 'old_test.jpg')
         extra_environ = {'test.authentication.id': my_contributor_id}
         params = self.file_create_params_base64.copy()
+        with open(jpg_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': 'test_delete.jpg',
-            'base64_encoded_file': b64encode(open(jpg_file_path, 'rb').read()).decode('utf8'),
+            'base64_encoded_file': base64_encoded_file,
             'speaker': speaker_id,
             'tags': [tag_id]
         })
@@ -1542,7 +1563,6 @@ class TestFilesView(TestView):
 
         # The deleted file will be returned to us, so the assertions from
         # above should still hold true.
-        dbsession.expire(file_that_was_not_deleted)
         file_that_was_deleted = dbsession.query(
             old_models.File).get(to_delete_id)
         file_path = os.path.join(self.files_path, to_delete_name)
@@ -1569,9 +1589,11 @@ class TestFilesView(TestView):
         # Create and delete a file with unicode characters in the file name
         extra_environ = {'test.authentication.id': my_contributor_id}
         params = self.file_create_params_base64.copy()
+        with open(jpg_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': '\u201Cte\u0301st delete\u201D.jpg',
-            'base64_encoded_file': b64encode(open(jpg_file_path, 'rb').read()).decode('utf8'),
+            'base64_encoded_file': base64_encoded_file,
             'speaker': speaker_id,
             'tags': [tag_id]
         })
@@ -1596,9 +1618,11 @@ class TestFilesView(TestView):
         # Create the parent WAV file.
         wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
         params = self.file_create_params_base64.copy()
+        with open(wav_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': 'parent.wav',
-            'base64_encoded_file': b64encode(open(wav_file_path, 'rb').read()).decode('utf8')
+            'base64_encoded_file': base64_encoded_file
         })
         params = json.dumps(params)
         response = self.app.post(url('create'), params, self.json_headers, self.extra_environ_admin)
@@ -1657,9 +1681,11 @@ class TestFilesView(TestView):
         jpg_file_path = os.path.join(self.test_files_path, 'old_test.jpg')
         jpg_file_size = os.path.getsize(jpg_file_path)
         params = self.file_create_params_base64.copy()
+        with open(jpg_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': 'old_test.jpg',
-            'base64_encoded_file': b64encode(open(jpg_file_path, 'rb').read()).decode('utf8')
+            'base64_encoded_file': base64_encoded_file
         })
         params = json.dumps(params)
         response = self.app.post(url('create'), params, self.json_headers,
@@ -1744,9 +1770,11 @@ class TestFilesView(TestView):
         wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
         extra_environ = {'test.authentication.id': contributor_id}
         params = self.file_create_params_base64.copy()
+        with open(wav_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': 'old_test.wav',
-            'base64_encoded_file': b64encode(open(wav_file_path, 'rb').read()).decode('utf8'),
+            'base64_encoded_file': base64_encoded_file,
             'tags': [db.get_tags()[0].id]    # the restricted tag should be the only one
         })
         params = json.dumps(params)
@@ -1819,9 +1847,11 @@ class TestFilesView(TestView):
         wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
         extra_environ = {'test.authentication.id': contributor_id}
         params = self.file_create_params_base64.copy()
+        with open(wav_file_path, 'rb') as f:
+            base64_encoded_file = b64encode(f.read()).decode('utf8')
         params.update({
             'filename': 'old_test.wav',
-            'base64_encoded_file': b64encode(open(wav_file_path, 'rb').read()).decode('utf8'),
+            'base64_encoded_file': base64_encoded_file,
             'tags': [restricted_tag.id]
         })
         params = json.dumps(params)
@@ -1944,7 +1974,8 @@ class TestFilesView(TestView):
         wav_filename = 'old_test.wav'
         wav_file_path = os.path.join(test_files_path, wav_filename)
         wav_file_size = os.path.getsize(wav_file_path)
-        wav_file_base64 = b64encode(open(wav_file_path, 'rb').read()).decode('utf8')
+        with open(wav_file_path, 'rb') as f:
+            wav_file_base64 = b64encode(f.read()).decode('utf8')
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': wav_filename,
@@ -1959,7 +1990,7 @@ class TestFilesView(TestView):
 
         # Retrieve the file data as the admin who entered it
         response = self.app.get(
-            '/files/{}/serve'.format(wav_file_id),
+            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, wav_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert wav_file_base64.encode('utf8') == response_base64
@@ -1969,7 +2000,7 @@ class TestFilesView(TestView):
         # Attempt to retrieve the file without authentication and expect to
         # fail (401).
         response = self.app.get(
-            '/files/{}/serve'.format(wav_file_id),
+            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, wav_file_id),
             headers=self.json_headers, status=401)
         resp = response.json_body
         assert resp['error'] == 'Authentication is required to access this resource.'
@@ -1978,7 +2009,7 @@ class TestFilesView(TestView):
         # Attempt to retrieve the restricted file data as the contrib and
         # expect to fail.
         response = self.app.get(
-            '/files/{}/serve'.format(wav_file_id),
+            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, wav_file_id),
             headers=self.json_headers, extra_environ=extra_environ_contrib,
             status=403)
         resp = response.json_body
@@ -2007,7 +2038,7 @@ class TestFilesView(TestView):
         # Attempt to retrieve the externally hosted file's "data" and
         # expect a 400 response.
         response = self.app.get(
-            '/files/{}/serve'.format(eh_file_id),
+            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, eh_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin,
             status=400)
         resp = response.json_body
@@ -2036,7 +2067,7 @@ class TestFilesView(TestView):
         # Retrieve the parent file's file data when requesting that of the
         # child.
         response = self.app.get(
-            '/files/{}/serve'.format(sr_file_id),
+            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, sr_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert wav_file_base64.encode('utf8') == response_base64
@@ -2046,7 +2077,7 @@ class TestFilesView(TestView):
         if (    self.create_reduced_size_file_copies and
                 h.command_line_program_installed('ffmpeg')):
             response = self.app.get(
-                '/files/{}/serve_reduced'.format(wav_file_id),
+                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, wav_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin)
             response_base64 = b64encode(response.body)
@@ -2055,7 +2086,7 @@ class TestFilesView(TestView):
 
         else:
             response = self.app.get(
-                '/files/{}/serve_reduced'.format(wav_file_id),
+                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, wav_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin, status=404)
             resp = response.json_body
@@ -2065,7 +2096,7 @@ class TestFilesView(TestView):
         # Retrieve the reduced file of the wav-subinterval-referencing file above
         if self.create_reduced_size_file_copies and h.command_line_program_installed('ffmpeg'):
             response = self.app.get(
-                '/files/{}/serve_reduced'.format(sr_file_id),
+                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, sr_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin)
 
@@ -2075,7 +2106,7 @@ class TestFilesView(TestView):
             assert response.content_type == guess_type('x.%s' % self.preferred_lossy_audio_format)[0]
         else:
             response = self.app.get(
-                '/files/{}/serve_reduced'.format(sr_file_id),
+                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, sr_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin, status=404)
             resp = response.json_body
@@ -2086,7 +2117,8 @@ class TestFilesView(TestView):
         jpg_filename = 'large_image.jpg'
         jpg_file_path = os.path.join(test_files_path, jpg_filename)
         jpg_file_size = os.path.getsize(jpg_file_path)
-        jpg_file_base64 = b64encode(open(jpg_file_path, 'rb').read()).decode('utf8')
+        with open(jpg_file_path, 'rb') as f:
+            jpg_file_base64 = b64encode(f.read()).decode('utf8')
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': jpg_filename,
@@ -2100,7 +2132,7 @@ class TestFilesView(TestView):
 
         # Get the image file's contents
         response = self.app.get(
-            '/files/{}/serve'.format(jpg_file_id),
+            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, jpg_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert jpg_file_base64.encode('utf8') == response_base64
@@ -2110,7 +2142,7 @@ class TestFilesView(TestView):
         # Get the reduced image file's contents
         if self.create_reduced_size_file_copies and Image:
             response = self.app.get(
-                '/files/{}/serve_reduced'.format(jpg_file_id),
+                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, jpg_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin)
             response_base64 = b64encode(response.body)
@@ -2118,7 +2150,7 @@ class TestFilesView(TestView):
             assert guess_type(jpg_filename)[0] == response.headers['Content-Type']
         else:
             response = self.app.get(
-                '/files/{}/serve_reduced'.format(jpg_file_id),
+                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, jpg_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin, status=404)
             resp = response.json_body
@@ -2131,7 +2163,8 @@ class TestFilesView(TestView):
         ogg_filename = 'old_test.ogg'
         ogg_file_path = os.path.join(test_files_path, ogg_filename)
         ogg_file_size = os.path.getsize(ogg_file_path)
-        ogg_file_base64 = b64encode(open(ogg_file_path, 'rb').read()).decode('utf8')
+        with open(ogg_file_path, 'rb') as f:
+            ogg_file_base64 = b64encode(f.read()).decode('utf8')
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': ogg_filename,
@@ -2145,7 +2178,7 @@ class TestFilesView(TestView):
 
         # Get the .ogg file's contents
         response = self.app.get(
-            '/files/{}/serve'.format(ogg_file_id),
+            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, ogg_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert ogg_file_base64.encode('utf8') == response_base64
@@ -2154,7 +2187,7 @@ class TestFilesView(TestView):
 
         # Attempt to get the reduced image file's contents and expect to fail
         response = self.app.get(
-            '/files/{}/serve_reduced'.format(ogg_file_id),
+            '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, ogg_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin,
             status=404)
         resp = response.json_body
@@ -2162,7 +2195,7 @@ class TestFilesView(TestView):
 
         # Invalid id
         response = self.app.get(
-            '/files/{}/serve'.format(123456789012),
+            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, 123456789012),
             headers=self.json_headers, extra_environ=extra_environ_admin,
             status=404)
         resp = response.json_body
@@ -2191,8 +2224,9 @@ class TestFilesView(TestView):
         # small enough
         jpg_file_path = os.path.join(self.test_files_path, 'old_test.jpg')
         jpg_file_size = os.path.getsize(jpg_file_path)
-        jpg_file_base64 = b64encode(
-            open(jpg_file_path, 'rb').read()).decode('utf8')
+        with open(jpg_file_path, 'rb') as f:
+            jpg_file_base64 = b64encode(f.read()).decode('utf8')
+
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': 'old_test.jpg',
@@ -2217,8 +2251,9 @@ class TestFilesView(TestView):
         jpg_file_path = os.path.join(self.test_files_path, filename)
         jpg_reduced_file_path = os.path.join(
             self.reduced_files_path, filename)
-        jpg_file_base64 = b64encode(
-            open(jpg_file_path, 'rb').read()).decode('utf8')
+        with open(jpg_file_path, 'rb') as f:
+            jpg_file_base64 = b64encode(f.read()).decode('utf8')
+
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': filename,
@@ -2246,7 +2281,9 @@ class TestFilesView(TestView):
         filename = 'large_image.gif'
         gif_file_path = os.path.join(self.test_files_path, filename)
         gif_reduced_file_path = os.path.join(self.reduced_files_path, filename)
-        gif_file_base64 = b64encode(open(gif_file_path, 'rb').read()).decode('utf8')
+        with open(gif_file_path, 'rb') as f:
+            gif_file_base64 = b64encode(f.read()).decode('utf8')
+
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': filename,
@@ -2307,8 +2344,8 @@ class TestFilesView(TestView):
             self.reduced_files_path, lossy_filename)
         wav_file_path = os.path.join(self.test_files_path, filename)
         wav_file_size = os.path.getsize(wav_file_path)
-        wav_file_base64 = b64encode(
-            open(wav_file_path, 'rb').read()).decode('utf8')
+        with open(wav_file_path, 'rb') as f:
+            wav_file_base64 = b64encode(f.read()).decode('utf8')
         params = self.file_create_params_base64.copy()
         params.update({
             'filename': filename,

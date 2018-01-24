@@ -358,7 +358,8 @@ class Command:
             self.kill_process(self.process)
             thread.join()
         try:
-            stdout = open(self.logpath).read()
+            with open(self.logpath) as filei:
+                stdout = filei.read()
         except Exception:
             stdout = ''
         return self.process.returncode, stdout
@@ -1010,7 +1011,8 @@ class LanguageModel(Command, Parse):
             a pickled ``simplelm.LMTree`` instance.
         """
         self._trie = simplelm.load_arpa(self.get_file_path('arpa'), 'utf8')
-        pickle.dump(self._trie, open(self.get_file_path('trie'), 'wb'))
+        with open(self.get_file_path('trie'), 'wb') as fileo:
+            pickle.dump(self._trie, fileo)
 
     @property
     def trie(self):
@@ -1022,7 +1024,8 @@ class LanguageModel(Command, Parse):
             return self._trie
         else:
             try:
-                self._trie = pickle.load(open(self.get_file_path('trie'), 'rb'))
+                with open(self.get_file_path('trie'), 'rb') as filei:
+                    self._trie = pickle.load(filei)
                 return self._trie
             except Exception:
                 try:
@@ -1053,7 +1056,8 @@ class Cache:
         self._store = {}
         if self.path and os.path.isfile(self.path):
             try:
-                self._store = pickle.load(open(self.path, 'rb'))
+                with open(self.path, 'rb') as filei:
+                    self._store = pickle.load(filei)
                 if not isinstance(self._store, dict):
                     self._store = {}
             except Exception:
@@ -1083,7 +1087,8 @@ class Cache:
         """Update the persistence layer with the value of ``self._store``.
         """
         if self.updated and self.path:
-            pickle.dump(self._store, open(self.path, 'wb'))
+            with open(self.path, 'wb') as fileo:
+                pickle.dump(self._store, fileo)
             self.updated = False
 
     def clear(self, persist=False):
@@ -1280,7 +1285,8 @@ class MorphologicalParser(FomaFST, Parse):
         dictionary_path = self.my_morphology.get_file_path('dictionary')
         LOGGER.debug('in disambiguate: got dictionary path')
         try:
-            dictionary = pickle.load(open(dictionary_path, 'rb'))
+            with open(dictionary_path, 'rb') as filei:
+                dictionary = pickle.load(filei)
             LOGGER.debug('in disambiguate: pickle-loaded dictionary')
             result = {}
             for transcription, candidate_list in candidates.items():

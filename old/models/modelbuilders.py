@@ -39,7 +39,7 @@ def generate_default_administrator(**kwargs):
     admin.username = 'admin'
     admin.email = 'admin@example.com'
     admin.salt = generate_salt()
-    admin.password = str(encrypt_password('adminA_1', admin.salt))
+    admin.password = str(encrypt_password('adminA_1', admin.salt.encode('utf8')))
     admin.role = 'administrator'
     admin.input_orthography = None
     admin.output_orthography = None
@@ -56,7 +56,7 @@ def generate_default_contributor(**kwargs):
     contributor.email = 'contributor@example.com'
     contributor.salt = generate_salt()
     contributor.password = str(encrypt_password(
-        'contributorC_1', contributor.salt))
+        'contributorC_1', contributor.salt.encode('utf8')))
     contributor.role = 'contributor'
     contributor.input_orthography = None
     contributor.output_orthography = None
@@ -72,7 +72,7 @@ def generate_default_viewer(**kwargs):
     viewer.username = 'viewer'
     viewer.email = 'viewer@example.com'
     viewer.salt = generate_salt()
-    viewer.password = str(encrypt_password('viewerV_1', viewer.salt))
+    viewer.password = str(encrypt_password('viewerV_1', viewer.salt.encode('utf8')))
     viewer.role = 'viewer'
     viewer.input_orthography = None
     viewer.output_orthography = None
@@ -296,8 +296,8 @@ def get_language_objects(here, truncated=True):
         iso_639_3_file_path = os.path.join(
             languages_path, 'iso_639_3.tab')
     # QUESTION/TODO: codecs used in Python3 still?
-    iso_639_3_file = codecs.open(iso_639_3_file_path, 'r', 'utf-8')
-    language_list = [l.split('\t') for l in iso_639_3_file]
+    with codecs.open(iso_639_3_file_path, 'r', 'utf-8') as iso_639_3_file:
+        language_list = [l.split('\t') for l in iso_639_3_file]
     return [get_language_object(language) for language in language_list
             if len(language) == 8]
 

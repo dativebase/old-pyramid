@@ -8,6 +8,7 @@ from uuid import uuid4
 from formencode.validators import Invalid
 from pyramid.response import FileResponse
 
+from old import db_session_factory_registry
 import old.lib.constants as oldc
 from old.lib.foma_worker import (
     FOMA_WORKER_Q,
@@ -24,6 +25,10 @@ from old.views.resources import Resources
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def session_getter(settings):
+    return db_session_factory_registry.get_session(settings)()
 
 
 class Morphologicalparsers(Resources):
@@ -148,7 +153,7 @@ class Morphologicalparsers(Resources):
             morphparser.cache = Cache(
                 morphparser,
                 self.request.registry.settings,
-                get_dbsession_from_settings
+                session_getter
             )
             LOGGER.warning([h.normalize(w) for w in
                 TranscriptionsSchema.to_python(inputs)['transcriptions']])
@@ -217,7 +222,7 @@ class Morphologicalparsers(Resources):
             morphparser.cache = Cache(
                 morphparser,
                 self.request.registry.settings,
-                get_dbsession_from_settings
+                session_getter
             )
             directory = morphparser.directory
             lib_path = os.path.abspath(os.path.dirname(h.__file__))
@@ -316,7 +321,8 @@ class Morphologicalparsers(Resources):
                 'compile': compile_,
                 'user_id': self.logged_in_user.id,
                 'timeout': oldc.MORPHOLOGICAL_PARSER_COMPILE_TIMEOUT,
-                'config_path': self.request.registry.settings['__file__']
+                'config_path': self.request.registry.settings['__file__'],
+                'settings': self.request.registry.settings
             }
         })
         return morphparser

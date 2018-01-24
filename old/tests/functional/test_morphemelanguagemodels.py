@@ -188,7 +188,7 @@ class TestMorphemelanguagemodelsView(TestView):
         # Attempt to compute the perplexity of the LM before its files have been generated.  Expect this
         # to work: perplexity generation creates its own pairs of test/training sets.
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/compute_perplexity'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_perplexity_attempt = resp['perplexity_attempt']
@@ -204,14 +204,14 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Attempt to get the ARPA file of the LM before it exists and expect to fail.
         response = self.app.get(
-            '/morphemelanguagemodels/{id}/serve_arpa'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/serve_arpa'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin, status=404)
         resp = response.json_body
         assert resp['error'] == 'The ARPA file for morpheme language model %d has not been compiled yet.' % morpheme_language_model_id
 
         # Generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -225,7 +225,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Get the ARPA file of the LM as a viewer.
         response = self.app.get(
-            '/morphemelanguagemodels/{id}/serve_arpa'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/serve_arpa'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_view)
         assert response.content_type == 'text/plain'
         arpa = str(response.body, encoding='utf8')
@@ -239,7 +239,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Again generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -253,7 +253,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Attempt to get the ARPA file of the LM as a viewer but expect to fail this time.
         response = self.app.get(
-            '/morphemelanguagemodels/{id}/serve_arpa'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/serve_arpa'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_view, status=403)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -261,7 +261,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Attempt to get the ARPA file of the LM as an administrator and expect to succeed.
         response = self.app.get(
-            '/morphemelanguagemodels/{id}/serve_arpa'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/serve_arpa'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         assert response.content_type == 'text/plain'
         arpa = str(response.body, encoding='utf8')
@@ -276,7 +276,7 @@ class TestMorphemelanguagemodelsView(TestView):
             oldc.RARE_DELIMITER.join([u'chat', 'cat', 'N']))
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/get_probabilities'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         likely_word_log_prob = resp[likely_word]
@@ -304,7 +304,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -316,7 +316,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Get probabilities again
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/get_probabilities'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         new_likely_word_log_prob = resp[likely_word]
@@ -330,7 +330,7 @@ class TestMorphemelanguagemodelsView(TestView):
         # training (90%) and test (10%) sets and compute the perplexity of each test set according to 
         # the LM generated from its training set and return the average of these 5 perplexity calculations.
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/compute_perplexity'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_perplexity_attempt = resp['perplexity_attempt']
@@ -397,7 +397,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -410,7 +410,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Get the ARPA file of the LM.
         response = self.app.get(
-            '/morphemelanguagemodels/{id}/serve_arpa'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/serve_arpa'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         assert response.content_type == 'text/plain'
         arpa = str(response.body, encoding='utf8')
@@ -426,7 +426,7 @@ class TestMorphemelanguagemodelsView(TestView):
         unlikely_word = 'PHI N'
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/get_probabilities'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         likely_word_log_prob = resp[likely_word]
@@ -435,7 +435,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Compute the perplexity of the category-based language old_models.
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/compute_perplexity'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_perplexity_attempt = resp['perplexity_attempt']
@@ -816,7 +816,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -836,7 +836,7 @@ class TestMorphemelanguagemodelsView(TestView):
             oldc.RARE_DELIMITER.join([u'nit', '1', 'agra']))
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/get_probabilities'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         likely_word_log_prob = resp[likely_word]
@@ -845,7 +845,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Compute the perplexity of the LM 
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/compute_perplexity'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_perplexity_attempt = resp['perplexity_attempt']
@@ -889,7 +889,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -905,7 +905,7 @@ class TestMorphemelanguagemodelsView(TestView):
         unlikely_category_word = 'vai agra'
         ms_params = json.dumps({'morpheme_sequences': [likely_category_word, unlikely_category_word]})
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/get_probabilities'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         likely_category_word_log_prob = resp[likely_category_word]
@@ -914,7 +914,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Compute the perplexity of the LM 
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/compute_perplexity'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_perplexity_attempt = resp['perplexity_attempt']
@@ -1080,7 +1080,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -1093,7 +1093,7 @@ class TestMorphemelanguagemodelsView(TestView):
         # Get some probabilities: nit-ihpiyi should be more probable than ihpiyi-nit
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/get_probabilities'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         new_likely_word_log_prob = resp[likely_word]
@@ -1104,7 +1104,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Compute the perplexity of the LM 
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/compute_perplexity'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_perplexity_attempt = resp['perplexity_attempt']
@@ -1148,7 +1148,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -1161,7 +1161,7 @@ class TestMorphemelanguagemodelsView(TestView):
         # Get some probabilities: agra-vai should be more probable than vai-agra
         ms_params = json.dumps({'morpheme_sequences': [likely_category_word, unlikely_category_word]})
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/get_probabilities'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         new_likely_category_word_log_prob = resp[likely_category_word]
@@ -1172,7 +1172,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Compute the perplexity of the LM 
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/compute_perplexity'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_perplexity_attempt = resp['perplexity_attempt']
@@ -1239,7 +1239,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Generate the files of the language model
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/generate'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -1255,7 +1255,7 @@ class TestMorphemelanguagemodelsView(TestView):
         # than it was before.
         ms_params = json.dumps({'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/get_probabilities'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         newer_likely_word_log_prob = resp[likely_word]
@@ -1268,7 +1268,7 @@ class TestMorphemelanguagemodelsView(TestView):
 
         # Compute the perplexity of the LM 
         response = self.app.put(
-            '/morphemelanguagemodels/{id}/compute_perplexity'.format(id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/compute_perplexity'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_perplexity_attempt = resp['perplexity_attempt']

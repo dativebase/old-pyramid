@@ -45,6 +45,7 @@ class Phonologies(Resources):
                 'user_id': self.logged_in_user.id,
                 'timeout': oldc.PHONOLOGY_COMPILE_TIMEOUT,
                 'config_path': self.request.registry.settings['__file__'],
+                'settings': self.request.registry.settings
             }
         })
         return phonology

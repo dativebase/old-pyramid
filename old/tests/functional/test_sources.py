@@ -19,6 +19,7 @@ import pprint
 import re
 from time import sleep
 
+from old.lib.constants import OLD_NAME_DFLT
 from old.lib.bibtex import ENTRY_TYPES
 from old.lib.dbutils import DBUtils
 import old.lib.helpers as h
@@ -1189,7 +1190,7 @@ class TestSourcesView(TestView):
         dbsession = self.dbsession
         db = DBUtils(dbsession, self.settings)
         query_builder = SQLAQueryBuilder(dbsession, 'Source', settings=self.settings)
-        response = self.app.get('/sources/new_search', headers=self.json_headers,
+        response = self.app.get('/{old_name}/sources/new_search'.format(old_name=OLD_NAME_DFLT), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = response.json_body
         assert resp['search_parameters'] == query_builder.get_search_parameters()

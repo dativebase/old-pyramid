@@ -18,9 +18,12 @@ import json
 import logging
 
 import inflect
+
+from old.lib.constants import OLD_NAME_DFLT
+
+
 inflect_p = inflect.engine()
 inflect_p.classical()
-
 
 
 LOGGER = logging.getLogger(__name__)
@@ -33,38 +36,49 @@ class URL:
     etc. by calling ``url('create')``, ``url('show', id=1)``, etc.
     """
 
-    RSRCS_PATH = '/{collection_name}'
-    RSRC_PATH = '/{collection_name}/{id_}'
-    RSRC_EDIT_PATH = '/{collection_name}/{id_}/edit'
-    RSRC_NEW_PATH = '/{collection_name}/new'
-    RSRC_NEW_SRCH_PATH = '/{collection_name}/new_search'
-    RSRC_HIST_PATH = '/{collection_name}/{id_}/history'
-    RSRC_SRCH_POST_PATH = '/{collection_name}/search'
+    RSRCS_PATH = '/{old_name}/{collection_name}'
+    RSRC_PATH = '/{old_name}/{collection_name}/{id_}'
+    RSRC_EDIT_PATH = '/{old_name}/{collection_name}/{id_}/edit'
+    RSRC_NEW_PATH = '/{old_name}/{collection_name}/new'
+    RSRC_NEW_SRCH_PATH = '/{old_name}/{collection_name}/new_search'
+    RSRC_HIST_PATH = '/{old_name}/{collection_name}/{id_}/history'
+    RSRC_SRCH_POST_PATH = '/{old_name}/{collection_name}/search'
 
     def __init__(self, collection_name='resources'):
         self.collection_name = collection_name
 
     def __call__(self, route_name, **kwargs):
         if route_name in ('index', 'create', 'search'):
-            return self.RSRCS_PATH.format(collection_name=self.collection_name)
+            return self.RSRCS_PATH.format(
+                collection_name=self.collection_name,
+                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
         elif route_name in ('show', 'delete', 'update'):
-            return self.RSRC_PATH.format(collection_name=self.collection_name,
-                                         id_=kwargs.get('id'))
+            return self.RSRC_PATH.format(
+                collection_name=self.collection_name,
+                id_=kwargs.get('id'),
+                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
         elif route_name == 'new':
             return self.RSRC_NEW_PATH.format(
-                collection_name=self.collection_name)
+                collection_name=self.collection_name,
+                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
         elif route_name == 'edit':
             return self.RSRC_EDIT_PATH.format(
-                collection_name=self.collection_name, id_=kwargs.get('id'))
+                collection_name=self.collection_name,
+                id_=kwargs.get('id'),
+                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
         elif route_name == 'history':
             return self.RSRC_HIST_PATH.format(
-                collection_name=self.collection_name, id_=kwargs.get('id'))
+                collection_name=self.collection_name,
+                id_=kwargs.get('id'),
+                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
         elif route_name == 'new_search':
             return self.RSRC_NEW_SRCH_PATH.format(
-                collection_name=self.collection_name)
+                collection_name=self.collection_name,
+                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
         elif route_name == 'search_post':
             return self.RSRC_SRCH_POST_PATH.format(
-                collection_name=self.collection_name)
+                collection_name=self.collection_name,
+                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
         else:
             return None
 

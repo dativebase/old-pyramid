@@ -15,6 +15,7 @@
 import logging
 import json
 
+from old.lib.constants import OLD_NAME_DFLT
 from old.lib.dbutils import DBUtils
 from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
 import old.models as old_models
@@ -77,7 +78,7 @@ class TestFormbackupsView(TestView):
         })
         params = json.dumps(params)
         response = self.app.post(
-            '/forms', params, self.json_headers, contrib)
+            '/{}/forms'.format(OLD_NAME_DFLT), params, self.json_headers, contrib)
         form_count = dbsession.query(old_models.Form).count()
         resp = response.json_body
         form_id = resp['id']
@@ -94,7 +95,7 @@ class TestFormbackupsView(TestView):
             'enterer': administrator_id  # This should change nothing.
         })
         params = json.dumps(params)
-        response = self.app.put('/forms/{}'.format(form_id), params,
+        response = self.app.put('/{}/forms/{}'.format(OLD_NAME_DFLT, form_id), params,
                         self.json_headers, admin)
         resp = response.json_body
         form_count = dbsession.query(old_models.Form).count()
@@ -324,7 +325,7 @@ class TestFormbackupsView(TestView):
         query_builder = SQLAQueryBuilder(
             dbsession, 'FormBackup', settings=self.settings)
         response = self.app.get(
-            '/formbackups/new_search', headers=self.json_headers,
+            '/{}/formbackups/new_search'.format(OLD_NAME_DFLT), headers=self.json_headers,
             extra_environ=self.extra_environ_view)
         resp = response.json_body
         assert resp['search_parameters'] == query_builder.get_search_parameters()

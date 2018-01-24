@@ -98,39 +98,27 @@ that the files that are crucial to a parser's parsing functionality are
 
 """
 
-from uuid import uuid4
-import os
-import re
 import codecs
 from hashlib import md5
+import json
+import logging
+import os
+import re
+from shutil import copyfile
+from uuid import uuid4
+
 from sqlalchemy import Column, Sequence, ForeignKey, engine_from_config
 from sqlalchemy.dialects import mysql
 from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
 from sqlalchemy.orm import relation, sessionmaker
-from .meta import Base, now
-from old.lib.parser import MorphologicalParser, LanguageModel, MorphologyFST, PhonologyFST
-from shutil import copyfile
-import logging
-import json
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import transaction
 
-LOGGER = logging.getLogger(__name__)
-
-
-def get_engine(settings, prefix='sqlalchemy.'):
-    return engine_from_config(settings, prefix)
-
-
-def get_session_factory(engine):
-    factory = sessionmaker()
-    factory.configure(bind=engine)
-    return factory
+from old.lib.parser import MorphologicalParser, LanguageModel, MorphologyFST, PhonologyFST
+from .meta import Base, now
 
 
 LOGGER = logging.getLogger(__name__)
+
 
 class Parse(Base):
     """A parse is a parser-specific mapping from a transcription to a parse.
@@ -254,15 +242,18 @@ class MorphologicalParser(MorphologicalParser, Base):
                     self.changed = True
 
     def write(self):
-        """Write the parser's morphophonology files and copy select attribute values of LM & morphology.
+        """Write the parser's morphophonology files and copy select attribute
+        values of LM & morphology.
 
-        :returns: None; but writes files to disk and sets attribute values.  An overview:
+        :returns: None; but writes files to disk and sets attribute values.  An
+        overview:
 
         1. Generate and write to disk the morphophonology script
-        2. Make copies of the phonology, morphology and LM attributes relevant to parsing behaviour
+        2. Make copies of the phonology, morphology and LM attributes relevant
+           to parsing behaviour
         3. Copy the language model's pickled trie file
-        4. Copy the morphology's pickled dictionary file (if lacking rich morpheme representations)
-
+        4. Copy the morphology's pickled dictionary file (if lacking rich
+           morpheme representations)
         """
 
         self.generate_succeeded = False
@@ -322,12 +313,12 @@ class MorphologicalParser(MorphologicalParser, Base):
                 f.write('define morphophonology ?*;\n')
 
     def replicate_lm(self):
-        """Copy the parser's LM's trie pickle and ARPA files to the parser's directory.
+        """Copy the parser's LM's trie pickle and ARPA files to the parser's
+        directory.
 
-        If this results in a new trie pickle or arpa file being written, set ``self.changed = True``.
-
+        If this results in a new trie pickle or arpa file being written, set
+        ``self.changed = True``.
         """
-
         trie_path = self.language_model.get_file_path('trie')
         arpa_path = self.language_model.get_file_path('arpa')
         my_language_model = LanguageModel(parent_directory=self.directory)
@@ -335,43 +326,49 @@ class MorphologicalParser(MorphologicalParser, Base):
         replicated_arpa_path = my_language_model.get_file_path('arpa')
         self.copy_file(trie_path, replicated_trie_path)
         self.copy_file(arpa_path, replicated_arpa_path)
+        try:
+            del self._my_language_model
+        except AttributeError:
+            pass
+        try:
+            del self.language_model._trie
+        except AttributeError:
+            pass
 
     def replicate_morphology(self):
-        """Copy the parser's morphology's foma script and dictionary pickle files (if
-        either exist) to the parser's directory.
+        """Copy the parser's morphology's foma script and dictionary pickle
+        files (if either exist) to the parser's directory.
 
-        If this results in any new files being written, set ``self.changed = True``.
-
+        If this results in any new files being written, set ``self.changed =
+        True``.
         """
-
         my_morphology = MorphologyFST(parent_directory=self.directory)
-
         if not self.morphology.rich_upper:
             dictionary_path = self.morphology.get_file_path('dictionary')
             if os.path.isfile(dictionary_path):
                 replicated_dictionary_path = my_morphology.get_file_path('dictionary')
                 self.copy_file(dictionary_path, replicated_dictionary_path)
-
         script_path = self.morphology.get_file_path('script')
         if os.path.isfile(script_path):
             replicated_script_path = my_morphology.get_file_path('script')
             self.copy_file(script_path, replicated_script_path)
+        try:
+            del self._my_morphology
+        except AttributeError:
+            pass
 
     def replicate_phonology(self):
         """Copy the parser's phonology's foma script and binary files (if
         either exist) to the parser's directory.
 
-        If this results in any new files being written, set ``self.changed = True``.
-
+        If this results in any new files being written, set ``self.changed =
+        True``.
         """
-
         my_phonology = PhonologyFST(parent_directory=self.directory)
-
         script_path = self.phonology.get_file_path('script')
         if os.path.isfile(script_path):
             replicated_script_path = my_phonology.get_file_path('script')
             self.copy_file(script_path, replicated_script_path)
-
         binary_path = self.phonology.get_file_path('binary')
         if os.path.isfile(binary_path):
             replicated_binary_path = my_phonology.get_file_path('binary')
@@ -380,11 +377,11 @@ class MorphologicalParser(MorphologicalParser, Base):
     def copy_file(self, src, dst):
         """Copy the file at ``src`` to ``dst``.
 
-        Set ``self.changed`` to ``True`` if the copying results in a change to the
-        file at ``dst``.  Note that we only perform the (potentially expensive) check
-        for a change to the destination file if ``self.changed`` is ``False``, i.e., if
-        the core attributes of our parser have not yet changed.
-
+        Set ``self.changed`` to ``True`` if the copying results in a change to
+        the file at ``dst``.  Note that we only perform the (potentially
+        expensive) check for a change to the destination file if
+        ``self.changed`` is ``False``, i.e., if the core attributes of our
+        parser have not yet changed.
         """
         dst_existed = False
         pre_hash = None
@@ -396,7 +393,7 @@ class MorphologicalParser(MorphologicalParser, Base):
         if not self.changed:
             if dst_existed:
                 post_hash = self.get_hash(dst)
-                self.changed = pre_hash == post_hash
+                self.changed = pre_hash != post_hash
             else:
                 if os.path.isfile(dst):
                     self.changed = True
@@ -470,12 +467,13 @@ class MorphologicalParser(MorphologicalParser, Base):
 
     @property
     def my_language_model(self):
-        """Here we override the default ``my_language_model`` property and provide one which
-        defaults to a minimal LanguageModel instance generated on the fly using attribute
-        values copied from ``self.language_model`` at parser create/update time.  Note that
-        we construct this LM instance with only those attributes needed to successfully call
-        ``self.get_most_probable`` (which is called by ``self.parse``).
-
+        """Here we override the default ``my_language_model`` property and
+        provide one which defaults to a minimal LanguageModel instance
+        generated on the fly using attribute values copied from
+        ``self.language_model`` at parser create/update time.  Note that we
+        construct this LM instance with only those attributes needed to
+        successfully call ``self.get_most_probable`` (which is called by
+        ``self.parse``).
         """
         try:
             return self._my_language_model
@@ -532,12 +530,12 @@ class Cache(object):
         self._store[k] = v
 
     def __getitem__(self, k):
-        # LOGGER.warn('DB_CACHE.__getitem__(%s) CALLED' % k)
         try:
             return self._store[k]
         except KeyError as e:
-            with transaction.manager:
+            try:
                 dbsession = self.session_getter(self.settings)
+                dbsession.expunge_all()
                 parse = dbsession.query(Parse).filter(
                     Parse.parser_id==self.parser.id).filter(
                     Parse.transcription==k).first()
@@ -547,6 +545,9 @@ class Cache(object):
                     return self._store[k]
                 else:
                     raise e
+            finally:
+                dbsession.commit()
+                dbsession.close()
 
     def get(self, k, default=None):
         try:
@@ -565,7 +566,7 @@ class Cache(object):
         """Update the persistence layer with the value of ``self._store``.
         """
         if self.updated:
-            with transaction.manager:
+            try:
                 dbsession = self.session_getter(self.settings)
                 persisted = [
                     parse.transcription for parse in dbsession.query(Parse).\
@@ -578,9 +579,11 @@ class Cache(object):
                             for transcription, (parse, candidates) in self._store.items()
                             if transcription not in persisted]
                 dbsession.add_all(unpersisted)
-                transaction.commit()
                 # LOGGER.warn('DB_CACHE: PERSISTED %s' % u', '.join([p.transcription for p in unpersisted]))
                 self.updated = False
+            finally:
+                dbsession.commit()
+                dbsession.close()
 
     def json_dumps_candidates(self, candidates):
         candidates = json.dumps(candidates)
@@ -599,21 +602,26 @@ class Cache(object):
         """
         self._store = {}
         if persist:
-            engine = create_engine(self.settings['sqlalchemy.url'])
-            Session = sessionmaker(bind=engine)
-            dbsession = Session()
-            delete = Parse.__table__.delete().where(
-                Parse.__table__.c.parser_id==self.parser.id)
-            dbsession.execute(delete)
-            dbsession.commit()
+            try:
+                dbsession = self.session_getter(self.settings)
+                delete = Parse.__table__.delete().where(
+                    Parse.__table__.c.parser_id==self.parser.id)
+                dbsession.execute(delete)
+            finally:
+                dbsession.commit()
+                dbsession.close()
 
     def export(self):
-        """Update the local store with the persistence layer and return the store.
+        """Update the local store with the persistence layer and return the
+        store.
         """
-        with transaction.manager:
+        try:
             dbsession = self.session_getter(self.settings)
             persisted = {p.transcription: (p.parse, json.loads(p.candidates))
                          for p in dbsession.query(Parse).filter(
                              Parse.parser_id==self.parser.id).all()}
             self._store.update(persisted)
             return self._store
+        finally:
+            dbsession.commit()
+            dbsession.close()

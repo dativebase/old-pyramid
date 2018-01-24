@@ -35,15 +35,16 @@ class Morphologies(Resources):
         if self.request.GET.get('script') == '1':
             morphology_script_path = morphology.get_file_path('script')
             if os.path.isfile(morphology_script_path):
-                morphology_dict['script'] = codecs.open(
-                    morphology_script_path, mode='r', encoding='utf8').read()
+                with codecs.open(morphology_script_path, mode='r',
+                                 encoding='utf8') as filei:
+                    morphology_dict['script'] = filei.read()
             else:
                 morphology_dict['script'] = ''
         if self.request.GET.get('lexicon') == '1':
             morphology_lexicon_path = morphology.get_file_path('lexicon')
             if os.path.isfile(morphology_lexicon_path):
-                morphology_dict['lexicon'] = pickle.load(
-                    open(morphology_lexicon_path, 'rb'))
+                with open(morphology_lexicon_path, 'rb') as filei:
+                    morphology_dict['lexicon'] = pickle.load(filei)
             else:
                 morphology_dict['lexicon'] = {}
         return morphology_dict
@@ -90,6 +91,7 @@ class Morphologies(Resources):
                 'user_id': self.logged_in_user.id,
                 'timeout': oldc.MORPHOLOGY_COMPILE_TIMEOUT,
                 'config_path': self.request.registry.settings['__file__'],
+                'settings': self.request.registry.settings
             }
         })
         return morphology

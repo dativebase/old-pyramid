@@ -538,7 +538,6 @@ class TestCorporaView(TestView):
         resp = response.json_body
         corpus_count = new_corpus_count
         new_corpus_count = dbsession.query(Corpus).count()
-        dbsession.expire(corpus)
         our_corpus_datetime_modified = dbsession.query(Corpus).get(corpus_id).datetime_modified
         assert our_corpus_datetime_modified.strftime(oldc.ISO_STRFTIME) == datetime_modified
         assert corpus_count == new_corpus_count
@@ -632,7 +631,6 @@ class TestCorporaView(TestView):
         assert resp['content'] == test_corpus_content
 
         # Trying to get the deleted corpus from the db should return None
-        dbsession.expire(corpus)
         deleted_corpus = dbsession.query(Corpus).get(corpus_id)
         assert deleted_corpus == None
 
@@ -1004,7 +1002,7 @@ class TestCorporaView(TestView):
         extra_environ = {'test.authentication.role': 'contributor',
                         'test.application_settings': True}
         response = self.app.get(
-            '/corpora/{}/history'.format(corpus_id),
+            url('history', id=corpus_id),
             headers=self.json_headers, extra_environ=extra_environ)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -1039,7 +1037,7 @@ class TestCorporaView(TestView):
         # as the one retrieved above
         corpus_UUID = resp['corpus']['UUID']
         response = self.app.get(
-            '/corpora/{}/history'.format(corpus_UUID),
+            url('history', id=corpus_UUID),
             headers=self.json_headers, extra_environ=extra_environ)
         resp_UUID = response.json_body
         assert resp == resp_UUID
@@ -1049,13 +1047,13 @@ class TestCorporaView(TestView):
         bad_id = 103
         bad_UUID = str(uuid4())
         response = self.app.get(
-            '/corpora/{}/history'.format(bad_id),
+            url('history', id=bad_id),
             headers=self.json_headers, extra_environ=extra_environ,
             status=404)
         resp = response.json_body
         assert resp['error'] == 'No corpora or corpus backups match %d' % bad_id
         response = self.app.get(
-            '/corpora/{}/history'.format(bad_UUID),
+            url('history', id=bad_UUID),
             headers=self.json_headers, extra_environ=extra_environ,
             status=404)
         resp = response.json_body
@@ -1067,7 +1065,7 @@ class TestCorporaView(TestView):
 
         # ... and get its history again, this time using the corpus's UUID
         response = self.app.get(
-            '/corpora/{}/history'.format(corpus_UUID),
+            url('history', id=corpus_UUID),
             headers=self.json_headers, extra_environ=extra_environ)
         by_UUID_resp = response.json_body
         assert by_UUID_resp['corpus'] == None
@@ -1100,7 +1098,7 @@ class TestCorporaView(TestView):
         # Get the deleted corpus's history again, this time using its id.  The 
         # response should be the same as the response received using the UUID.
         response = self.app.get(
-            '/corpora/{}/history'.format(corpus_id),
+            url('history', id=corpus_id),
             headers=self.json_headers, extra_environ=extra_environ)
         by_corpus_id_resp = response.json_body
         assert by_corpus_id_resp == by_UUID_resp

@@ -211,3 +211,6 @@ JSONDecodeErrorResponse = {
 # ignore milliseconds on purpose. Reason: stupid MySQL doesn't support them in
 # standard versions.
 ISO_STRFTIME = '%Y-%m-%dT%H:%M:%S.%f'
+
+
+OLD_NAME_DFLT = 'old'

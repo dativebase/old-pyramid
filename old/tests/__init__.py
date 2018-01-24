@@ -16,8 +16,9 @@
 """Machinery for functional tests for the OLD Pyramid app."""
 
 from io import StringIO, BytesIO
-import json
 import gzip
+import json
+import logging
 import os
 import random
 from time import sleep
@@ -33,7 +34,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 import webtest
 
-from old import main
+from old import main, db_session_factory_registry
 import old.lib.helpers as h
 from old.lib.dbutils import (
     get_model_names,
@@ -42,21 +43,13 @@ from old.lib.dbutils import (
 from old.models.meta import Base
 import old.models.modelbuilders as omb
 from old.views.tags import Tags
-from old.models import (
-    get_engine,
-    get_session_factory,
-    get_tm_session,
-)
 import old.models as old_models
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 __all__ = ['TestView', 'add_SEARCH_to_web_test_valid_methods', 'get_file_size']
-
-
-# TODO: how to initialize the test database?
-# In Pylons, we did:
-# SetupCommand('setup-app').run([pylons.test.pylonsapp.config['__file__']])
-
 
 
 def add_SEARCH_to_web_test_valid_methods():
@@ -76,9 +69,7 @@ CONFIG = {
 }
 APP = webtest.TestApp(main(CONFIG, **SETTINGS))
 dburl = SETTINGS['sqlalchemy.url']
-engine = create_engine(dburl)
-session_factory = sessionmaker(bind=engine)
-Session = scoped_session(session_factory)
+Session = db_session_factory_registry.get_session(SETTINGS)
 
 
 class TestView(TestCase):
@@ -96,7 +87,6 @@ class TestView(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        engine.dispose()
         Session.close_all()
 
     def setUp(self):
@@ -119,7 +109,6 @@ class TestView(TestCase):
             h.destroy_all_directories(self.inflect_p.plural(dir_name),
                                       self.settings)
         self.tear_down_dbsession()
-        #testing.tearDown()
 
     def tear_down_dbsession(self):
         self.dbsession.commit()
@@ -128,12 +117,12 @@ class TestView(TestCase):
     def default_setup(self):
         self.settings = SETTINGS
         self.config = CONFIG
+        self.Session = Session
         self.dbsession = Session()
         self.app = APP
         setup_logging('test.ini#loggers')
         self._setattrs()
         self._setcreateparams()
-        #testing.setUp()
 
     def create_db(self):
         # Create the database tables

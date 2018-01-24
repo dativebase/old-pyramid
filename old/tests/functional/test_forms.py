@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from base64 import encodestring
+from base64 import encodebytes
 import datetime
 import json
 import logging
@@ -23,6 +23,7 @@ from uuid import uuid4
 
 from sqlalchemy.sql import desc
 
+from old.lib.constants import OLD_NAME_DFLT
 from old.lib.dbutils import DBUtils
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 import old.models.modelbuilders as omb
@@ -779,6 +780,8 @@ class TestFormsView(TestView):
         foreign_word_tag = omb.generate_foreign_word_tag()
         dbsession.add(foreign_word_tag)
         dbsession.commit()
+        dbsession.expunge_all()
+
         params = self.form_create_params.copy()
         params.update({
             'narrow_phonetic_transcription': 'f`ore_n',
@@ -796,8 +799,13 @@ class TestFormsView(TestView):
                                     retain_extra_environ)
         resp = response.json_body
         form_count = dbsession.query(old_models.Form).count()
-        #application_settings = response.g.application_settings
         application_settings = db.current_app_set
+
+        x = application_settings.get_transcription_inventory(
+            'narrow_phonetic', db).input_list
+        print('KANGAROO')
+        print(x)
+
         assert ('f`ore_n' in
                 application_settings.get_transcription_inventory(
                     'narrow_phonetic', db).input_list)
@@ -994,8 +1002,8 @@ class TestFormsView(TestView):
 
         # Then create two files, one restricted and one not.
         wav_file_path = os.path.join(self.test_files_path, 'old_test.wav')
-        wav_file_base64 = encodestring(open(wav_file_path, 'rb').read())\
-            .decode('utf8')
+        with open(wav_file_path, 'rb') as filei:
+            wav_file_base64 = encodebytes(filei.read()).decode('utf8')
 
         params = self.file_create_params.copy()
         params.update({
@@ -1373,7 +1381,6 @@ class TestFormsView(TestView):
         response = self.app.post(url('create'), new_params,
                                     self.json_headers,
                                     self.extra_environ_admin)
-        dbsession.expire(updated_word)
         updated_word = dbsession.query(old_models.Form).get(id_)
         new_morpheme_break_ids_of_word = json.loads(
             updated_word.morpheme_break_ids)
@@ -1561,7 +1568,6 @@ class TestFormsView(TestView):
         # expect to succeed. Show that translations get deleted when forms
         # do but many-to-many relations (e.g., tags and files) and
         # many-to-one relations (e.g., speakers) do not.
-        dbsession.expire(translation)
         extra_environ = {'test.authentication.id': my_contributor_id}
         response = self.app.delete(url('delete', id=to_delete_id),
                                 extra_environ=extra_environ)
@@ -1693,12 +1699,9 @@ class TestFormsView(TestView):
         # We have to re-create a new ``DBUtils`` object because the
         # existing one caches _foreign_word_transcriptions
         db = DBUtils(dbsession, self.settings)
-        dbsession.expire(application_settings)
         application_settings = dbsession.query(
             old_models.ApplicationSettings).order_by(
                 desc(old_models.ApplicationSettings.id)).first()
-        # Following is necessary because SQLA for some reason keeps this non-db
-        # instance attr even after expire above ...?
         application_settings._orthographic_inv = None
         assert ('test_delete_transcription' not in
                 application_settings.get_transcription_inventory(
@@ -2325,13 +2328,13 @@ class TestFormsView(TestView):
         # ids to remember and expect to get it back.
         administrator = dbsession.query(old_models.User).filter(old_models.User.role=='administrator').first()
         administrator_datetime_modified = administrator.datetime_modified
+        dbsession.expire(administrator)
         sleep(1)
         params = json.dumps({'forms': form_ids})
-        response = self.app.post('/forms/remember',
+        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
             params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
-        dbsession.expire(administrator)
         administrator = dbsession.query(old_models.User).filter(old_models.User.role=='administrator').first()
         assert response.content_type == 'application/json'
         assert len(resp) == len(form_ids)
@@ -2343,7 +2346,7 @@ class TestFormsView(TestView):
         bad_params = form_ids[:]
         bad_params.append('a')
         bad_params = json.dumps({'forms': bad_params})
-        response = self.app.post('/forms/remember',
+        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
             bad_params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -2354,7 +2357,7 @@ class TestFormsView(TestView):
         bad_params = form_ids[:]
         bad_params.append(bad_id)
         bad_params = json.dumps({'forms': bad_params})
-        response = self.app.post('/forms/remember',
+        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
             bad_params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -2362,7 +2365,7 @@ class TestFormsView(TestView):
 
         # Bad JSON parameters will return its own 400 error.
         bad_JSON = '[%d, %d, %d' % tuple(form_ids)
-        response = self.app.post('/forms/remember',
+        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
             bad_JSON, headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -2371,7 +2374,7 @@ class TestFormsView(TestView):
 
         # An empty list ...
         empty_list = json.dumps([])
-        response = self.app.post('/forms/remember',
+        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
             empty_list, headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=404)
         resp = response.json_body
@@ -2381,7 +2384,7 @@ class TestFormsView(TestView):
         # Re-issue the same remember request that succeeded previously.  Expect
         # user.remembered_forms to be unchanged (i.e., auto-duplicate removal)
         params = json.dumps({'forms': form_ids})
-        response = self.app.post('/forms/remember',
+        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
             params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -2423,7 +2426,7 @@ class TestFormsView(TestView):
         # returned.
         extra_environ_viewer = {'test.authentication.role': 'viewer'}
         params = json.dumps({'forms': form_ids})
-        response = self.app.post('/forms/remember',
+        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
             params, headers=self.json_headers,
             extra_environ=extra_environ_viewer, status=403)
         resp = response.json_body
@@ -2437,7 +2440,7 @@ class TestFormsView(TestView):
         # Finally, request to remember only the restricted form as a viewer.
         # Expect a 403 error.
         params = json.dumps({'forms': [form1_id]})
-        response = self.app.post('/forms/remember',
+        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
             params, headers=self.json_headers,
             extra_environ=extra_environ_viewer, status=403)
         resp = response.json_body
@@ -2922,7 +2925,11 @@ class TestFormsView(TestView):
             body=json_query, headers=self.json_headers, environ=self.extra_environ_admin)
         resp2 = response.json_body
         assert [f['id'] for f in resp] == [f['id'] for f in resp2]
-        assert [f['datetime_modified'] for f in resp2] != [f['datetime_modified'] for f in resp]
+        assert [f['datetime_modified'] for f in resp2] != [
+                f['datetime_modified'] for f in resp]
+
+        print('gangsta')
+        print(resp2[0]['morpheme_break_ids'])
 
         assert resp2[0]['morpheme_break_ids'][0][0][0][1] == '1'
         assert resp2[0]['morpheme_break_ids'][0][0][0][2] == 'Num'
@@ -2982,7 +2989,6 @@ class TestFormsView(TestView):
 
         # Update the morpheme_gloss value of the lexical form 'y' and expect the
         # phrasal form 'xyz' to get updated too.
-        dbsession.expire(xyz_phrase)
         y_params = json.loads(y_params)
         y_params['morpheme_gloss'] = '88'
         y_params = json.dumps(y_params)
@@ -3000,7 +3006,6 @@ class TestFormsView(TestView):
 
         # Update the syntactic category of the lexical form 'z' and expect the
         # phrasal form 'xyz' to get updated too.
-        dbsession.expire(xyz_phrase)
         z_params = json.loads(z_params)
         z_params['syntactic_category'] = NId
         z_params = json.dumps(z_params)
@@ -3024,7 +3029,6 @@ class TestFormsView(TestView):
 
         # Update the lexical form 'z' in a way that is irrelevant to the phrasal
         # form 'xyz'; expect 'xyz' to be unaffected.
-        dbsession.expire(xyz_phrase)
         z_params = json.loads(z_params)
         z_params['transcription'] = 'zZz'
         z_params['translations'] = [{'transcription': '999', 'grammaticality': ''}]
@@ -3052,7 +3056,6 @@ class TestFormsView(TestView):
         response = self.app.post(url('create'), x2_params, self.json_headers, extra_environ)
         x2_id = response.json_body['id']
 
-        dbsession.expire(new_xyz_phrase)
         xyz_phrase = dbsession.query(old_models.Form).get(xyz_id)
         xyz_morpheme_gloss_ids = json.loads(xyz_phrase.morpheme_gloss_ids)
         xyz_morpheme_break_ids = json.loads(xyz_phrase.morpheme_break_ids)
@@ -3067,7 +3070,6 @@ class TestFormsView(TestView):
         assert xyz_phrase.syntactic_category_string == 'Agr-N-N'
 
         # Delete the 'y' morpheme and expect the 'xyz' phrase to be udpated.
-        dbsession.expire(xyz_phrase)
         response = self.app.delete(url('delete', id=y_id), headers=self.json_headers,
                                 extra_environ=extra_environ)
         xyz_phrase = dbsession.query(old_models.Form).get(xyz_id)
@@ -3083,7 +3085,6 @@ class TestFormsView(TestView):
 
         # Delete the 'x/7' morpheme and expect the 'xyz' phrase to be udpated.  The
         # partial match 'xx/7' morpheme will now again be referenced in xyz_form.morpheme_gloss_ids
-        dbsession.expire(xyz_phrase)
         response = self.app.delete(url('delete', id=x2_id), headers=self.json_headers, extra_environ=extra_environ)
         xyz_phrase = dbsession.query(old_models.Form).get(xyz_id)
         xyz_morpheme_gloss_ids = json.loads(xyz_phrase.morpheme_gloss_ids)
@@ -3102,7 +3103,6 @@ class TestFormsView(TestView):
         # to be updated (shows that potentially affected forms are discovered by
         # searching for matches to the altered lexcical item's current *and* previous
         # states.)
-        dbsession.expire(xyz_phrase)
         z_params = json.loads(z_params)
         z_params['morpheme_break'] = 'm'
         z_params['morpheme_gloss'] = '4'

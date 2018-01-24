@@ -347,6 +347,8 @@ class Forms(Resources):
             return UNAUTHORIZED_MSG
         user_model.remembered_forms += unrestricted_forms
         user_model.datetime_modified = h.now()
+        self.request.dbsession.add(user_model)
+        self.request.dbsession.flush()
         self.request.session['user'] = user_model.get_dict()
         return [f.id for f in unrestricted_forms]
 

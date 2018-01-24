@@ -92,7 +92,7 @@ class ValidTranslations(FancyValidator):
 
     accept_iterator = True
 
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         def create_translation(dict_):
             translation = old_models.Translation()
             translation.transcription = h.to_single_space(
@@ -131,7 +131,7 @@ class ValidOrthographicTranscription(UnicodeString):
                                  ' character are permitted.'
     }
 
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         transcription = h.to_single_space(h.normalize(value))
         if (not form_is_foreign_word(state.full_dict, state.db) and
                 not transcription_is_valid(
@@ -156,7 +156,7 @@ class ValidNarrowPhoneticTranscription(UnicodeString):
                                  ' the space character are permitted.'
     }
 
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         transcription = h.to_single_space(h.normalize(value))
         if (not form_is_foreign_word(state.full_dict, state.db) and
                 not transcription_is_valid(
@@ -182,7 +182,7 @@ class ValidBroadPhoneticTranscription(UnicodeString):
                                  ' the space character are permitted.'
     }
 
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         transcription = h.to_single_space(h.normalize(value))
         if (not form_is_foreign_word(state.full_dict, state.db) and
                 not transcription_is_valid(
@@ -209,7 +209,7 @@ class ValidMorphemeBreakTranscription(UnicodeString):
                                  ' permitted.'
     }
 
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         transcription = h.to_single_space(h.normalize(value))
         morpheme_break_is_orthographic = (
             state.db.current_app_set.morpheme_break_is_orthographic)
@@ -265,7 +265,7 @@ class ValidGrammaticality(FancyValidator):
                                   ' any of the available options.'
     }
 
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         valid_grammaticalities = state.db.get_grammaticalities()
         if value not in valid_grammaticalities:
             raise Invalid(self.message("invalid_grammaticality", state),
@@ -285,7 +285,7 @@ class ValidOLDModelObject(FancyValidator):
             'You are not authorized to access the %(model_name_eng)s with id %(id)d.'
     }
 
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         if value in ['', None]:
             return None
         else:
@@ -325,7 +325,7 @@ class AtLeastOneTranscriptionTypeValue(FancyValidator):
                          ' phonetic transcription, or narrow phonetic'
                          ' transcription.'
     }
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         if (not values['transcription'].strip()) and \
         (not values['phonetic_transcription'].strip()) and \
         (not values['narrow_phonetic_transcription'].strip()) and \
@@ -405,7 +405,7 @@ class ValidBase64EncodedFile(String):
         'invalid_base64_encoded_file': 'The uploaded file must be base64'
                                        ' encoded.'
     }
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         try:
             return b64decode(value)
         except (TypeError, UnicodeEncodeError):
@@ -423,7 +423,7 @@ class ValidFileName(UnicodeString):
                         ' %(MIME_type)s is not allowed.'
     }
 
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         MIME_type_from_ext = guess_type(value)[0]
         if MIME_type_from_ext in oldc.ALLOWED_FILE_TYPES:
             return h.clean_and_secure_filename(value)
@@ -458,7 +458,7 @@ class AddMIMETypeToValues(FancyValidator):
         'mismatched_type': 'The file extension does not match the file\'s true'
                            ' type (%(x)s vs. %(y)s, respectively).'
     }
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         MIME_type_from_filename = guess_type(values['filename'])[0]
         if 'base64_encoded_file' in values:
             contents = values['base64_encoded_file'][:1024]
@@ -535,7 +535,7 @@ class ValidAudioVideoFile(FancyValidator):
                    ' file.'
     }
 
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         if value in ['', None]:
             raise Invalid(self.message('empty', state), value, state)
         else:
@@ -572,7 +572,7 @@ class ValidSubinterval(FancyValidator):
         'invalid': 'The start value must be less than the end value.',
         'not_numbers': 'The start and end values must be numbers.'
     }
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         if (not isinstance(values['start'], (int, float)) or
                 not isinstance(values['end'], (int, float))):
             raise Invalid(self.message('not_numbers', state), values, state)
@@ -602,7 +602,7 @@ class ValidMIMEType(FancyValidator):
     messages = {'invalid_type': 'The file upload failed because the file type'
                                 ' %(MIME_type)s is not allowed.'}
 
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         if value not in oldc.ALLOWED_FILE_TYPES:
             raise Invalid(
                 self.message('invalid_type', state, MIME_type=value),
@@ -656,7 +656,7 @@ class GetMorphemeDelimiters(FancyValidator):
     """Remove redundant commas and whitespace from the string representing the
     morpheme delimiters.
     """
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         value = h.remove_all_white_space(value)
         return ','.join([d for d in value.split(',') if d])
 
@@ -706,7 +706,7 @@ class ValidBibTeXEntryType(FancyValidator):
                                 ' entry type'
     }
 
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         if value.lower() in bibtex.ENTRY_TYPES.keys():
             return value.lower()
         else:
@@ -728,7 +728,7 @@ class ValidBibTexKey(FancyValidator):
         'bibtex_key_not_unique': 'The submitted source key is not unique'
     }
 
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         valid = ('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX'
                  'YZ!"#$%&\'()*+-./:;<=>?@[\\]^_`{|}~')
         if set(list(value)) - set(list(valid)):
@@ -795,7 +795,7 @@ class ValidBibTeXEntry(FancyValidator):
         else:
             return None
 
-    def validate_python(self, values, state):
+    def _validate_python(self, values, state):
         invalid = False
         type_ = values.get('type', '')
         required_fields, disjunctively_required_fields, msg = \
@@ -822,7 +822,7 @@ class ValidCrossref(FancyValidator):
     """
     messages = {'invalid_crossref': 'There is no source with "%(crossref)s" as its key.'}
 
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         if values.get('crossref') in (None, ''):
             values['crossref_source'] = None
             return values
@@ -908,7 +908,7 @@ class UniqueUnicodeValue(UnicodeString):
                       ' %(model_name)s.%(attribute_name)s is not unique.'
     }
 
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         model_ = getattr(old_models, self.model_name)
         attribute = getattr(model_, self.attribute_name)
         id_ = getattr(state, 'id', None)
@@ -942,7 +942,7 @@ class ValidFormQuery(FancyValidator):
     """
     accept_iterator = True
     messages = {'query_error': 'The submitted query was invalid'}
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         try:
             query_builder = SQLAQueryBuilder(state.db.dbsession,
                                              'Form',
@@ -1026,7 +1026,7 @@ class ValidTagName(FancyValidator):
         'unchangeable': 'The names of the restricted and foreign word tags'
                         ' cannot be changed.'
     }
-    def validate_python(self, value, state):
+    def _validate_python(self, value, state):
         tag = getattr(state, 'tag', None)
         if tag and tag.name in ('restricted', 'foreign word'):
             raise Invalid(self.message('unchangeable', state), value, state)
@@ -1082,7 +1082,7 @@ class ValidUsernameAndPassword(FancyValidator):
         'non_admin_username_update': 'Only administrators can update usernames.'
     }
 
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         user_to_update = getattr(state, 'user_to_update', {})
         user_attempting_update = getattr(state, 'user', {})
         id_ = user_to_update.get('id')
@@ -1184,7 +1184,7 @@ class LicitRoleChange(FancyValidator):
         'non_admin_role_update': 'Only administrators can update roles.'
     }
 
-    def validate_python(self, values, state):
+    def _validate_python(self, values, state):
         role = values.get('role')
         user_to_update = getattr(state, 'user_to_update', {})
         user_attempting_update = getattr(state, 'user', {})
@@ -1250,7 +1250,7 @@ class MorphemeSequencesSchema(Schema):
 class ValidFormReferences(FancyValidator):
     messages = {'invalid': 'At least one form id in the content was invalid.'}
 
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         if values.get('form_search'):
             values['forms'] = SQLAQueryBuilder(
                 state.db.dbsession,
@@ -1312,7 +1312,7 @@ class CorpusFormatSchema(Schema):
 
 
 class MorphologyRules(UnicodeString):
-    def _to_python(self, value, state):
+    def _convert_to_python(self, value, state):
         if value:
             value = h.to_single_space(value)
         return value
@@ -1324,7 +1324,7 @@ class RulesOrRulesCorpus(FancyValidator):
                    ' specified.'
     }
 
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         if values.get('rules') or values.get('rules_corpus'):
             return values
         else:
@@ -1359,7 +1359,7 @@ class CompatibleParserComponents(FancyValidator):
                          ' rare_delimiter value as its morphology.'
     }
 
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         # If a parser's LM is *not* categorial, then its rare_delimiter value
         # must match that of the morphology or probability estimation will not
         # be possible!
@@ -1394,7 +1394,7 @@ class ValidSmoothing(FancyValidator):
                              ' smoothing algorithm %(smoothing)s.'
     }
 
-    def _to_python(self, values, state):
+    def _convert_to_python(self, values, state):
         if (values.get('smoothing') and values['smoothing'] not in
                 oldc.LANGUAGE_MODEL_TOOLKITS[
                     values['toolkit']]['smoothing_algorithms']):
