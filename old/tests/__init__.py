@@ -81,6 +81,7 @@ class TestView(TestCase):
             '/forms', status=200,
             extra_environ={'test.authentication.role': 'viewer'})
     """
+    # pylint: disable=too-many-instance-attributes
 
     inflect_p = inflect.engine()
     inflect_p.classical()
@@ -140,7 +141,8 @@ class TestView(TestCase):
         self.dbsession.add_all(languages + [administrator, contributor, viewer])
         self.dbsession.commit()
 
-    def clear_all_models(self, dbsession, retain=('Language',)):
+    @staticmethod
+    def clear_all_models(dbsession, retain=('Language',)):
         """Convenience function for removing all OLD models from the database.
         The retain parameter is a list of model names that should not be
         cleared.
@@ -477,11 +479,15 @@ class TestView(TestCase):
             'output_orthography': None
         }
 
-    def poll(self, requester, changing_attr, changing_attr_originally,
-             log, wait=2, vocal=True, task_descr='task'):
+    @staticmethod
+    def poll(requester, changing_attr, changing_attr_originally,
+             log, **kwargs):
         """Poll a resource by calling ``requester`` until the value of
         ``changing_attr`` no longer matches ``changing_attr_originally``.
         """
+        wait = kwargs.get('wait', 2)
+        vocal = kwargs.get('vocal', True)
+        task_descr = kwargs.get('task_descr', 'task')
         seconds_elapsed = 0
         while True:
             response = requester()

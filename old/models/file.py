@@ -14,14 +14,18 @@
 
 """File model"""
 
+import logging
+
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime, Float
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, Float
 from sqlalchemy.orm import relation
-from .meta import Base, now
 
-import logging
-log = logging.getLogger(__name__)
+from old.models.meta import Base, now
+
+
+LOGGER = logging.getLogger(__name__)
+
 
 class FileTag(Base):
 
@@ -35,12 +39,12 @@ class FileTag(Base):
 
 class File(Base):
     """There are 3 types of file:
-    
+
     1. Standard files: their content is a file in /files/filename.  These files
        have a filename attribute.
     2. Subinterval-referring A/V files: these refer to another OLD file for
-       their content.  These files have a parent_file attribute (as well as start
-       and end attributes.)
+       their content.  These files have a parent_file attribute (as well as
+       start and end attributes.)
     3. Externally hosted files: these refer to a file hosted on another server.
        They have a url attribute (and optionally a password attribute as well.)
     """
@@ -51,8 +55,10 @@ class File(Base):
         return "<File (%s)>" % self.id
 
     id = Column(Integer, Sequence('file_seq_id', optional=True), primary_key=True)
-    filename = Column(Unicode(255), unique=True)    # filename is the name of the file as written to disk
-    name = Column(Unicode(255))                     # just a name; useful for subinterval-referencing files; need not be unique
+    # filename is the name of the file as written to disk
+    filename = Column(Unicode(255), unique=True)
+    # just a name; useful for subinterval-referencing files; need not be unique
+    name = Column(Unicode(255))
     MIME_type = Column(Unicode(255))
     size = Column(Integer)
     description = Column(UnicodeText)
@@ -66,6 +72,7 @@ class File(Base):
     speaker_id = Column(Integer, ForeignKey('speaker.id', ondelete='SET NULL'))
     speaker = relation('Speaker')
     utterance_type = Column(Unicode(255))
+    # pylint: disable=no-member
     tags = relation('Tag', secondary=FileTag.__table__, backref='files')
 
     # Attributes germane to externally hosted files.

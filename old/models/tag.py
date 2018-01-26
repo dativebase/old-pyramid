@@ -2,9 +2,9 @@
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
+from sqlalchemy.types import Integer, Unicode, UnicodeText
 
-from .meta import Base, now
+from old.models.meta import Base, now
 
 
 class Tag(Base):

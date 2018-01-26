@@ -19,14 +19,18 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
-from sqlalchemy import Column, Sequence
-from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
-from .meta import Base, now
 import json
 import logging
 
-log = logging.getLogger(__name__)
+from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean
+
+from old.models.meta import Base, now
+
+
+LOGGER = logging.getLogger(__name__)
+
 
 class MorphologyBackup(Base):
     """Class for creating OLD morphology_backup models.
@@ -36,6 +40,7 @@ class MorphologyBackup(Base):
     JSON objects.
 
     """
+    # pylint: disable=too-many-instance-attributes
 
     __tablename__ = "morphologybackup"
 
@@ -86,7 +91,8 @@ class MorphologyBackup(Base):
         self.compile_message = morphology_dict['compile_message']
         self.compile_attempt = morphology_dict['compile_attempt']
         self.generate_attempt = morphology_dict['generate_attempt']
-        self.extract_morphemes_from_rules_corpus = morphology_dict['extract_morphemes_from_rules_corpus']
+        self.extract_morphemes_from_rules_corpus = morphology_dict[
+            'extract_morphemes_from_rules_corpus']
         self.rules = morphology_dict['rules']
         self.rich_upper = morphology_dict['rich_upper']
         self.rich_lower = morphology_dict['rich_lower']

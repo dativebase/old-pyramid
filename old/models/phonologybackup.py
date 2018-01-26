@@ -19,11 +19,14 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
+import json
+
 from sqlalchemy import Column, Sequence
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
-from .meta import Base, now
-import json
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean
+
+from old.models.meta import Base, now
+
 
 class PhonologyBackup(Base):
     """Class for creating OLD phonology_backup models.
@@ -31,8 +34,8 @@ class PhonologyBackup(Base):
     The vivify method takes a phonology and a user object as input and populates
     a number of phonology-like attributes, converting relational attributes to
     JSON objects.
-
     """
+    # pylint: disable=too-many-instance-attributes,too-many-locals,too-many-branches,too-many-statements
 
     __tablename__ = "phonologybackup"
 

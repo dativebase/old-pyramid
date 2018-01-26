@@ -40,14 +40,3 @@ matrix:
 
     - python: "3.6"
       env: TOXENV=py36-pylint
-
-  allow_failures:
-
-    - python: "3.4"
-      env: TOXENV=py34-pylint
-
-    - python: "3.5"
-      env: TOXENV=py35-pylint
-
-    - python: "3.6"
-      env: TOXENV=py36-pylint

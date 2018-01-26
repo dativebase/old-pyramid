@@ -36,99 +36,111 @@ against the Form model.
 
 1. Simple scalar queries::
 
-        ['Form', 'transcription', 'like', '%a%']
-        self.dbsession.query(Form).filter(Form.transcription.like('%a%'))
+        >>> ['Form', 'transcription', 'like', '%a%']
+        >>> self.dbsession.query(Form).filter(Form.transcription.like('%a%'))
 
 2. Scalar relations::
 
-        ['Form', 'enterer', 'first_name', 'regex', '^[JS]']
-        self.dbsession.query(Form).filter(Form.enterer.has(User.first_name.op('regexp')('^[JS]')))
+        >>> ['Form', 'enterer', 'first_name', 'regex', '^[JS]']
+        >>> self.dbsession.query(Form).filter(
+        >>>     Form.enterer.has(User.first_name.op('regexp')('^[JS]')))
 
 3. Scalar relations presence/absence::
 
-        ['Form', 'enterer', '=', 'None']
-        self.dbsession.query(Form).filter(Form.enterer==None)
+        >>> ['Form', 'enterer', '=', 'None']
+        >>> self.dbsession.query(Form).filter(Form.enterer==None)
 
 4. Collection relations (w/ SQLA's collection.any() method)::
 
-        ['Form', 'files', 'id', 'in', [1, 2, 33, 5]]
-        self.dbsession.query(Form).filter(Form.files.any(File.id.in_([1, 2, 33, 5])))
+        >>> ['Form', 'files', 'id', 'in', [1, 2, 33, 5]]
+        >>> self.dbsession.query(Form).filter(
+        >>>     Form.files.any(File.id.in_([1, 2, 33, 5])))
 
-5. Collection relations (w/ joins; should return the same results as (4)):
+5. Collection relations (w/ joins; should return the same results as (4))::
 
-        ['File', 'id', 'in', [1, 2, 33, 5]]
-        file_alias = aliased(File)
-        self.dbsession.query(Form).filter(file_alias.id.in_([1, 2, 33, 5])).outerjoin(file_alias, Form.files)
+        >>> ['File', 'id', 'in', [1, 2, 33, 5]]
+        >>> file_alias = aliased(File)
+        >>> self.dbsession.query(Form).filter(
+        >>>     file_alias.id.in_([1, 2, 33, 5])).outerjoin(
+        >>>         file_alias, Form.files)
 
 6. Collection relations presence/absence::
 
-        ['Form', 'files', '=', None]
-        self.dbsession.query(Form).filter(Form.files == None)
+        >>> ['Form', 'files', '=', None]
+        >>> self.dbsession.query(Form).filter(Form.files == None)
 
 7. Negation::
 
-        ['not', ['Form', 'transcription', 'like', '%a%']]
-        self.dbsession.query(Form).filter(not_(Form.transcription.like('%a%')))
+        >>> ['not', ['Form', 'transcription', 'like', '%a%']]
+        >>> self.dbsession.query(Form).filter(
+        >>>     not_(Form.transcription.like('%a%')))
 
 8. Conjunction::
 
-        ['and', [['Form', 'transcription', 'like', '%a%'],
-                 ['Form', 'elicitor', 'id', '=', 13]]]
-        self.dbsession.query(Form).filter(and_(Form.transcription.like('%a%'),
-                                        Form.elicitor.has(User.id==13)))
+        >>> ['and', [['Form', 'transcription', 'like', '%a%'],
+        >>>          ['Form', 'elicitor', 'id', '=', 13]]]
+        >>> self.dbsession.query(Form).filter(
+        >>>     and_(Form.transcription.like('%a%'),
+        >>>          Form.elicitor.has(User.id==13)))
 
 9. Disjunction::
 
-        ['or', [['Form', 'transcription', 'like', '%a%'],
-                ['Form', 'date_elicited', '<', '2012-01-01']]]
-        self.dbsession.query(Form).filter(or_(Form.transcription.like('%a%'),
-                                       Form.date_elicited < datetime.date(2012, 1, 1)))
+        >>> ['or', [['Form', 'transcription', 'like', '%a%'],
+        >>>         ['Form', 'date_elicited', '<', '2012-01-01']]]
+        >>> self.dbsession.query(Form).filter(
+        >>>     or_(Form.transcription.like('%a%'),
+        >>>         Form.date_elicited < datetime.date(2012, 1, 1)))
 
 10. Complex::
 
-        ['and', [['Translation', 'transcription', 'like', '%1%'],
-                 ['not', ['Form', 'morpheme_break', 'regex', '[28][5-7]']],
-                 ['or', [['Form', 'datetime_modified', '<', '2012-03-01T00:00:00'],
-                         ['Form', 'datetime_modified', '>', '2012-01-01T00:00:00']]]]]
-        translation_alias = aliased(Translation)
-        self.dbsession.query(Form).filter(and_(
-            translation_alias.transcription.like('%1%'),
-            not_(Form.morpheme_break.op('regexp')('[28][5-7]')),
-            or_(
-                Form.datetime_modified < ...,
-                Form.datetime_modified > ...
-            )
-        )).outerjoin(translation_alias, Form.translations)
+        >>> ['and', [['Translation', 'transcription', 'like', '%1%'],
+        >>>          ['not', ['Form', 'morpheme_break', 'regex', '[28][5-7]']],
+        >>>          ['or', [['Form', 'datetime_modified', '<',
+        >>>                   '2012-03-01T00:00:00'],
+        >>>                  ['Form', 'datetime_modified', '>',
+        >>>                   '2012-01-01T00:00:00']]]]]
+        >>> translation_alias = aliased(Translation)
+        >>> self.dbsession.query(Form).filter(and_(
+        >>>     translation_alias.transcription.like('%1%'),
+        >>>     not_(Form.morpheme_break.op('regexp')('[28][5-7]')),
+        >>>     or_(
+        >>>         Form.datetime_modified < ...,
+        >>>         Form.datetime_modified > ...
+        >>>     )
+        >>> )).outerjoin(translation_alias, Form.translations)
 
 Note also that SQLAQueryBuilder detects the RDBMS and issues collate commands
 where necessary to ensure that pattern matches are case-sensitive while ordering
 is not.
 
-A further potential enhancement would be to allow doubly relational searches, e.g.,
-return all forms whose enterer has remembered a form with a transcription like 'a':
+A further potential enhancement would be to allow doubly relational searches,
+e.g., return all forms whose enterer has remembered a form with a transcription
+like 'a':
 
 11. Scalar's collection relations::
 
-        ['Form', 'enterer', 'remembered_forms', 'transcription', 'like', '%a%']
-        self.dbsession.query(Form).filter(Form.enterer.has(User.remembered_forms.any(
-            Form.transcription.like('%1%'))))
-
+        >>> ['Form', 'enterer', 'remembered_forms', 'transcription', 'like',
+        >>>  '%a%']
+        >>> self.dbsession.query(Form).filter(
+        >>>     Form.enterer.has(User.remembered_forms.any(
+        >>>         Form.transcription.like('%1%'))))
 """
 
-import logging
 import datetime
+import logging
+
 from sqlalchemy.sql import or_, and_, not_, asc, desc
 from sqlalchemy.exc import OperationalError, InvalidRequestError
 from sqlalchemy.sql.expression import collate
 from sqlalchemy.orm import aliased
 from sqlalchemy.types import Unicode, UnicodeText
+
 from old.lib.utils import normalize
+import old.models as old_models
+
 
 LOGGER = logging.getLogger(__name__)
 
-
-import json
-import old.models as old_models
 
 try:
     mysql_engine = old_models.Model.__table_args__.get('mysql_engine')
@@ -156,17 +168,19 @@ except ImportError:
             dt += datetime.timedelta(seconds=1)
         return dt
 
-    def datetime_string2datetime(datetime_string, RDBMSName=None, mysql_engine=None):
+    def datetime_string2datetime(datetime_string, RDBMSName=None,
+                                 mysql_engine_=None):
         """Parse an ISO 8601-formatted datetime into a Python datetime object.
-        Cf. http://stackoverflow.com/questions/531157/parsing-datetime-strings-with-microseconds
+        Cf. http://stackoverflow.com/questions/531157/\
+            parsing-datetime-strings-with-microseconds
 
         Previously called ISO8601Str2datetime.
         """
         try:
             parts = datetime_string.split('.')
             years_to_seconds_string = parts[0]
-            datetime_object = datetime.datetime.strptime(years_to_seconds_string,
-                                                        "%Y-%m-%dT%H:%M:%S")
+            datetime_object = datetime.datetime.strptime(
+                years_to_seconds_string, "%Y-%m-%dT%H:%M:%S")
         except ValueError:
             return None
         try:
@@ -175,7 +189,7 @@ except ImportError:
         except (IndexError, ValueError, OverflowError):
             pass
         # MySQL InnoDB tables round microseconds to the nearest second.
-        if RDBMSName == 'mysql' and mysql_engine == 'InnoDB':
+        if RDBMSName == 'mysql' and mysql_engine_ == 'InnoDB':
             datetime_object = round_datetime(datetime_object)
         return datetime_object
 
@@ -186,12 +200,17 @@ except ImportError:
             return None
 
 class OLDSearchParseError(Exception):
+
     def __init__(self, errors):
         self.errors = errors
+        super().__init__()
+
     def __repr__(self):
         return '; '.join(['%s: %s' % (k, self.errors[k]) for k in self.errors])
+
     def __str__(self):
         return self.__repr__()
+
     def unpack_errors(self):
         return self.errors
 
@@ -222,8 +241,10 @@ class SQLAQueryBuilder(object):
         self.dbsession = dbsession
         self.errors = {}
         self.joins = []
-        self.model_name = model_name  # The name of the target model, i.e., the one we are querying, e.g., 'Form'
-        self.primary_key = primary_key    # Some models have a primary key other than 'id' ...
+        # The name of the target model, i.e., the one we are querying, e.g., 'Form'
+        self.model_name = model_name
+        # Some models have a primary key other than 'id' ...
+        self.primary_key = primary_key
         if not settings:
             settings = {}
         self.RDBMSName = get_RDBMS_name(settings) # i.e., mysql or sqlite
@@ -265,15 +286,20 @@ class SQLAQueryBuilder(object):
             attribute_name = self._get_attribute_name(order_by[1], model_name)
             model = self._get_model(model_name)
             attribute = getattr(model, attribute_name)
-            if self.RDBMSName == 'sqlite' and attribute is not None and \
-            isinstance(attribute.property.columns[0].type, self.SQLAlchemyStringTypes):
-                attribute = collate(attribute, 'NOCASE')    # Force SQLite to order case-insensitively
+            if (self.RDBMSName == 'sqlite' and
+                    attribute is not None and
+                    isinstance(attribute.property.columns[0].type,
+                               self.SQLAlchemyStringTypes)):
+                # Force SQLite to order case-insensitively
+                attribute = collate(attribute, 'NOCASE')
             try:
-                return {'asc': asc, 'desc': desc}.get(order_by[2], asc)(attribute)
+                return {'asc': asc, 'desc': desc}.get(
+                    order_by[2], asc)(attribute)
             except IndexError:
                 return asc(attribute)
         except (IndexError, AttributeError):
-            self._add_to_errors('OrderByError', 'The provided order by expression was invalid.')
+            self._add_to_errors(
+                'OrderByError', 'The provided order by expression was invalid.')
             return default_order_by
 
     def clear_errors(self):
@@ -282,7 +308,9 @@ class SQLAQueryBuilder(object):
     def _raise_search_parse_error_if_necessary(self):
         if self.errors:
             errors = self.errors.copy()
-            self.clear_errors()    # Clear the errors so the instance can be reused to build further queries
+            # Clear the errors so the instance can be reused to build further
+            # queries
+            self.clear_errors()
             raise OLDSearchParseError(errors)
 
     def _get_base_query(self):
@@ -303,10 +331,9 @@ class SQLAQueryBuilder(object):
             if python[0] in ('and', 'or'):
                 return {'and': and_, 'or': or_}[python[0]](
                     *[self._python2sqla(x) for x in python[1]])
-            elif python[0] == 'not':
+            if python[0] == 'not':
                 return not_(self._python2sqla(python[1]))
-            else:
-                return self._get_simple_filter_expression(*python)
+            return self._get_simple_filter_expression(*python)
         except TypeError as e:
             self.errors['Malformed OLD query error'] = 'The submitted query was malformed'
             self.errors['TypeError'] = str(e)
@@ -330,22 +357,30 @@ class SQLAQueryBuilder(object):
     def _get_date_value(self, date_string):
         """Converts ISO 8601 date strings to Python datetime.date objects."""
         if date_string is None:
-            return date_string   # None can be used on date comparisons so assume this is what was intended
+            # None can be used on date comparisons so assume this is what was
+            # intended
+            return date_string
         date = date_string2date(date_string)
         if date is None:
-            self._add_to_errors('date %s' % str(date_string),
+            self._add_to_errors(
+                'date %s' % str(date_string),
                 'Date search parameters must be valid ISO 8601 date strings.')
         return date
 
     def _get_datetime_value(self, datetime_string):
         """Converts ISO 8601 datetime strings to Python datetime.datetime objects."""
         if datetime_string is None:
-            return datetime_string   # None can be used on datetime comparisons so assume this is what was intended
-        datetime = datetime_string2datetime(datetime_string, self.RDBMSName, mysql_engine)
-        if datetime is None:
-            self._add_to_errors('datetime %s' % str(datetime_string),
-                'Datetime search parameters must be valid ISO 8601 datetime strings.')
-        return datetime
+            # None can be used on datetime comparisons so assume this is what
+            # was intended
+            return datetime_string
+        datetime_ = datetime_string2datetime(
+            datetime_string, self.RDBMSName, mysql_engine)
+        if datetime_ is None:
+            self._add_to_errors(
+                'datetime %s' % str(datetime_string),
+                'Datetime search parameters must be valid ISO 8601 datetime'
+                ' strings.')
+        return datetime_
 
     ############################################################################
     # Data structures
@@ -866,16 +901,19 @@ class SQLAQueryBuilder(object):
     def _get_model_name(self, model_name):
         """Always return model_name; store an error if model_name is invalid."""
         if model_name not in self.schema:
-            self._add_to_errors(model_name, 'Searching on the %s model is not permitted' % model_name)
+            self._add_to_errors(
+                model_name,
+                'Searching on the %s model is not permitted' % model_name)
         return model_name
 
     def _get_model(self, model_name, add_to_joins=True):
         try:
-            model = getattr(old_models, self.model_aliases.get(model_name, model_name))
+            model = getattr(
+                old_models, self.model_aliases.get(model_name, model_name))
         except AttributeError:
             model = None
-            self._add_to_errors(model_name, u"The OLD has no model %s" % model_name)
-
+            self._add_to_errors(model_name,
+                                'The OLD has no model %s' % model_name)
         # Store any implicit joins in self.joins to await addition to the query
         # in self._add_joins_to_query.  Using sqlalchemy.orm's aliased to alias
         # models/tables is what permits filters on multiple -to-many relations.
@@ -886,13 +924,14 @@ class SQLAQueryBuilder(object):
             if model_name in join_models:
                 join_collection_name = join_models[model_name]
                 join_collection = getattr(getattr(old_models, self.model_name),
-                                        join_collection_name)
+                                          join_collection_name)
                 model = aliased(model)
                 self.joins.append((model, join_collection))
             else:
-                self._add_to_errors(model_name,
-                    u"Searching the %s model by joining on the %s model is not possible" % (
-                        self.model_name, model_name))
+                self._add_to_errors(
+                    model_name,
+                    'Searching the %s model by joining on the %s model is not'
+                    ' possible' % (self.model_name, model_name))
         return model
 
     def _get_attribute_model_name(self, attribute_name, model_name):
@@ -904,12 +943,16 @@ class SQLAQueryBuilder(object):
         try:
             return attribute_dict['foreign_model']
         except KeyError:
-            self._add_to_errors('%s.%s' % (model_name, attribute_name),
-                'The %s attribute of the %s model does not represent a many-to-one relation.' % (
+            self._add_to_errors(
+                '%s.%s' % (model_name, attribute_name),
+                'The %s attribute of the %s model does not represent a'
+                ' many-to-one relation.' % (
                     attribute_name, model_name))
         # TODO: bare except is bad practice
         except:
-            pass    # probably a TypeError, meaning model_name.attribute_name is invalid; would have already been caught
+            # probably a TypeError, meaning model_name.attribute_name is
+            # invalid; would have already been caught
+            pass
 
     ############################################################################
     # Attribute getters
@@ -930,8 +973,10 @@ class SQLAQueryBuilder(object):
         attribute_dict = self.schema.get(model_name, {}).get(
             attribute_name, None)
         if attribute_dict is None and report_error:
-            self._add_to_errors('%s.%s' % (model_name, attribute_name),
-                'Searching on %s.%s is not permitted' % (model_name, attribute_name))
+            self._add_to_errors(
+                '%s.%s' % (model_name, attribute_name),
+                'Searching on %s.%s is not permitted' % (
+                    model_name, attribute_name))
         return attribute_dict
 
     def _get_attribute(self, attribute_name, model, model_name):
@@ -939,8 +984,9 @@ class SQLAQueryBuilder(object):
             attribute = self._collate_attribute(getattr(model, attribute_name))
         except AttributeError:  # model can be None
             attribute = None
-            self._add_to_errors('%s.%s' % (model_name, attribute_name),
-                u"There is no attribute %s of %s" % (attribute_name, model_name))
+            self._add_to_errors(
+                '%s.%s' % (model_name, attribute_name),
+                'There is no attribute %s of %s' % (attribute_name, model_name))
         return attribute
 
     def _collate_attribute(self, attribute):
@@ -981,8 +1027,10 @@ class SQLAQueryBuilder(object):
         except AttributeError:
             relation_dict = None
         if relation_dict is None and report_error:
-            self._add_to_errors('%s.%s.%s' % (model_name, attribute_name, relation_name),
-                u"The relation %s is not permitted for %s.%s" % (relation_name, model_name, attribute_name))
+            self._add_to_errors(
+                '%s.%s.%s' % (model_name, attribute_name, relation_name),
+                'The relation %s is not permitted for %s.%s' % (
+                    relation_name, model_name, attribute_name))
         return relation_dict
 
     def _get_attribute_relations(self, attribute_name, model_name):
@@ -993,8 +1041,7 @@ class SQLAQueryBuilder(object):
         try:
             if attribute_dict.get('foreign_model'):
                 return self.equality_relations
-            else:
-                return self.relations
+            return self.relations
         except AttributeError:  # attribute_dict can be None
             return None
 
@@ -1007,21 +1054,24 @@ class SQLAQueryBuilder(object):
                 relation = getattr(attribute, relation_name)
         except AttributeError:  # attribute can be None
             relation = None
-            self._add_to_errors('%s.%s.%s' % (model_name, attribute_name, relation_name),
-                u"There is no relation '%s' of '%s.%s'" % (relation_name, model_name, attribute_name))
+            self._add_to_errors(
+                '%s.%s.%s' % (model_name, attribute_name, relation_name),
+                'There is no relation \'%s\' of \'%s.%s\'' % (
+                    relation_name, model_name, attribute_name))
         return relation
 
     ############################################################################
     # Value getters
     ############################################################################
 
-    def _normalize(self, value):
+    @staticmethod
+    def _normalize(value):
         def normalize_if_string(value):
             if isinstance(value, str):
                 return normalize(value)
             return value
         value = normalize_if_string(value)
-        if type(value) is list:
+        if isinstance(value, list):
             value = [normalize_if_string(i) for i in value]
         return value
 
@@ -1035,10 +1085,11 @@ class SQLAQueryBuilder(object):
 
     def _get_value(self, value, model_name, attribute_name, relation_name):
         """Unicode normalize & modify the value using a value_converter (if necessary)."""
-        value = self._normalize(value)    # unicode normalize (NFD) search patterns; we might want to parameterize this
+        # unicode normalize (NFD) search patterns; we might want to parameterize this
+        value = self._normalize(value)
         value_converter = self._get_value_converter(attribute_name, model_name)
         if value_converter is not None:
-            if type(value) is type([]):
+            if isinstance(value, list):
                 value = [value_converter(li) for li in value]
             else:
                 value = value_converter(value)
@@ -1048,30 +1099,49 @@ class SQLAQueryBuilder(object):
     # Filter expression getters
     ############################################################################
 
-    def _get_invalid_filter_expression_message(self, model_name, attribute_name,
-                                          relation_name, value):
-        return u"Invalid filter expression: %s.%s.%s(%s)" % (model_name,
-                                            attribute_name, relation_name, repr(value))
+    @staticmethod
+    def _get_invalid_filter_expression_message(
+            model_name, attribute_name, relation_name, value):
+        return 'Invalid filter expression: %s.%s.%s(%s)' % (
+            model_name, attribute_name, relation_name, repr(value))
 
-    def _get_invalid_model_attribute_errors(self, relation, value, model_name,
-            attribute_name, relation_name, attribute, attribute_model_name, attribute_model_attribute_name):
+    def _get_invalid_model_attribute_errors(self, *args):
         """Avoid catching a (costly) RuntimeError by preventing _get_filter_expression
         from attempting to build relation(value) or attribute.has(relation(value)).
         We do this by returning a non-empty list of error tuples if Model.attribute
         errors are present in self.errors.
         """
+        try:
+            (value, model_name, attribute_name, relation_name,
+             attribute_model_name, attribute_model_attribute_name) = args
+        except ValueError:
+            raise TypeError(
+                '_get_invalid_model_attribute_errors() missing 6 required'
+                ' positional arguments: \'value\', \'model_name\','
+                ' \'attribute_name\', \'relation_name\','
+                ' \'attribute_model_name\', and'
+                ' \'attribute_model_attribute_name\'')
         e = []
         if attribute_model_name:
-            error_key = '%s.%s' % (attribute_model_name, attribute_model_attribute_name)
-            if self.errors.get(error_key) == 'Searching on the %s is not permitted' % error_key:
-                e.append(('%s.%s.%s' % (attribute_model_name, attribute_model_attribute_name, relation_name),
-                    self._get_invalid_filter_expression_message(attribute_model_name,
-                            attribute_model_attribute_name, relation_name, value)))
+            error_key = '%s.%s' % (
+                attribute_model_name, attribute_model_attribute_name)
+            if (self.errors.get(error_key) ==
+                    'Searching on the %s is not permitted' % error_key):
+                e.append(
+                    ('%s.%s.%s' % (attribute_model_name,
+                                   attribute_model_attribute_name,
+                                   relation_name),
+                     self._get_invalid_filter_expression_message(
+                         attribute_model_name,
+                         attribute_model_attribute_name,
+                         relation_name,
+                         value)))
         error_key = '%s.%s' % (model_name, attribute_name)
-        if self.errors.get(error_key) == 'Searching on %s is not permitted' % error_key:
+        if (self.errors.get(error_key) ==
+                'Searching on %s is not permitted' % error_key):
             e.append(('%s.%s.%s' % (model_name, attribute_name, relation_name),
-                self._get_invalid_filter_expression_message(model_name, attribute_name,
-                                                        relation_name, value)))
+                      self._get_invalid_filter_expression_message(
+                          model_name, attribute_name, relation_name, value)))
         return e
 
     def _get_meta_relation(self, attribute, model_name, attribute_name):
@@ -1081,17 +1151,27 @@ class SQLAQueryBuilder(object):
         return getattr(attribute, {'scalar': 'has', 'collection': 'any'}[
             self.schema[model_name][attribute_name]['type']])
 
-    def _get_filter_expression(self, relation, value, model_name, attribute_name,
-                             relation_name, attribute=None, attribute_model_name=None,
-                             attribute_model_attribute_name=None):
+    def _get_filter_expression(self, *args, **kwargs):
         """Attempt to return relation(value), catching and storing errors as
         needed.  If 5 args are provided, we are doing a [mod, attr, rel, val]
         search; if all 8 are provided, it's a [mod, attr, attr_mod_attr, rel, val]
         one.
         """
-        invalid_model_attribute_errors = self._get_invalid_model_attribute_errors(
-            relation, value, model_name, attribute_name, relation_name, attribute,
-            attribute_model_name, attribute_model_attribute_name)
+        try:
+            relation, value, model_name, attribute_name, relation_name = args
+        except ValueError:
+            raise TypeError(
+                '_get_filter_expression() missing 5 required'
+                ' positional arguments: \'relation\', \'value\','
+                ' \'model_name\', \'attribute_name\', and \'relation_name\'')
+        attribute = kwargs.get('attribute', None)
+        attribute_model_name = kwargs.get('attribute_model_name', None)
+        attribute_model_attribute_name = kwargs.get(
+            'attribute_model_attribute_name', None)
+        invalid_model_attribute_errors = (
+            self._get_invalid_model_attribute_errors(
+                value, model_name, attribute_name, relation_name,
+                attribute_model_name, attribute_model_attribute_name))
         if invalid_model_attribute_errors:
             filter_expression = None
             for e in invalid_model_attribute_errors:
@@ -1099,20 +1179,23 @@ class SQLAQueryBuilder(object):
         else:
             try:
                 if attribute_model_name:
-                    meta_relation = self._get_meta_relation(attribute, model_name, attribute_name)
+                    meta_relation = self._get_meta_relation(
+                        attribute, model_name, attribute_name)
                     filter_expression = meta_relation(relation(value))
                 else:
                     filter_expression = relation(value)
             except AttributeError:
                 filter_expression = None
-                self._add_to_errors('%s.%s' % (model_name, attribute_name),
-                    'The %s.%s attribute does not represent a many-to-one relation.' % (
-                        model_name, attribute_name))
+                self._add_to_errors(
+                    '%s.%s' % (model_name, attribute_name),
+                    'The %s.%s attribute does not represent a many-to-one'
+                    ' relation.' % (model_name, attribute_name))
             except TypeError:
                 filter_expression = None
-                self._add_to_errors('%s.%s.%s' % (model_name, attribute_name, relation_name),
-                    self._get_invalid_filter_expression_message(model_name,
-                                            attribute_name, relation_name, value))
+                self._add_to_errors(
+                    '%s.%s.%s' % (model_name, attribute_name, relation_name),
+                    self._get_invalid_filter_expression_message(
+                        model_name, attribute_name, relation_name, value))
             except InvalidRequestError as e:
                 filter_expression = None
                 self.errors['InvalidRequestError'] = str(e)
@@ -1125,46 +1208,63 @@ class SQLAQueryBuilder(object):
         return filter_expression
 
     def _get_simple_filter_expression(self, *args):
-        """Build an SQLAlchemy filter expression.  Examples:
+        """Build an SQLAlchemy filter expression.  Examples::
 
-        1. ['Form', 'transcription', '=', 'abc'] =>
-           model.Form.transcription.__eq__('abc')
+            >>> ['Form', 'transcription', '=', 'abc']
+            >>> model.Form.transcription.__eq__('abc')
 
-        2. ['Form', 'enterer', 'first_name', 'like', 'J%'] =>
-           self.dbsession.query(model.Form)\
-                .filter(model.Form.enterer.has(model.User.first_name.like('J%')))
+            >>> ['Form', 'enterer', 'first_name', 'like', 'J%']
+            >>> self.dbsession.query(model.Form).filter(
+            ...     model.Form.enterer.has(model.User.first_name.like('J%')))
 
-        3. ['Tag', 'name', 'like', '%abc%'] (when searching the Form model) =>
-           aliased_tag = aliased(model.Tag)
-           self.dbsession.query(model.Form)\
-                .filter(aliased_tag.name.like('%abc%'))\
-                .outerjoin(aliased_tag, model.Form.tags)
+            >>> # When searching the Form model
+            ... ['Tag', 'name', 'like', '%abc%']
+            >>> aliased_tag = aliased(model.Tag)
+            >>> self.dbsession.query(model.Form).filter(
+            ...     aliased_tag.name.like('%abc%')).outerjoin(
+            ...     aliased_tag, model.Form.tags)
 
-        4. ['Form', 'tags', 'name', 'like', '%abc%'] =>
-           self.dbsession.query(model.Form)\
-                .filter(model.Form.tags.any(model.Tag.name.like('%abc%')))
+            >>> ['Form', 'tags', 'name', 'like', '%abc%']
+            >>> self.dbsession.query(model.Form).filter(
+            ...     model.Form.tags.any(model.Tag.name.like('%abc%')))
         """
         model_name = self._get_model_name(args[0])
         attribute_name = self._get_attribute_name(args[1], model_name)
         if len(args) == 4:
             model = self._get_model(model_name)
-            relation_name = self._get_relation_name(args[2], model_name, attribute_name)
-            value = self._get_value(args[3], model_name, attribute_name, relation_name)
-            attribute = self._get_attribute(attribute_name, model, model_name)
-            relation = self._get_relation(relation_name, attribute, attribute_name, model_name)
-            return self._get_filter_expression(relation, value, model_name, attribute_name, relation_name)
-        else:
-            attribute_model_name = self._get_attribute_model_name(attribute_name, model_name)
-            attribute_model_attribute_name = self._get_attribute_name(args[2], attribute_model_name)
-            relation_name = self._get_relation_name(args[3], attribute_model_name, attribute_model_attribute_name)
-            value = self._get_value(args[4], attribute_model_name, attribute_model_attribute_name, relation_name)
-            model = self._get_model(model_name, False)
-            attribute = self._get_attribute(attribute_name, model, model_name)
-            attribute_model = self._get_model(attribute_model_name, False)
-            attribute_model_attribute = self._get_attribute(attribute_model_attribute_name, attribute_model, attribute_model_name)
-            relation = self._get_relation(relation_name, attribute_model_attribute, attribute_model_attribute_name, attribute_model_name)
-            return self._get_filter_expression(relation, value, model_name, attribute_name, relation_name,
-                                             attribute, attribute_model_name, attribute_model_attribute_name)
+            relation_name = self._get_relation_name(
+                args[2], model_name, attribute_name)
+            value = self._get_value(
+                args[3], model_name, attribute_name, relation_name)
+            attribute = self._get_attribute(
+                attribute_name, model, model_name)
+            relation = self._get_relation(
+                relation_name, attribute, attribute_name, model_name)
+            return self._get_filter_expression(
+                relation, value, model_name, attribute_name, relation_name)
+        attribute_model_name = self._get_attribute_model_name(
+            attribute_name, model_name)
+        attribute_model_attribute_name = self._get_attribute_name(
+            args[2], attribute_model_name)
+        relation_name = self._get_relation_name(
+            args[3], attribute_model_name, attribute_model_attribute_name)
+        value = self._get_value(
+            args[4], attribute_model_name, attribute_model_attribute_name,
+            relation_name)
+        model = self._get_model(model_name, False)
+        attribute = self._get_attribute(
+            attribute_name, model, model_name)
+        attribute_model = self._get_model(attribute_model_name, False)
+        attribute_model_attribute = self._get_attribute(
+            attribute_model_attribute_name, attribute_model,
+            attribute_model_name)
+        relation = self._get_relation(
+            relation_name, attribute_model_attribute,
+            attribute_model_attribute_name, attribute_model_name)
+        return self._get_filter_expression(
+            relation, value, model_name, attribute_name, relation_name,
+            attribute=attribute, attribute_model_name=attribute_model_name,
+            attribute_model_attribute_name=attribute_model_attribute_name)
 
     def get_search_parameters(self):
         """Given the view's resource-configured SQLAQueryBuilder instance,

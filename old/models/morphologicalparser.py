@@ -95,7 +95,6 @@ that the files that are crucial to a parser's parsing functionality are
     The parser requires knowledge of the delimiters assumed by the morphology
     in order to disambiguate the output of its morphophonology (if necessary)
     and to pass a suitable input to the ``get_most_probable`` method.
-
 """
 
 import codecs
@@ -107,14 +106,16 @@ import re
 from shutil import copyfile
 from uuid import uuid4
 
-from sqlalchemy import Column, Sequence, ForeignKey, engine_from_config
+from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
-from sqlalchemy.orm import relation, sessionmaker
-import transaction
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean
+from sqlalchemy.orm import relation
 
-from old.lib.parser import MorphologicalParser, LanguageModel, MorphologyFST, PhonologyFST
-from .meta import Base, now
+from old.lib.parser import MorphologicalParser as MorphologicalParser_
+from old.lib.parser import LanguageModel, MorphologyFST, PhonologyFST
+from old.models.meta import Base, now
+
+# pylint: disable=attribute-defined-outside-init,no-member
 
 
 LOGGER = logging.getLogger(__name__)
@@ -133,16 +134,17 @@ class Parse(Base):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    id = Column(Integer, Sequence('parse_seq_id', optional=True),
-            primary_key=True)
+    id = Column(
+        Integer, Sequence('parse_seq_id', optional=True), primary_key=True)
     transcription = Column(Unicode(1000))
     parse = Column(UnicodeText)
     candidates = Column(UnicodeText)
-    parser_id = Column(Integer, ForeignKey('morphologicalparser.id', ondelete='SET NULL'))
+    parser_id = Column(
+        Integer, ForeignKey('morphologicalparser.id', ondelete='SET NULL'))
     datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
-class MorphologicalParser(MorphologicalParser, Base):
+class MorphologicalParser(MorphologicalParser_, Base):
 
     __tablename__ = 'morphologicalparser'
 
@@ -172,18 +174,20 @@ class MorphologicalParser(MorphologicalParser, Base):
     generate_message = Column(Unicode(255))
     generate_attempt = Column(Unicode(36)) # a UUID
 
-    # MorphologicalParser().parses is a collection of cached parse objects, i.e.,
-    # a mapping from transcriptions to parses.
-    parses = relation('Parse', backref='parser', cascade='all, delete, delete-orphan')
+    # MorphologicalParser().parses is a collection of cached parse objects,
+    # i.e., a mapping from transcriptions to parses.
+    parses = relation(
+        'Parse', backref='parser', cascade='all, delete, delete-orphan')
 
     # These incidental attributes are initialized by the constructor.
     parent_directory = Column(Unicode(255))
     persist_cache = Column(Boolean)
 
-    # These attributes are valued when ``self.write`` and (as a result) ``self.replicate_attributes``
-    # are called.  Their purpose is to preserve enough values from ``self.language_model``
-    # and ``self.morphology`` to allow the parser to parse even when those referenced models have
-    # been altered or deleted.
+    # These attributes are valued when ``self.write`` and (as a result)
+    # ``self.replicate_attributes`` are called.  Their purpose is to preserve
+    # enough values from ``self.language_model`` and ``self.morphology`` to
+    # allow the parser to parse even when those referenced models have been
+    # altered or deleted.
     word_boundary_symbol = Column(Unicode(10))
     morphology_rare_delimiter = Column(Unicode(10))
     morphology_rich_upper = Column(Boolean)
@@ -255,10 +259,9 @@ class MorphologicalParser(MorphologicalParser, Base):
         4. Copy the morphology's pickled dictionary file (if lacking rich
            morpheme representations)
         """
-
-        self.generate_succeeded = False
-        self.generate_message = u''
         try:
+            self.generate_succeeded = False
+            self.generate_message = u''
             self.write_morphophonology_script()
             self.replicate_attributes()
             self.replicate_lm()
@@ -266,35 +269,38 @@ class MorphologicalParser(MorphologicalParser, Base):
             self.replicate_phonology()
             self.generate_succeeded = True
             self.generate_message = ''
+            self.generate_attempt = str(uuid4())
         except Exception as error:
             LOGGER.debug('Error in write method of morphparser model: %s %s',
-                error.__class__.__name__, error)
-            pass
-        self.generate_attempt = str(uuid4())
+                         error.__class__.__name__, error)
 
     def write_morphophonology_script(self):
         """Generate and write to disk the morphophonology script:
 
-            a. load the lexc/regex morphology script, making sure that the 'morphology'
-               regex is defined and is enclosed in word boundary symbols.
-            b. copy in the phonology script, replacing 'define phonology ...' with
-               'define morphophonology .o. morphology ...'.
+        a. load the lexc/regex morphology script, making sure that the
+           'morphology' regex is defined and is enclosed in word boundary
+           symbols.
 
+        b. copy in the phonology script, replacing 'define phonology ...' with
+           'define morphophonology .o. morphology ...'.
         """
-
         script_path = self.get_file_path('script')
         binary_path = self.get_file_path('binary')
         compiler_path = self.get_file_path('compiler')
         with open(compiler_path, 'w') as f:
-            f.write('#!/bin/sh\nfoma -e "source %s" -e "regex morphophonology;" '
+            f.write(
+                '#!/bin/sh\nfoma -e "source %s" -e "regex morphophonology;" '
                 '-e "save stack %s" -e "quit"' % (script_path, binary_path))
         os.chmod(compiler_path, 0o744)
-        # NOTE: the phonology script is taken from the script as written to disk.  This
-        # is because it is only this version that has had its combining characters separated
-        # from their base characters (the user-created script is stored unaltered in the db;
-        # see the ``save_script`` and ``decombine`` methods of ``lib/parser.py`` as well as
-
-        phonology_script = codecs.open(self.phonology.get_file_path('script'), 'r', 'utf8').read()
+        # NOTE: the phonology script is taken from the script as written to
+        # disk. This is because it is only this version that has had its
+        # combining characters separated from their base characters (the
+        # user-created script is stored unaltered in the db; see the
+        # ``save_script`` and ``decombine`` methods of ``lib/parser.py`` as
+        # well as
+        with codecs.open(
+            self.phonology.get_file_path('script'), 'r', 'utf8') as filei:
+            phonology_script = filei.read()
         morphophonology = self.generate_morphophonology(phonology_script)
         morphology_script_path = self.morphology.get_file_path('script')
         if morphophonology:
@@ -398,8 +404,10 @@ class MorphologicalParser(MorphologicalParser, Base):
                 if os.path.isfile(dst):
                     self.changed = True
 
-    def get_hash(self, path):
-        """Return the MD5 hash of the file at ``path`` or ``None`` if there is no file there.
+    @staticmethod
+    def get_hash(path):
+        """Return the MD5 hash of the file at ``path`` or ``None`` if there is
+        no file there.
         """
         try:
             with open(path, 'rb') as f:
@@ -416,31 +424,47 @@ class MorphologicalParser(MorphologicalParser, Base):
         """
         changed = False
         if getattr(self, 'phonology', None):
-            changed = self.set_attr('word_boundary_symbol', self.phonology.word_boundary_symbol, changed)
-        changed = self.set_attr('morpheme_delimiters', self.morphology.morpheme_delimiters, changed)
-        changed = self.set_attr('morphology_rare_delimiter', self.morphology.rare_delimiter, changed)
-        changed = self.set_attr('morphology_rich_upper', self.morphology.rich_upper, changed)
-        changed = self.set_attr('morphology_rich_lower', self.morphology.rich_lower, changed)
-        changed = self.set_attr('morphology_rules_generated', self.morphology.rules_generated, changed)
-        changed = self.set_attr('language_model_start_symbol', self.language_model.start_symbol, changed)
-        changed = self.set_attr('language_model_end_symbol', self.language_model.end_symbol, changed)
-        changed = self.set_attr('language_model_categorial', self.language_model.categorial, changed)
+            changed = self.set_attr(
+                'word_boundary_symbol', self.phonology.word_boundary_symbol,
+                changed)
+        changed = self.set_attr(
+            'morpheme_delimiters', self.morphology.morpheme_delimiters, changed)
+        changed = self.set_attr(
+            'morphology_rare_delimiter', self.morphology.rare_delimiter,
+            changed)
+        changed = self.set_attr(
+            'morphology_rich_upper', self.morphology.rich_upper, changed)
+        changed = self.set_attr(
+            'morphology_rich_lower', self.morphology.rich_lower, changed)
+        changed = self.set_attr(
+            'morphology_rules_generated', self.morphology.rules_generated,
+            changed)
+        changed = self.set_attr(
+            'language_model_start_symbol', self.language_model.start_symbol,
+            changed)
+        changed = self.set_attr(
+            'language_model_end_symbol', self.language_model.end_symbol,
+            changed)
+        changed = self.set_attr(
+            'language_model_categorial', self.language_model.categorial,
+            changed)
         self.changed = changed
 
-    def generate_morphophonology(self, phonology_script):
+    @staticmethod
+    def generate_morphophonology(phonology_script):
         """Generate a morphophonology script.
 
-        Actually, this function returns a string representing the portion of the 
-        morphophonology script that follows the definition of the "morphology" FST.
-        Return the ``phonology_script`` with 'define phonology ...' replaced by
-        'define morphophonology morphology .o. ...'
-
+        Actually, this function returns a string representing the portion of
+        the morphophonology script that follows the definition of the
+        "morphology" FST.  Return the ``phonology_script`` with 'define
+        phonology ...' replaced by 'define morphophonology morphology .o. ...'
         """
-
-        phonology_definition_patt = re.compile('define( )+phonology( )+.+?[^%"];', re.DOTALL)
+        phonology_definition_patt = re.compile(
+            'define( )+phonology( )+.+?[^%"];', re.DOTALL)
         define_phonology_patt = re.compile('define( )+phonology')
         if phonology_definition_patt.search(phonology_script):
-            return define_phonology_patt.sub('define morphophonology morphology .o. ', phonology_script)
+            return define_phonology_patt.sub(
+                'define morphophonology morphology .o. ', phonology_script)
         return None
 
     @property
@@ -455,13 +479,13 @@ class MorphologicalParser(MorphologicalParser, Base):
             return self._my_morphology
         except AttributeError:
             self._my_morphology = MorphologyFST(
-                parent_directory = self.directory,
-                rare_delimiter = self.morphology_rare_delimiter,
-                word_boundary_symbol = self.word_boundary_symbol,
-                rules_generated = self.morphology_rules_generated,
-                rich_upper = self.morphology_rich_upper,
-                rich_lower = self.morphology_rich_lower,
-                morpheme_delimiters = self.morpheme_delimiters
+                parent_directory=self.directory,
+                rare_delimiter=self.morphology_rare_delimiter,
+                word_boundary_symbol=self.word_boundary_symbol,
+                rules_generated=self.morphology_rules_generated,
+                rich_upper=self.morphology_rich_upper,
+                rich_lower=self.morphology_rich_lower,
+                morpheme_delimiters=self.morpheme_delimiters
             )
             return self._my_morphology
 
@@ -479,15 +503,16 @@ class MorphologicalParser(MorphologicalParser, Base):
             return self._my_language_model
         except AttributeError:
             self._my_language_model = LanguageModel(
-                parent_directory = self.directory,
-                start_symbol = self.language_model_start_symbol,
-                end_symbol = self.language_model_end_symbol,
-                categorial = self.language_model_categorial
+                parent_directory=self.directory,
+                start_symbol=self.language_model_start_symbol,
+                end_symbol=self.language_model_end_symbol,
+                categorial=self.language_model_categorial
             )
             return self._my_language_model
 
     @property
     def cache(self):
+        # pylint: disable=no-value-for-parameter
         try:
             return self._cache
         except AttributeError:
@@ -537,8 +562,8 @@ class Cache(object):
                 dbsession = self.session_getter(self.settings)
                 dbsession.expunge_all()
                 parse = dbsession.query(Parse).filter(
-                    Parse.parser_id==self.parser.id).filter(
-                    Parse.transcription==k).first()
+                    Parse.parser_id == self.parser.id).filter(
+                        Parse.transcription == k).first()
                 if parse:
                     # LOGGER.warn('GOT %s FROM DB IN DB_CACHE' % k)
                     self._store[k] = parse.parse, json.loads(parse.candidates)
@@ -570,27 +595,28 @@ class Cache(object):
                 dbsession = self.session_getter(self.settings)
                 persisted = [
                     parse.transcription for parse in dbsession.query(Parse).\
-                    filter(Parse.parser_id==self.parser.id).\
+                    filter(Parse.parser_id == self.parser.id).\
                     filter(Parse.transcription.in_(self._store.keys())).all()]
                 unpersisted = [Parse(transcription=transcription,
-                                    parse=parse,
-                                    candidates = self.json_dumps_candidates(candidates),
-                                    parser=self.parser)
-                            for transcription, (parse, candidates) in self._store.items()
-                            if transcription not in persisted]
+                                     parse=parse,
+                                     candidates=self.json_dumps_candidates(
+                                         candidates),
+                                     parser=self.parser)
+                               for transcription, (parse, candidates)
+                               in self._store.items()
+                               if transcription not in persisted]
                 dbsession.add_all(unpersisted)
-                # LOGGER.warn('DB_CACHE: PERSISTED %s' % u', '.join([p.transcription for p in unpersisted]))
                 self.updated = False
             finally:
                 dbsession.commit()
                 dbsession.close()
 
-    def json_dumps_candidates(self, candidates):
+    @staticmethod
+    def json_dumps_candidates(candidates):
         candidates = json.dumps(candidates)
         if len(candidates) > 65000:
             return json.dumps(candidates[:500])
-        else:
-            return candidates
+        return candidates
 
     def clear(self, persist=False):
         """Clear the cache and its persistence layer.
@@ -605,7 +631,7 @@ class Cache(object):
             try:
                 dbsession = self.session_getter(self.settings)
                 delete = Parse.__table__.delete().where(
-                    Parse.__table__.c.parser_id==self.parser.id)
+                    Parse.__table__.c.parser_id == self.parser.id)
                 dbsession.execute(delete)
             finally:
                 dbsession.commit()
@@ -619,7 +645,7 @@ class Cache(object):
             dbsession = self.session_getter(self.settings)
             persisted = {p.transcription: (p.parse, json.loads(p.candidates))
                          for p in dbsession.query(Parse).filter(
-                             Parse.parser_id==self.parser.id).all()}
+                             Parse.parser_id == self.parser.id).all()}
             self._store.update(persisted)
             return self._store
         finally:

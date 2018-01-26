@@ -16,8 +16,10 @@
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
-from .meta import Base, now
+from sqlalchemy.types import Integer, Unicode, UnicodeText
+
+from old.models.meta import Base, now
+
 
 class Speaker(Base):
 

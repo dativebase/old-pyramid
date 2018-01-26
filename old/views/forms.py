@@ -169,7 +169,7 @@ class Forms(Resources):
             form_model.morpheme_gloss_ids,
             form_model.syntactic_category_string,
             form_model.break_gloss_category,
-            cache
+            _
         ) = self.compile_morphemic_analysis(form_model)
         return form_model
 
@@ -189,7 +189,7 @@ class Forms(Resources):
             data['morpheme_gloss_ids'],
             data['syntactic_category_string'],
             data['break_gloss_category'],
-            cache
+            _
         ) = self.compile_morphemic_analysis(form_model)
         if not changed:
             for attr in MORPH_ATTRS:
@@ -490,12 +490,10 @@ class Forms(Resources):
             collection_view = Collections(self.request)
             for collection in collections_referencing_this_form:
                 collection_view.\
-                    _update_collection_by_deletion_of_referenced_form(
+                    update_collection_by_deletion_of_referenced_form(
                         collection, form)
 
-    def get_perfect_matches(self, form, word_index, morpheme_index, morpheme,
-                            gloss, matches_found, lexical_items,
-                            deleted_lexical_items, whole_db):
+    def get_perfect_matches(self, *args):
         """Return the list of forms that perfectly match a given morpheme.
         That is, return all forms ``f`` such that ``f.morpheme_break==morpheme``
         *and* ``f.morpheme_gloss==gloss``.
@@ -541,6 +539,16 @@ class Forms(Resources):
             of the return value is the ``(morpheme, gloss)`` tuple representing
             the morpheme.
         """
+        try:
+            (form, word_index, morpheme_index, morpheme, gloss, matches_found,
+             lexical_items, deleted_lexical_items, whole_db) = args
+        except ValueError:
+            raise TypeError(
+                'get_perfect_matches() missing 9 required'
+                ' positional arguments: \'form\', \'word_index\','
+                ' \'morpheme_index\', \'morpheme\', \'gloss\','
+                ' \'matches_found\', \'lexical_items\','
+                ' \'deleted_lexical_items\' and \'whole_db\'')
         if (morpheme, gloss) in matches_found:
             return matches_found[(morpheme, gloss)], matches_found
         if whole_db:
@@ -692,7 +700,6 @@ class Forms(Resources):
             LOGGER.debug('compile_morphemic_analysis raised an error (%s) on'
                          ' "%s"/"%s".', error, form.morpheme_break,
                          form.morpheme_gloss)
-            raise
             return None, None, None, None, {}
 
     def _compile_morphemic_analysis(self, form, morpheme_delimiters=None,
@@ -760,7 +767,7 @@ class Forms(Resources):
         morpheme_gloss_ids = []
         syntactic_category_string = []
         morpheme_delimiters = morpheme_delimiters or self.db.get_morpheme_delimiters()
-        if len([md for md in morpheme_delimiters if md]) > 0:
+        if [md for md in morpheme_delimiters if md]:
             morpheme_splitter = '[%s]' % ''.join(
                 [h.esc_RE_meta_chars(d) for d in morpheme_delimiters])
         else:
@@ -1029,13 +1036,14 @@ def morphemic_analysis_is_consistent(**kwargs):
                 kwargs['morpheme_gloss'] != '' and
                 len(kwargs['mb_words']) == len(kwargs['mg_words']) and
                 [len(_split(kwargs['morpheme_splitter'], mbw)) for mbw in
-                kwargs['mb_words']] ==
+                 kwargs['mb_words']] ==
                 [len(_split(kwargs['morpheme_splitter'], mgw)) for mgw in
-                kwargs['mg_words']])
+                 kwargs['mg_words']])
     except Exception as error:
         LOGGER.debug('error in morphemic_analysis_is_consistent')
         LOGGER.debug(error)
-        LOGGER.debug("kwargs['morpheme_splitter'] " + kwargs['morpheme_splitter'])
+        LOGGER.debug("kwargs['morpheme_splitter'] %s",
+                     kwargs['morpheme_splitter'])
         raise
 
 

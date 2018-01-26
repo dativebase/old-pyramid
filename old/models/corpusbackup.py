@@ -14,11 +14,14 @@
 
 """Corpus backup model"""
 
+import json
+
 from sqlalchemy.dialects import mysql
 from sqlalchemy import Column, Sequence
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
-from .meta import Base, now
-import json
+from sqlalchemy.types import Integer, Unicode, UnicodeText
+
+from old.models.meta import Base, now
+
 
 class CorpusBackup(Base):
     """Define the corpus backup model.

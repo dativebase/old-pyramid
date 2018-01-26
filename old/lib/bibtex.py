@@ -12,33 +12,30 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# pylint: disable=anomalous-backslash-in-string
+
 """bibtex.py encodes and describes the BibTeX specification (see Kopka & Daly,
 2004 for details).  Useful for validating OLD source input since the data
 structure for OLD sources is the BibTeX data structure.
 
 Use Pybtex (http://pybtex.sourceforge.net/manual.html) to parse BibTeX files if
-need be:
+need be::
 
-from io import StringIO
-from pybtex.database.input.bibtex import Parser
-
-e1 = '''
-@BOOK{knuth:86a,
-  AUTHOR = "Donald E. Knuth",
-  TITLE = {The \TeX{}book},
-  EDITION = "third",
-  PUBLISHER = "Addison--Wesley",
-  ADDRESS = {Reading, Massachusetts},
-  YEAR = 1986
-}
-'''.strip()
-
-parser = Parser()
-bib_data = parser.parse_stream(StringIO(e1))
-knuth86a = parser.data.entries['knuth:86a']
-str(knuth86a.persons['author'][0])
-'Knuth, Donald E.'
-
+    >>> from io import StringIO
+    >>> from pybtex.database.input.bibtex import Parser
+    >>> e1 = (
+    ...     r'@BOOK{knuth:86a,'
+    ...     r' AUTHOR = "Donald E. Knuth",'
+    ...     r' TITLE = {The \TeX{}book},'
+    ...     r' EDITION = "third",'
+    ...     r' PUBLISHER = "Addison--Wesley",'
+    ...     r' ADDRESS = {Reading, Massachusetts},'
+    ...     r' YEAR = 1986}').strip()
+    >>> parser = Parser()
+    >>> bib_data = parser.parse_stream(StringIO(e1))
+    >>> knuth86a = parser.data.entries['knuth:86a']
+    >>> str(knuth86a.persons['author'][0])
+    'Knuth, Donald E.'
 """
 
 
@@ -87,7 +84,7 @@ ENTRY_TYPES = {
         'description': 'An article in a conference proceedings.',
         'required': ('author', 'title', 'booktitle', 'year'),
         'optional': ('editor', ('volume', 'number'), 'series', 'pages',
-                    'address', 'month', 'organization', 'publisher', 'note')
+                     'address', 'month', 'organization', 'publisher', 'note')
     },
     'manual': {
         'description': 'Technical documentation.',
@@ -238,7 +235,8 @@ OTHER_FIELD_NAMES = (
     'ISSN',         # The International Standard Serial Number. Used to identify a journal.
     'keywords',     # Key words used for searching or possibly for annotation.
     'language',     # The language the document is in.
-    'location',     # A location associated with the entry, such as the city in which a conference took place.
+    'location',     # A location associated with the entry, such as the city in
+                    # which a conference took place.
     'LCCN',         # The Library of Congress Call Number. I've also seen this as lib-congress.
     'mrnumber',     # The Mathematical Reviews number.
     'price',        # The price of the document.

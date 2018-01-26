@@ -10,7 +10,7 @@ import old.lib.constants as oldc
 from old.lib.foma_worker import FOMA_WORKER_Q
 import old.lib.helpers as h
 from old.lib.schemata import MorphophonemicTranscriptionsSchema
-from old.models import Phonology, PhonologyBackup
+from old.models import PhonologyBackup
 from old.views.resources import Resources
 
 
@@ -125,7 +125,7 @@ class Phonologies(Resources):
         :returns: if the phonology exists and foma is installed, a JSON object
             representing the results of the test.
         """
-        phonology, id_ = self._model_from_id(eager=True)
+        phonology, _ = self._model_from_id(eager=True)
         if not phonology:
             self.request.response.status_int = 404
             return {'error': 'There is no phonology with id %s' % id}
@@ -136,10 +136,9 @@ class Phonologies(Resources):
             test_results = phonology.run_tests()
             if test_results:
                 return test_results
-            else:
-                self.request.response.status_int = 400
-                return {'error': 'The script of phonology %d contains no'
-                                 ' tests.' % phonology.id}
+            self.request.response.status_int = 400
+            return {'error': 'The script of phonology %d contains no'
+                             ' tests.' % phonology.id}
         except AttributeError:
             self.request.response.status_int = 400
             return {'error': 'Phonology {} has not been compiled yet.'.format(

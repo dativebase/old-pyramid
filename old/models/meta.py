@@ -19,6 +19,6 @@ NAMING_CONVENTION = {
 metadata = MetaData()
 Base = declarative_base(metadata=metadata, cls=Model)
 
+
 def now():
     return datetime.datetime.utcnow()
-

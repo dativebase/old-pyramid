@@ -14,23 +14,30 @@
 
 """Morpheme language model backup model"""
 
-from sqlalchemy import Column, Sequence
-from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean, Float
-from .meta import Base, now
 import json
 import logging
 
-log = logging.getLogger(__file__)
+from sqlalchemy import Column, Sequence
+from sqlalchemy.dialects import mysql
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean, Float
+
+from old.models.meta import Base, now
+
+
+LOGGER = logging.getLogger(__file__)
+
 
 class MorphemeLanguageModelBackup(Base):
+    # pylint: disable=too-many-instance-attributes
 
     __tablename__ = 'morphemelanguagemodelbackup'
 
     def __repr__(self):
         return '<MorphemeLanguageModelBackup (%s)>' % self.id
 
-    id = Column(Integer, Sequence('morphemelanguagemodelbackup_seq_id', optional=True), primary_key=True)
+    id = Column(
+        Integer, Sequence('morphemelanguagemodelbackup_seq_id', optional=True),
+        primary_key=True)
     morphemelanguagemodel_id = Column(Integer)
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
@@ -54,10 +61,11 @@ class MorphemeLanguageModelBackup(Base):
     categorial = Column(Boolean)
 
     def vivify(self, morpheme_language_model_dict):
-        """The vivify method gives life to a morpheme language model backup by specifying its
-        attributes using the to-be-backed-up morpheme language model (morpheme_language_model_dict)
-        The relational attributes of the to-be-backed-up morpheme language model are converted into (truncated) JSON objects.
-
+        """The vivify method gives life to a morpheme language model backup by
+        specifying its attributes using the to-be-backed-up morpheme language
+        model (morpheme_language_model_dict) The relational attributes of the
+        to-be-backed-up morpheme language model are converted into (truncated)
+        JSON objects.
         """
         self.UUID = morpheme_language_model_dict['UUID']
         self.morphemelanguagemodel_id = morpheme_language_model_dict['id']
@@ -77,7 +85,8 @@ class MorphemeLanguageModelBackup(Base):
         self.toolkit = morpheme_language_model_dict['toolkit']
         self.order = morpheme_language_model_dict['order']
         self.smoothing = morpheme_language_model_dict['smoothing']
-        self.vocabulary_morphology = json.dumps(morpheme_language_model_dict['vocabulary_morphology'])
+        self.vocabulary_morphology = json.dumps(
+            morpheme_language_model_dict['vocabulary_morphology'])
         self.restricted = morpheme_language_model_dict['restricted']
         self.categorial = morpheme_language_model_dict['categorial']
 
@@ -106,4 +115,3 @@ class MorphemeLanguageModelBackup(Base):
             'restricted': self.restricted,
             'categorial': self.categorial
         }
-

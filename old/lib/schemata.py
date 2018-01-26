@@ -25,7 +25,6 @@ import re
 from formencode.foreach import ForEach
 from formencode.schema import Schema
 from formencode.validators import (
-    ByteString,
     DateConverter,
     Email,
     FancyValidator,
@@ -656,6 +655,7 @@ class GetMorphemeDelimiters(FancyValidator):
     """Remove redundant commas and whitespace from the string representing the
     morpheme delimiters.
     """
+    # pylint: disable=no-self-use
     def _convert_to_python(self, value, state):
         value = h.remove_all_white_space(value)
         return ','.join([d for d in value.split(',') if d])
@@ -755,7 +755,8 @@ class ValidBibTeXEntry(FancyValidator):
     """
     messages = {'invalid_entry': '%(msg)s'}
 
-    def parse_requirements(self, entry_type):
+    @staticmethod
+    def parse_requirements(entry_type):
         """Given a BibTeX entry type, return a tuple (a, b, c) where a is the
         list of required fields, b is the list of disjunctively required fields
         and c is a string expressing the requirements in English.
@@ -784,7 +785,8 @@ class ValidBibTeXEntry(FancyValidator):
                             for drf in disjunctively_required_fields]))
         return required_fields, disjunctively_required_fields, '%s.' % msg
 
-    def get_required_value(self, values, required_field):
+    @staticmethod
+    def get_required_value(values, required_field):
         """Try to get a requied value from the values dict; if it's not there,
         try the cross-referenced source model.
         """
@@ -792,8 +794,7 @@ class ValidBibTeXEntry(FancyValidator):
             return values[required_field]
         elif getattr(values.get('crossref_source'), required_field, None):
             return getattr(values['crossref_source'], required_field)
-        else:
-            return None
+        return None
 
     def _validate_python(self, values, state):
         invalid = False
@@ -1103,7 +1104,7 @@ class ValidUsernameAndPassword(FancyValidator):
             """Returns True if the password has a lowercase character, an
             uppercase character, a digit and a symbol.
             """
-            symbol_patt = re.compile('''[-!$%^&*()_+|~=`{}\[\]:";'<>?,./]''')
+            symbol_patt = re.compile(r'''[-!$%^&*()_+|~=`{}\[\]:";'<>?,./]''')
             return (
                 re.search('[a-z]', password) is not None and
                 re.search('[A-Z]', password) is not None and
@@ -1132,7 +1133,7 @@ class ValidUsernameAndPassword(FancyValidator):
         if username_is_a_non_empty_string:
             User = old_models.User
             query = state.db.dbsession.query(User)
-            if re.search('[^\w]+', username):
+            if re.search(r'[^\w]+', username):
                 # Only word characters are allowed
                 raise Invalid(self.message('illegal_chars', state,
                                            username=username),

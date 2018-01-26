@@ -14,13 +14,18 @@
 
 """FormSearch model"""
 
+import logging
+
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
+from sqlalchemy.types import Integer, Unicode, UnicodeText
 from sqlalchemy.orm import relation
-from .meta import Base, now
-import logging
-log = logging.getLogger(__name__)
+
+from old.models.meta import Base, now
+
+
+LOGGER = logging.getLogger(__name__)
+
 
 class FormSearch(Base):
 

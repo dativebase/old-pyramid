@@ -48,39 +48,39 @@ class URL:
         self.collection_name = collection_name
 
     def __call__(self, route_name, **kwargs):
+        # pylint: disable=too-many-return-statements
         if route_name in ('index', 'create', 'search'):
             return self.RSRCS_PATH.format(
                 collection_name=self.collection_name,
                 old_name=kwargs.get('old_name', OLD_NAME_DFLT))
-        elif route_name in ('show', 'delete', 'update'):
+        if route_name in ('show', 'delete', 'update'):
             return self.RSRC_PATH.format(
                 collection_name=self.collection_name,
                 id_=kwargs.get('id'),
                 old_name=kwargs.get('old_name', OLD_NAME_DFLT))
-        elif route_name == 'new':
+        if route_name == 'new':
             return self.RSRC_NEW_PATH.format(
                 collection_name=self.collection_name,
                 old_name=kwargs.get('old_name', OLD_NAME_DFLT))
-        elif route_name == 'edit':
+        if route_name == 'edit':
             return self.RSRC_EDIT_PATH.format(
                 collection_name=self.collection_name,
                 id_=kwargs.get('id'),
                 old_name=kwargs.get('old_name', OLD_NAME_DFLT))
-        elif route_name == 'history':
+        if route_name == 'history':
             return self.RSRC_HIST_PATH.format(
                 collection_name=self.collection_name,
                 id_=kwargs.get('id'),
                 old_name=kwargs.get('old_name', OLD_NAME_DFLT))
-        elif route_name == 'new_search':
+        if route_name == 'new_search':
             return self.RSRC_NEW_SRCH_PATH.format(
                 collection_name=self.collection_name,
                 old_name=kwargs.get('old_name', OLD_NAME_DFLT))
-        elif route_name == 'search_post':
+        if route_name == 'search_post':
             return self.RSRC_SRCH_POST_PATH.format(
                 collection_name=self.collection_name,
                 old_name=kwargs.get('old_name', OLD_NAME_DFLT))
-        else:
-            return None
+        return None
 
 
 class Model(object):
@@ -88,6 +88,7 @@ class Model(object):
     OLD models inherit both from model.model.Model and model.meta.Base (cf.
     model.meta).
     """
+    # pylint: disable=too-many-public-methods
 
     __table_args__ = {
         'mysql_charset': 'utf8',
@@ -95,6 +96,7 @@ class Model(object):
     }
 
     def __json__(self, request):
+        # pylint: disable=unused-argument
         return self.get_dict()
 
     def get_dict(self):
@@ -105,6 +107,7 @@ class Model(object):
 
     @classmethod
     def _url(cls):
+        # pylint: disable=no-member
         __url = getattr(cls, '__url', None)
         if not __url:
             if cls.__tablename__ == 'applicationsettings':
@@ -117,17 +120,21 @@ class Model(object):
     # Maps names of tables to the sets of attributes required for mini-dict creation
     table_name2core_attributes = {
         'corpus': ['id', 'name'],
-        'corpusfile': ['id', 'filename', 'datetime_modified', 'format', 'restricted'],
+        'corpusfile': ['id', 'filename', 'datetime_modified', 'format',
+                       'restricted'],
         'elicitationmethod': ['id', 'name'],
-        'file': ['id', 'name', 'filename', 'MIME_type', 'size', 'url', 'lossy_filename'],
+        'file': ['id', 'name', 'filename', 'MIME_type', 'size', 'url',
+                 'lossy_filename'],
         'formsearch': ['id', 'name'],
         'morphemelanguagemodel': ['id', 'name'],
         'morphology': ['id', 'name'],
-        'orthography': ['id', 'name', 'orthography', 'lowercase', 'initial_glottal_stops'],
+        'orthography': ['id', 'name', 'orthography', 'lowercase',
+                        'initial_glottal_stops'],
         'phonology': ['id', 'name'],
         'source': ['id', 'crossref', 'crossref_source', 'type', 'key',
-            'journal', 'editor', 'chapter', 'pages', 'publisher', 'booktitle',
-            'school', 'institution', 'year', 'author', 'title', 'note'],
+                   'journal', 'editor', 'chapter', 'pages', 'publisher',
+                   'booktitle', 'school', 'institution', 'year', 'author',
+                   'title', 'note'],
         'speaker': ['id', 'first_name', 'last_name', 'dialect'],
         'syntacticcategory': ['id', 'name'],
         'tag': ['id', 'name'],
@@ -142,11 +149,12 @@ class Model(object):
         dict_ = {}
         try:
             for attr in attrs:
-                if attr is 'crossref_source':
+                if attr == 'crossref_source':
                     crossref_source = getattr(model, 'crossref_source')
                     if crossref_source:
                         sub_attrs = self.table_name2core_attributes['source']
-                        tmp = self.get_dict_from_model(crossref_source, sub_attrs)
+                        tmp = self.get_dict_from_model(
+                            crossref_source, sub_attrs)
                         dict_[attr] = tmp
                 else:
                     dict_[attr] = getattr(model, attr)
@@ -154,7 +162,8 @@ class Model(object):
         except AttributeError:
             return None
 
-    def json_loads(self, JSONString):
+    @staticmethod
+    def json_loads(JSONString):
         try:
             return json.loads(JSONString)
         except (ValueError, TypeError):
@@ -162,8 +171,8 @@ class Model(object):
 
     def get_mini_dict(self, model=None):
         model = model or self
-        return self.get_dict_from_model(model,
-                    self.table_name2core_attributes.get(model.__tablename__, []))
+        return self.get_dict_from_model(
+            model, self.table_name2core_attributes.get(model.__tablename__, []))
 
     def get_mini_dict_for(self, model):
         return model and self.get_mini_dict(model) or None
@@ -201,7 +210,8 @@ class Model(object):
     def get_mini_corpus_file_dict(self, corpus_file):
         return self.get_mini_dict_for(corpus_file)
 
-    def get_mini_list(self, list_of_models):
+    @staticmethod
+    def get_mini_list(list_of_models):
         return [m.get_mini_dict() for m in list_of_models]
 
     def get_translations_list(self, translations):
@@ -213,7 +223,8 @@ class Model(object):
     def get_files_list(self, files):
         return [self.get_mini_file_dict(file) for file in files]
 
-    def get_forms_list(self, forms):
+    @staticmethod
+    def get_forms_list(forms):
         return [form.get_dict() for form in forms]
 
     def get_users_list(self, users):

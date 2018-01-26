@@ -5,7 +5,7 @@ import re
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean
 from sqlalchemy.orm import relation
 
 from old.lib.utils import esc_RE_meta_chars, get_names_and_code_points
@@ -70,6 +70,7 @@ class ApplicationSettings(Base):
         'Orthography',
         primaryjoin='ApplicationSettings.output_orthography_id==Orthography.id')
     datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
+    # pylint: disable=no-member
     unrestricted_users = relation(
         'User', secondary=ApplicationSettingsUser.__table__)
 
@@ -147,33 +148,33 @@ class ApplicationSettings(Base):
             return inv
         if type_ == 'narrow_phonetic':
             setattr(self, attr, Inventory(
-                    getattr(fwt, type_) +
-                    [' '] +
-                    self.narrow_phonetic_inventory.split(',')))
+                getattr(fwt, type_) +
+                [' '] +
+                self.narrow_phonetic_inventory.split(',')))
         elif type_ == 'broad_phonetic':
             setattr(self, attr, Inventory(
-                    getattr(fwt, type_) +
-                    [' '] +
-                    self.broad_phonetic_inventory.split(',')))
+                getattr(fwt, type_) +
+                [' '] +
+                self.broad_phonetic_inventory.split(',')))
         elif type_ == 'orthographic':
             setattr(self, attr, Inventory(
-                    getattr(fwt, type_) +
-                    self.punctuation_list +
-                    [' '] +
-                    self.storage_orthography_list))
+                getattr(fwt, type_) +
+                self.punctuation_list +
+                [' '] +
+                self.storage_orthography_list))
         else:
             if self.morpheme_break_is_orthographic:
                 setattr(self, attr, Inventory(
-                        getattr(fwt, type_) +
-                        self.morpheme_delimiters_list +
-                        [' '] +
-                        self.storage_orthography_list))
+                    getattr(fwt, type_) +
+                    self.morpheme_delimiters_list +
+                    [' '] +
+                    self.storage_orthography_list))
             else:
                 setattr(self, attr, Inventory(
-                        getattr(fwt, type_) +
-                        self.morpheme_delimiters_list +
-                        [' '] +
-                        self.phonemic_inventory.split(',')))
+                    getattr(fwt, type_) +
+                    self.morpheme_delimiters_list +
+                    [' '] +
+                    self.phonemic_inventory.split(',')))
         return getattr(self, attr)
 
 def _get_regex_validator(input_list):

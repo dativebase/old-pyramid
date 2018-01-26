@@ -3,7 +3,6 @@ import logging
 import json
 
 from formencode.validators import Invalid
-from pyramid.view import view_config
 
 from old.lib.constants import (
     JSONDecodeErrorResponse
@@ -114,8 +113,7 @@ def email_reset_password(request):
                     'test.ini'):
                 return {'valid_username': True, 'password_reset': True,
                         'new_password': new_password}
-            else:
-                return {'valid_username': True, 'password_reset': True}
+            return {'valid_username': True, 'password_reset': True}
         except Exception as error:     # socket.error was too specific ...
             LOGGER.warning('EMAIL RESET PASSWORD: MAIL SEND FAIL: %s: %s',
                            error.__class__.__name__, error)

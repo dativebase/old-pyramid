@@ -10,10 +10,7 @@ from pyramid.response import FileResponse
 
 from old import db_session_factory_registry
 import old.lib.constants as oldc
-from old.lib.foma_worker import (
-    FOMA_WORKER_Q,
-    get_dbsession_from_settings
-)
+from old.lib.foma_worker import FOMA_WORKER_Q
 import old.lib.helpers as h
 from old.lib.schemata import (
     TranscriptionsSchema,
@@ -141,7 +138,7 @@ class Morphologicalparsers(Resources):
             ``t2`` are transcriptions of words from the request body and ``p1``
             and ``p2`` are the most probable morphological parsers of t1 and t2.
         """
-        morphparser, id_ = self._model_from_id(eager=True)
+        morphparser, _ = self._model_from_id(eager=True)
         if not morphparser:
             self.request.response.status_int = 404
             return {'error': 'There is no morphological parser with id %s' % id}
@@ -155,8 +152,9 @@ class Morphologicalparsers(Resources):
                 self.request.registry.settings,
                 session_getter
             )
-            LOGGER.warning([h.normalize(w) for w in
-                TranscriptionsSchema.to_python(inputs)['transcriptions']])
+            LOGGER.warning(
+                [h.normalize(w) for w in
+                 TranscriptionsSchema.to_python(inputs)['transcriptions']])
             parses = morphparser.parse(
                 [h.normalize(w) for w in
                  TranscriptionsSchema.to_python(inputs)['transcriptions']])

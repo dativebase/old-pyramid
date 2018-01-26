@@ -29,10 +29,12 @@ __version__ = '2.0.0'
 
 
 def date_adapter(obj, request):
+    # pylint: disable=unused-argument
     return obj.isoformat()
 
 
 def datetime_adapter(obj, request):
+    # pylint: disable=unused-argument
     return obj.strftime(ISO_STRFTIME)
 
 
@@ -152,6 +154,7 @@ class MyRequest(Request):
     ``'/okaold/forms/1'`` implies that the database being accessed is called
     ``'okaold'``.
     """
+    # pylint: disable=no-member
 
     def __init__(self, environ):
         super().__init__(environ)
@@ -167,8 +170,7 @@ class MyRequest(Request):
     def get_new_path(scheme, path, old_name):
         if scheme == 'sqlite':
             return os.path.join(os.path.dirname(path), '{}.sqlite'.format(old_name))
-        else:
-            return old_name
+        return old_name
 
     def get_sqlalchemy_url(self):
         old_name = self.get_old_name()
@@ -197,11 +199,13 @@ class MyRequest(Request):
         return self._session
 
     def close_dbsession(self, request):
+        # pylint: disable=unused-argument
         self._session.commit()
 
 
 def main(global_config, **settings):
     """This function returns a Pyramid WSGI application."""
+    # pylint: disable=unused-argument
     start_foma_worker()
     settings = expandvars_dict(settings)
     config = Configurator(settings=settings, request_factory=MyRequest)

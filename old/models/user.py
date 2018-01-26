@@ -16,9 +16,10 @@
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
+from sqlalchemy.types import Integer, Unicode, UnicodeText
 from sqlalchemy.orm import relation
-from .meta import Base, now
+
+from old.models.meta import Base, now
 from old.models import Form, File, Collection
 
 
@@ -27,13 +28,14 @@ class UserForm(Base):
     __tablename__ = 'userform'
 
     id = Column(Integer, Sequence('userform_seq_id', optional=True),
-            primary_key=True)
+                primary_key=True)
     form_id = Column(Integer, ForeignKey('form.id'))
     user_id = Column(Integer, ForeignKey('user.id'))
     datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
 
 
 class User(Base):
+    # pylint: disable=too-many-instance-attributes
 
     __tablename__ = 'user'
 
@@ -41,7 +43,7 @@ class User(Base):
         return "<User (%s)>" % self.id
 
     id = Column(Integer, Sequence('user_seq_id', optional=True),
-            primary_key=True)
+                primary_key=True)
     username = Column(Unicode(255), unique=True)
     password = Column(Unicode(255))
     salt = Column(Unicode(255))
@@ -53,17 +55,18 @@ class User(Base):
     markup_language = Column(Unicode(100))
     page_content = Column(UnicodeText)
     html = Column(UnicodeText)
-    input_orthography_id = Column(Integer, ForeignKey('orthography.id',
-        ondelete='SET NULL'))
-    input_orthography = relation('Orthography',
-        primaryjoin='User.input_orthography_id==Orthography.id')
-    output_orthography_id = Column(Integer, ForeignKey('orthography.id',
-        ondelete='SET NULL'))
-    output_orthography = relation('Orthography',
-        primaryjoin='User.output_orthography_id==Orthography.id')
+    input_orthography_id = Column(
+        Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
+    input_orthography = relation(
+        'Orthography', primaryjoin='User.input_orthography_id==Orthography.id')
+    output_orthography_id = Column(
+        Integer, ForeignKey('orthography.id', ondelete='SET NULL'))
+    output_orthography = relation(
+        'Orthography', primaryjoin='User.output_orthography_id==Orthography.id')
     datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
-    remembered_forms = relation('Form', secondary=UserForm.__table__,
-            backref='memorizers')
+    # pylint: disable=no-member
+    remembered_forms = relation(
+        'Form', secondary=UserForm.__table__, backref='memorizers')
 
     def get_dict(self):
         return {

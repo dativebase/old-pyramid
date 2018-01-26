@@ -144,11 +144,12 @@ def fix_for_tests(request):
     """Modifies the request if certain environment variables are present.
     Purpose is to simulate different login states for testing.
     """
-    if (    os.path.basename(request.registry.settings.get('__file__', '')) ==
+    if (os.path.basename(request.registry.settings.get('__file__', '')) ==
             'test.ini'):
         if 'test.authentication.role' in request.environ:
             role = request.environ['test.authentication.role']
-            user = request.dbsession.query(User).filter(User.role==role).first()
+            user = request.dbsession.query(User).filter(
+                User.role == role).first()
             if user:
                 request.session['user'] = user.get_dict()
         elif 'test.authentication.id' in request.environ:
@@ -226,15 +227,15 @@ def authorize(roles, users=None, user_id_is_args1=False):
             role = user['role']
             if role in roles:
                 # Check for authorization via user.
-                if (    users and role != 'administrator'
-                        and user['id'] not in users):
+                if (users and role != 'administrator' and
+                        user['id'] not in users):
                     LOGGER.info('Failed authorization check; user id %s not'
                                 ' in %s.', user['id'], users)
                     return UNAUTHORIZED_RESP
                 # Check whether the user id equals the id argument in the URL
                 # path. This is useful, e.g., when a user can only edit their
                 # own personal page.
-                if (    user_id_is_args1 and
+                if (user_id_is_args1 and
                         role != 'administrator' and
                         int(user['id']) != int(request.matchdict['id'])):
                     LOGGER.info('Failed authorization check; user id %s not'

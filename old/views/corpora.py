@@ -485,11 +485,12 @@ class Corpora(Resources):
             corpus_file.modifier = modifier
             corpus_file.datetime_modified = corpus.datetime_modified = \
                 datetime_modified
-        def generate_new_corpus_file(corpus, filename, format_, creator,
-                                     datetime_created, restricted):
+        def generate_new_corpus_file(*args):
             """Create a corpus file model with ``filename`` and append it to
             ``corpus.files``.
             """
+            (corpus, filename, format_, creator, datetime_created,
+             restricted) = args
             corpus_file = CorpusFile()
             corpus_file.restricted = restricted
             corpus.files.append(corpus_file)

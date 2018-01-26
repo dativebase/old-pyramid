@@ -46,10 +46,9 @@ def patch_sqlite(settings):
     """Make SQLite behave how we want it to: regex search and case-sensitive
     LIKE.
     """
-    RDBMS_Name, *rest = settings['sqlalchemy.url'].split(':')
+    RDBMS_Name, *_ = settings['sqlalchemy.url'].split(':')
     if RDBMS_Name == 'sqlite':
-        #@event.listens_for(Engine, 'connect', once=True)
-        #def sqlite_patches(dbapi_connection, connection_record):
+        # pylint: disable=unused-variable
         @event.listens_for(Engine, 'begin')
         def sqlite_patches(dbapi_connection):
             # Define a regexp function for SQLite,

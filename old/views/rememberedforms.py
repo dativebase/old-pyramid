@@ -148,11 +148,10 @@ class Rememberedforms(Resources):
             user.remembered_forms = unrestricted_forms
             user.datetime_modified = h.now()
             return user.remembered_forms
-        else:
-            self.request.response.status_int = 400
-            return {
-                'error': 'The update request failed because the submitted data'
-                         ' were not new.'}
+        self.request.response.status_int = 400
+        return {
+            'error': 'The update request failed because the submitted data'
+                     ' were not new.'}
 
     def search(self):
         """Return the remembered forms of a user that match the input JSON

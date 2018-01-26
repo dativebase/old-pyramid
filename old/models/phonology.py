@@ -16,9 +16,10 @@
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean
 from sqlalchemy.orm import relation
-from .meta import Base, now
+
+from old.models.meta import Base, now
 from old.lib.parser import PhonologyFST
 
 class Phonology(PhonologyFST, Base):

@@ -49,20 +49,21 @@ class Orthography:
 
     """
 
-    def remove_all_white_space(self, string):
+    @staticmethod
+    def remove_all_white_space(string):
         """Remove all spaces, newlines and tabs."""
         string = string.replace('\n', '')
         string = string.replace('\t', '')
         string = string.replace(' ', '')
         return string
 
-    def str2bool(self, string):
+    @staticmethod
+    def str2bool(string):
         if string == '1':
             return True
-        elif string == '0':
+        if string == '0':
             return False
-        else:
-            return string
+        return string
 
     def __init__(self, orthography_as_string, **kwargs):
         """Get core attributes; primarily, the orthography in various datatypes.
@@ -87,14 +88,14 @@ class Orthography:
             str(self.orthography_as_dict)
         )
 
-    def get_orthography_as_list(self, orthography):
+    @staticmethod
+    def get_orthography_as_list(orthography):
         """Returns orthography as a list of lists.
 
         E.g.,   u'[a,a\u0301],b,c,d'    becomes
                 [[u'a',u'a\u0301'],[u'b'],[u'c'],[u'd']]
 
         """
-
         in_brackets = False
         result = u''
         for char in orthography:
@@ -112,7 +113,8 @@ class Orthography:
         result = [item.split('|') for item in temp]
         return result
 
-    def get_orthography_as_dict(self, orthography):
+    @staticmethod
+    def get_orthography_as_dict(orthography):
         """Returns orthography as a dictionary of graphs to ranks.
 
         E.g.,   u'[a,a\u0301],b,c,d'    becomes
@@ -144,8 +146,7 @@ class Orthography:
         """Return **kwargs[key] as a boolean, else return default."""
         if key in kwargs:
             return self.str2bool(kwargs[key])
-        else:
-            return default
+        return default
 
 
 class OrthographyTranslator:
@@ -180,14 +181,12 @@ class OrthographyTranslator:
         means that the order of graphs entered by the user on the Settings page
         may have unintended consequences for translation...
         """
-
         replacements = {}
-        for i in range(len(self.input_orthography.orthography_as_list)):
-            graph_type_list = self.input_orthography.orthography_as_list[i]
-            for j in range(len(graph_type_list)):
-                if graph_type_list[j] not in replacements:
-                    replacements[graph_type_list[j]] = \
-                        self.output_orthography.orthography_as_list[i][j]
+        for i, graph_type_list in enumerate(self.input_orthography.orthography_as_list):
+            for j, x in enumerate(graph_type_list):
+                if x not in replacements:
+                    replacements[x] = (
+                        self.output_orthography.orthography_as_list[i][j])
         self.replacements = replacements
 
     def make_replacements_case_sensitive(self):
@@ -277,34 +276,34 @@ class OrthographyTranslator:
         """
         if string[:4] == '<ml>' and string[-5:] == '</ml>':
             return string
-        else:
-            return self.replacements[string]
+        return self.replacements[string]
 
     # The built-in methods lower(), upper(), isupper(), capitalize(), etc.
     #  don't do exactly what we need here
-
-    def make_lowercase(self, string):
+    @staticmethod
+    def make_lowercase(string):
         """Return the string in lowercase except for the substrings enclosed
         in metalanguage tags."""
         patt = re.compile("<ml>.*?</ml>|.")
         def get_replacement(string):
             if string[:4] == '<ml>' and string[-5:] == '</ml>':
                 return string
-            else:
-                return string.lower()
+            return string.lower()
         return patt.sub(lambda x:get_replacement(x.group()), string)
 
-    def capitalize(self, string):
+    @staticmethod
+    def capitalize(string):
         """If string contains an alpha character, return string with first alpha
         capitalized; else, return empty string.
         """
         result = ""
-        for i in range(len(string)):
-            if string[i].isalpha():
+        for i, c in enumerate(string):
+            if c.isalpha():
                 return string[:i] + string[i:].capitalize()
         return result
 
-    def is_capital(self, string):
+    @staticmethod
+    def is_capital(string):
         """Returns true only if first alpha character found is uppercase."""
         for char in string:
             if char.isalpha():
@@ -321,13 +320,13 @@ class OrthographyCompatibilityError(Exception):
 class CustomSorter():
     """Takes an Orthography instance and generates a method for sorting a list
     of Forms according to the order of graphs in the orthography.
-
     """
 
     def __init__(self, orthography):
         self.orthography = orthography
 
-    def remove_white_space(self, word):
+    @staticmethod
+    def remove_white_space(word):
         return word.replace(' ', '').lower()
 
     def get_integer_tuple(self, word):
@@ -338,20 +337,16 @@ class CustomSorter():
         Since graphs are not necessarily Python characters, we have to replace
         each graph with its rank, starting with the longest graphs first.
         """
-
         graphs = self.orthography.orthography_as_dict.keys()
         graphs.sort(key=len)
         graphs.reverse()
-
         for graph in graphs:
             word = str(
                 word.replace(
                     graph,
                     '%s,' % self.orthography.orthography_as_dict[graph]))
-
         # Filter out anything that is not a digit or a comma
-        word = filter(lambda x: x in '01234546789,', word)
-
+        word = list(filter(lambda x: x in '01234546789,', word))
         return tuple([int(x) for x in word[:-1].split(',') if x])
 
     def sort(self, forms):

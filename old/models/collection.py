@@ -2,16 +2,18 @@
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Date
 from sqlalchemy.orm import relation
 from .meta import Base, now
+
+# pylint: disable=no-member
 
 class CollectionFile(Base):
 
     __tablename__ = 'collectionfile'
 
     id = Column(Integer, Sequence('collectionfile_seq_id', optional=True),
-            primary_key=True)
+                primary_key=True)
     collection_id = Column(Integer, ForeignKey('collection.id'))
     file_id = Column(Integer, ForeignKey('file.id'))
     datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
@@ -22,7 +24,7 @@ class CollectionTag(Base):
     __tablename__ = 'collectiontag'
 
     id = Column(Integer, Sequence('collectiontag_seq_id', optional=True),
-            primary_key=True)
+                primary_key=True)
     collection_id = Column(Integer, ForeignKey('collection.id'))
     tag_id = Column(Integer, ForeignKey('tag.id'))
     datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
@@ -107,5 +109,3 @@ class Collection(Base):
         result = self.get_dict()
         result['forms'] = self.get_forms_list(self.forms)
         return result
-
-

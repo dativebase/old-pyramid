@@ -75,7 +75,7 @@ class Morphologies(Resources):
         return self.generate_and_compile_morphology(compile_=False)
 
     def generate_and_compile_morphology(self, compile_=True):
-        morphology, id_ = self._model_from_id(eager=True)
+        morphology, _ = self._model_from_id(eager=True)
         if not morphology:
             self.request.response.status_int = 404
             return {'error': 'There is no morphology with id %s' % id}

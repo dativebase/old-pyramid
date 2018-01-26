@@ -16,7 +16,7 @@
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
+from sqlalchemy.types import Integer, Unicode, UnicodeText
 from .meta import Base, now
 
 class Translation(Base):

@@ -60,6 +60,9 @@ from old.lib import simplelm
 LOGGER = logging.getLogger(__name__)
 
 
+# pylint: disable=not-callable
+
+
 class Parse:
     """Represents a parse of a word.
 
@@ -156,15 +159,17 @@ class Parse:
                 parse.append(item[0])
         return ''.join(parse)
 
-    def esc_re_meta_chars(self, string):
+    @staticmethod
+    def esc_re_meta_chars(string):
+        # pylint: disable=anomalous-backslash-in-string
         """Escapes regex metacharacters in ``string``.
 
             >>> esc_re_meta_chars('-')
-            '\\\-'
+            r'\-'
 
         """
         def esc(char):
-            if char in '\\^$*+?{,}.|][()^-':
+            if char in r'\^$*+?{,}.|][()^-':
                 return re.escape(char)
             return char
         return ''.join([esc(char) for char in string])
@@ -298,10 +303,9 @@ class Command:
         if getattr(self, 'id', None):
             return os.path.join(self.parent_directory, '%s_%d' % (
                 self.directory_name, self.id))
-        else:
-            # This is the (assumedly) non-SQLA/OLD case: we create all files in
-            # parent_directory
-            return self.parent_directory
+        # This is the (assumedly) non-SQLA/OLD case: we create all files in
+        # parent_directory
+        return self.parent_directory
 
     object_type2directory_name = {}
     object_type2file_name = {}
@@ -316,7 +320,8 @@ class Command:
         object_type = self.object_type
         return self.object_type2file_name.get(object_type, object_type)
 
-    def make_directory_safely(self, path):
+    @staticmethod
+    def make_directory_safely(path):
         """Create a directory and avoid race conditions.
         http://stackoverflow.com/questions/273192/python-best-way-to-create-directory-if-it-doesnt-exist-for-file-write.
         """
@@ -330,12 +335,11 @@ class Command:
         """Remove the directory of the FomaFST instance.
 
         :returns: an absolute path to the directory for the phonology.
-
         """
         try:
             rmtree(self.directory)
         except Exception:
-            return None
+            pass
 
     def run(self, cmd, timeout):
         """Run :func:`cmd` as a subprocess that is terminated within
@@ -383,14 +387,14 @@ class Command:
         """
         if os.uname()[0] == 'Darwin':
             return self.get_process_children_mac(pid)
-        else:
-            return self.get_process_children_linux(pid)
+        return self.get_process_children_linux(pid)
 
-    def get_process_children_mac(self, pid):
+    @staticmethod
+    def get_process_children_mac(pid):
         """Return list of pids of child processes of ``pid`` on Mac."""
         process = Popen('ps -o pid -o ppid', shell=True,
                         stdout=PIPE, stderr=PIPE)
-        stdout, stderr = process.communicate()
+        stdout, _ = process.communicate()
         try:
             return [int(p) for p, pp in
                     [line.strip().split() for line in stdout.splitlines()[1:]]
@@ -398,14 +402,16 @@ class Command:
         except Exception:
             return []
 
-    def get_process_children_linux(self, pid):
+    @staticmethod
+    def get_process_children_linux(pid):
         """Return list of pids of child processes of ``pid`` on Linux."""
         process = Popen('ps --no-headers -o pid --ppid %d' % pid, shell=True,
                         stdout=PIPE, stderr=PIPE)
-        stdout, stderr = process.communicate()
+        stdout, _ = process.communicate()
         return [int(p) for p in stdout.split()]
 
-    def executable_installed(self, name):
+    @staticmethod
+    def executable_installed(name):
         """Check if executable ``name`` is in the user's PATH."""
         for path in os.environ['PATH'].split(os.pathsep):
             path = path.strip('"')
@@ -415,7 +421,8 @@ class Command:
                 return True
         return False
 
-    def get_modification_time(self, path):
+    @staticmethod
+    def get_modification_time(path):
         """Return the modification time of the file or directory with
         ``path``.
         """
@@ -478,9 +485,9 @@ class FomaFST(Command):
         """Extend the base class's property of the same name so that
         ``get_file_path`` works appropriately for this type of command.
         """
-        if getattr(self, '_file_type2extension', None):
+        try:
             return self._file_type2extension
-        else:
+        except AttributeError:
             self._file_type2extension = super(
                 FomaFST, self).file_type2extension.copy()
             self._file_type2extension.update({
@@ -490,7 +497,8 @@ class FomaFST(Command):
             })
             return self._file_type2extension
 
-    def generate_salt(self):
+    @staticmethod
+    def generate_salt():
         return str(uuid4().hex)
 
     def applyup(self, input_, boundaries=None):
@@ -517,13 +525,13 @@ class FomaFST(Command):
         LOGGER.debug('in apply')
         boundaries = boundaries if boundaries is not None else getattr(
             self, 'boundaries', False)
-        LOGGER.debug('in apply got boundaries: {}'.format(boundaries))
+        LOGGER.debug('in apply got boundaries: %s', boundaries)
         if isinstance(input_, str):
             inputs = [input_]
         elif isinstance(input_, (list, tuple)):
             inputs = list(input_)
         else:
-            LOGGER.debug('in apply; returning None, bad type {}'.format(type(input)))
+            LOGGER.debug('in apply; returning None, bad type %s', type(input))
             return None
         LOGGER.debug('in apply ensured input_ is a list')
         directory = self.directory
@@ -590,8 +598,7 @@ class FomaFST(Command):
             if (x[0:1], x[-1:]) == (self.word_boundary_symbol,
                                     self.word_boundary_symbol):
                 return x[1:-1]
-            else:
-                return x
+            return x
         if remove_word_boundaries:
             remover = word_boundary_remover
         else:
@@ -602,7 +609,7 @@ class FomaFST(Command):
             if line:
                 try:
                     i, o = map(remover, line.split('\t')[:2])
-                except:
+                except (TypeError, ValueError):
                     i = o = line
                 result.setdefault(i, []).append({self.flookup_no_output: None}.get(o, o))
         return {k: list(filter(None, v)) for k, v in result.items()}
@@ -652,9 +659,9 @@ class FomaFST(Command):
         """
         LOGGER.debug('in compile')
         verification_string = verification_string or self.verification_string
-        LOGGER.debug('in compile got verification string: {}'.format(verification_string))
+        LOGGER.debug('in compile got verification string: %s', verification_string)
         compiler_path = self.get_file_path('compiler')
-        LOGGER.debug('in compile got compiler_path: {}'.format(compiler_path))
+        LOGGER.debug('in compile got compiler_path: %s', compiler_path)
         binary_path = self.get_file_path('binary')
         LOGGER.debug('in compile got binary path')
         binary_mod_time = self.get_modification_time(binary_path)
@@ -690,7 +697,8 @@ class FomaFST(Command):
                     'Foma script is not a well-formed %s %s.' %
                     (self.object_type, output))[:255]
         except Exception as e:
-            LOGGER.debug('in compile got exception {} {}'.format(e, e.__class__.__name__))
+            LOGGER.debug('in compile got exception %s %s',
+                         e, e.__class__.__name__)
             self.compile_message = 'Compilation attempt raised an error.'
         if self.compile_succeeded:
             LOGGER.debug('in compile compile succeeded')
@@ -704,7 +712,8 @@ class FomaFST(Command):
         LOGGER.debug('in compile done, changing uuid compile_attempt attr')
         self.compile_attempt = str(uuid4())
 
-    def decombine(self, string):
+    @staticmethod
+    def decombine(string):
         """Alter a string so that any unicode combining characters it contains
         are separated from their base characters by a space.  This was found to
         be necessary in order to sidestep a bug (?) of foma wherein a
@@ -831,26 +840,26 @@ class MorphologyFST(FomaFST, Parse):
         the script is written using the lexc formalism or the regular
         expression one.
         """
-        if getattr(self, '_verification_string', None):
+        try:
             return self._verification_string
-        if getattr(self, 'script_type', None) == 'lexc':
-            self._verification_string =  'Done!'
-        else:
-            self._verification_string =  'defined %s: ' % self.object_type
-        return self._verification_string
+        except AttributeError:
+            if getattr(self, 'script_type', None) == 'lexc':
+                self._verification_string =  'Done!'
+            else:
+                self._verification_string =  'defined %s: ' % self.object_type
+            return self._verification_string
 
     @property
     def file_type2extension(self):
         if getattr(self, '_file_type2extension', None):
             return self._file_type2extension
-        else:
-            self._file_type2extension = super(
-                MorphologyFST, self).file_type2extension.copy()
-            self._file_type2extension.update({
-                'lexicon': '.pickle',
-                'dictionary': '_dictionary.pickle',
-            })
-            return self._file_type2extension
+        self._file_type2extension = super(
+            MorphologyFST, self).file_type2extension.copy()
+        self._file_type2extension.update({
+            'lexicon': '.pickle',
+            'dictionary': '_dictionary.pickle',
+        })
+        return self._file_type2extension
 
 
 class LanguageModel(Command, Parse):
@@ -902,9 +911,9 @@ class LanguageModel(Command, Parse):
 
     @property
     def file_type2extension(self):
-        if getattr(self, '_file_type2extension', None):
+        try:
             return self._file_type2extension
-        else:
+        except AttributeError:
             self._file_type2extension = super(LanguageModel, self).file_type2extension.copy()
             self._file_type2extension.update({
                 'corpus': '.txt',
@@ -914,7 +923,7 @@ class LanguageModel(Command, Parse):
             })
             return self._file_type2extension
 
-    space_splitter = re.compile('\s+')
+    space_splitter = re.compile(r'\s+')
 
     def get_probabilities(self, input_):
         """Return the probability of each sequence of morphemes in ``input_``.
@@ -1016,9 +1025,8 @@ class LanguageModel(Command, Parse):
 
     @property
     def trie(self):
-        """Return the ``simplelm.LMTree`` instance representing a trie interface to the LM
-        if one is available or can be generated.
-
+        """Return the ``simplelm.LMTree`` instance representing a trie
+        interface to the LM if one is available or can be generated.
         """
         if isinstance(getattr(self, '_trie', None), simplelm.LMTree):
             return self._trie
@@ -1027,7 +1035,7 @@ class LanguageModel(Command, Parse):
                 with open(self.get_file_path('trie'), 'rb') as filei:
                     self._trie = pickle.load(filei)
                 return self._trie
-            except Exception:
+            except (FileNotFoundError, pickle.UnpicklingError):
                 try:
                     self.generate_trie()
                     return self._trie
@@ -1151,6 +1159,7 @@ class MorphologicalParser(FomaFST, Parse):
         return {transcription: parse.triplet
                 for transcription, (parse, candidates) in parses.items()}
 
+    # pylint: disable=method-hidden
     def parse(self, transcriptions, parse_objects=False, max_candidates=10):
         """Parse the input transcriptions.
         :param list transcriptions: unicode strings representing transcriptions
@@ -1169,7 +1178,7 @@ class MorphologicalParser(FomaFST, Parse):
         unparsed = []
         LOGGER.debug('in parse set vars')
         for transcription in transcriptions:
-            LOGGER.debug('in parse triaging {}'.format(transcription))
+            LOGGER.debug('in parse triaging %s', transcription)
             cached_parse, cached_candidates = self.cache.get(transcription, (False, False))
             if cached_parse is not False:
                 parsed[transcription] = cached_parse, cached_candidates
@@ -1179,7 +1188,7 @@ class MorphologicalParser(FomaFST, Parse):
         unparsed = self.get_candidates(unparsed) # This is where the foma subprocess is enlisted.
         LOGGER.debug('in parse got candidates from foma')
         for transcription, candidates in unparsed.items():
-            LOGGER.debug('in parse getting most probable for {}'.format(transcription))
+            LOGGER.debug('in parse getting most probable for %s', transcription)
             parse, sorted_candidates = self.get_most_probable(candidates)
             if max_candidates:
                 sorted_candidates = sorted_candidates[:max_candidates]
@@ -1274,14 +1283,16 @@ class MorphologicalParser(FomaFST, Parse):
             if isinstance(morpheme, list):
                 return self.my_morphology.rare_delimiter.join(morpheme)
             return morpheme
-        self.my_morphology
         LOGGER.debug('in disambiguate 3:')
-        LOGGER.debug('self.my_morphology: {}'.format(self.my_morphology))
-        LOGGER.debug('self.morphology_rules_generated: {}'.format(self.morphology_rules_generated))
-        LOGGER.debug('self.my_morphology.rules_generated: {}'.format(self.my_morphology.rules_generated))
-        #LOGGER.debug('self.morphology.rules_generated: {}'.format(self.morphology.rules_generated))
+        LOGGER.debug('self.my_morphology: %s', self.my_morphology)
+        LOGGER.debug('self.morphology_rules_generated: %s',
+                     self.morphology_rules_generated)
+        LOGGER.debug('self.my_morphology.rules_generated: %s',
+                     self.my_morphology.rules_generated)
         rules = self.my_morphology.rules_generated.split()
-        LOGGER.debug('in disambiguate: called split on my_morphology.rules_generated {}'.format(self.my_morphology.rules_generated))
+        LOGGER.debug(
+            'in disambiguate: called split on my_morphology.rules_generated'
+            ' %s', self.my_morphology.rules_generated)
         dictionary_path = self.my_morphology.get_file_path('dictionary')
         LOGGER.debug('in disambiguate: got dictionary path')
         try:
@@ -1290,14 +1301,20 @@ class MorphologicalParser(FomaFST, Parse):
             LOGGER.debug('in disambiguate: pickle-loaded dictionary')
             result = {}
             for transcription, candidate_list in candidates.items():
-                LOGGER.debug('in disambiguate: working on transcription {} and candidates'.format(transcription))
+                LOGGER.debug(
+                    'in disambiguate: working on transcription %s and'
+                    ' candidates', transcription)
                 new_candidates = set()
                 for candidate in candidate_list:
-                    LOGGER.debug('in disambiguate: working on candidate {}'.format(candidate))
+                    LOGGER.debug(
+                        'in disambiguate: working on candidate'
+                        ' %s', candidate)
                     temp = []
                     morphemes = self.morpheme_splitter(candidate)
                     for index, morpheme in enumerate(morphemes):
-                        LOGGER.debug('in disambiguate: looking at morpheme {}'.format(morpheme))
+                        LOGGER.debug(
+                            'in disambiguate: looking at morpheme'
+                            ' %s', morpheme)
                         if index % 2 == 0:
                             homographs = [[morpheme, gloss, category]
                                           for gloss, category in
@@ -1305,18 +1322,21 @@ class MorphologicalParser(FomaFST, Parse):
                             temp.append(homographs)
                         else:
                             temp.append(morpheme) # it's really a delimiter
-                    for candidate in product(*temp):
-                        LOGGER.debug('in disambiguate: looking at "candidate" {}'.format(candidate))
+                    for candidate2 in product(*temp):
+                        LOGGER.debug(
+                            'in disambiguate: looking at "candidate"'
+                            ' %s', candidate2)
                         # Only add a disambiguated candidate if its category
                         # sequence accords with the morphology's rules
-                        if ''.join(get_category(x) for x in candidate) in rules:
+                        if ''.join(get_category(x) for x in candidate2) in rules:
                             new_candidates.add(
-                                ''.join(get_morpheme(x) for x in candidate))
+                                ''.join(get_morpheme(x) for x in candidate2))
                 result[transcription] = list(new_candidates)
             LOGGER.debug('in disambiguate: done: returning result.')
             return result
         except Exception as error:
-            LOGGER.debug('in disambiguate: error: {}'.format(error.__class__.__name__))
+            LOGGER.debug(
+                'in disambiguate: error: %s', error.__class__.__name__)
             LOGGER.warning(
                 'some kind of exception occured in morphologicalparsers.py'
                 ' disambiguate_candidates: %s', error)
@@ -1339,12 +1359,12 @@ class MorphologicalParser(FomaFST, Parse):
         try:
             result = self._my_morphology
             LOGGER.debug('in my_morphology property: have self._my_morphology:'
-                         ' {}'.format(result))
+                         ' %s', result)
             return result
         except AttributeError:
             self._my_morphology = self.morphology
             LOGGER.debug('in my_morphology property: Attribute error: set'
-                         ' self._my_morphology to {}'.format(self.morphology))
+                         ' self._my_morphology to %s', self.morphology)
             return self._my_morphology
 
     @my_morphology.setter
@@ -1406,8 +1426,7 @@ class MorphologicalParser(FomaFST, Parse):
         ``get_file_path`` works appropriately for this type of command."""
         if getattr(self, '_file_type2extension', None):
             return self._file_type2extension
-        else:
-            self._file_type2extension = super(
-                MorphologicalParser, self).file_type2extension.copy()
-            self._file_type2extension.update({'cache': '_cache.pickle'})
-            return self._file_type2extension
+        self._file_type2extension = super(
+            MorphologicalParser, self).file_type2extension.copy()
+        self._file_type2extension.update({'cache': '_cache.pickle'})
+        return self._file_type2extension

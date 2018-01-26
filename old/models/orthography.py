@@ -16,7 +16,7 @@
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean
 from .meta import Base, now
 
 class Orthography(Base):

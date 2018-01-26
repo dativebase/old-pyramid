@@ -15,12 +15,14 @@
 """Keyboard model: encodes a mapping between JavaScript key codes and Unicode
 characters."""
 
+import json
+
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
+from sqlalchemy.types import Integer, Unicode, UnicodeText
 from sqlalchemy.orm import relation
-from .meta import Base, now
-import json
+
+from old.models.meta import Base, now
 
 
 class Keyboard(Base):
@@ -65,4 +67,3 @@ class Keyboard(Base):
             'enterer': self.get_mini_user_dict(self.enterer),
             'modifier': self.get_mini_user_dict(self.modifier),
         }
-

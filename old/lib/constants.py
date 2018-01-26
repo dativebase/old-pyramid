@@ -100,8 +100,7 @@ FORM_REFERENCE_PATTERN = re.compile(r'[Ff]orm\[([0-9]+)\]')
 
 
 # This is the regex for finding collection references in the contents of collections.
-#COLLECTION_REFERENCE_PATTERN = re.compile('[cC]ollection[\(\[](\d+)[\)\]]')
-COLLECTION_REFERENCE_PATTERN = re.compile('[cC]ollection[\[\(](\d+)[\]\)]')
+COLLECTION_REFERENCE_PATTERN = re.compile(r'[cC]ollection[\[\(](\d+)[\]\)]')
 
 
 MARKUP_LANGUAGES = (

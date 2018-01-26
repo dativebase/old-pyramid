@@ -16,19 +16,12 @@
 OLD.
 """
 
-import datetime
 import logging
-import re
-from uuid import uuid4
 
-from sqlalchemy import bindparam
-from sqlalchemy.sql import asc, or_
-from sqlalchemy.orm import subqueryload
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 import old.models as old_models
-# TODO: ...
-# from onlinelinguisticdatabase.config.routing import make_map
+
 
 LOGGER = logging.getLogger(__name__)
 

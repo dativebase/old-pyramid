@@ -14,11 +14,14 @@
 
 """Morphological parser backup model"""
 
+import json
+
 from sqlalchemy import Column, Sequence
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
-from .meta import Base, now
-import json
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean
+
+from old.models.meta import Base, now
+
 
 class MorphologicalParserBackup(Base):
 
@@ -27,7 +30,9 @@ class MorphologicalParserBackup(Base):
     def __repr__(self):
         return '<MorphologicalParserBackup (%s)>' % self.id
 
-    id = Column(Integer, Sequence('morphologicalparserbackup_seq_id', optional=True), primary_key=True)
+    id = Column(
+        Integer, Sequence('morphologicalparserbackup_seq_id', optional=True),
+        primary_key=True)
     morphologicalparser_id = Column(Integer)
     UUID = Column(Unicode(36))
     name = Column(Unicode(255))
@@ -88,4 +93,3 @@ class MorphologicalParserBackup(Base):
             'compile_message': self.compile_message,
             'compile_attempt': self.compile_attempt
         }
-

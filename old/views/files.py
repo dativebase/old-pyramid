@@ -165,12 +165,11 @@ class Files(Resources):
                 self.request.dbsession.add(file_)
                 self.request.dbsession.flush()
                 return file_.get_dict()
-            else:
-                self.request.response.status_int = 400
-                return {
-                    'error': 'The update request failed because the submitted'
-                             ' data were not new.'
-                }
+            self.request.response.status_int = 400
+            return {
+                'error': 'The update request failed because the submitted'
+                         ' data were not new.'
+            }
         except ValueError:
             self.request.response.status_int = 400
             return JSONDecodeErrorResponse
@@ -498,7 +497,7 @@ class Files(Resources):
             self.request.response.status_int = 400
             return {
                 'error': 'The content of file %s is stored elsewhere at %s' % (
-                         id_, file_.url)}
+                    id_, file_.url)}
         files_dir = h.get_old_directory_path('files',
                                              self.request.registry.settings)
         if reduced:

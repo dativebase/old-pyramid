@@ -75,12 +75,11 @@ def eagerload_collection(query, eagerload_forms=False):
             subqueryload(old_models.Collection.forms),
             joinedload(old_models.Collection.tags),
             joinedload(old_models.Collection.files))
-    else:
-        return query.options(
-            subqueryload(old_models.Collection.enterer),
-            subqueryload(old_models.Collection.modifier),
-            joinedload(old_models.Collection.tags),
-            joinedload(old_models.Collection.files))
+    return query.options(
+        subqueryload(old_models.Collection.enterer),
+        subqueryload(old_models.Collection.modifier),
+        joinedload(old_models.Collection.tags),
+        joinedload(old_models.Collection.files))
 
 
 def eagerload_corpus(query, eagerload_forms=False):
@@ -93,11 +92,10 @@ def eagerload_corpus(query, eagerload_forms=False):
             subqueryload(old_models.Corpus.modifier),
             subqueryload(old_models.Corpus.forms),
             joinedload(old_models.Corpus.tags))
-    else:
-        return query.options(
-            subqueryload(old_models.Corpus.enterer),
-            subqueryload(old_models.Corpus.modifier),
-            joinedload(old_models.Corpus.tags))
+    return query.options(
+        subqueryload(old_models.Corpus.enterer),
+        subqueryload(old_models.Corpus.modifier),
+        joinedload(old_models.Corpus.tags))
 
 
 def eagerload_file(query):
@@ -298,12 +296,11 @@ class DBUtils:
         """
         if user.role == 'administrator':
             return True
-        elif not self.get_restricted_tag():
+        if not self.get_restricted_tag():
             return True
-        elif user in self.get_unrestricted_users():
+        if user in self.get_unrestricted_users():
             return True
-        else:
-            return False
+        return False
 
     def get_foreign_words(self):
         """Return the forms that are tagged with a 'foreign word' tag. This is
@@ -540,8 +537,7 @@ class DBUtils:
     def filter_restricted_models(self, model_name, query, user):
         if self.user_is_unrestricted(user):
             return query
-        else:
-            return _filter_restricted_models_from_query(model_name, query, user)
+        return _filter_restricted_models_from_query(model_name, query, user)
 
     def get_morpheme_splitter(self):
         """Return a function that will split words into morphemes."""

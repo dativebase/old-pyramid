@@ -532,15 +532,15 @@ class Collections(Resources):
         :returns: a list of collection models.
         """
         patt = COLLECTION_REFERENCE_PATTERN.pattern.replace(
-            '\d+', str(collection.id)).replace('\\', '')
+            r'\d+', str(collection.id)).replace('\\', '')
         query = {'filter': ['Collection', 'contents', 'regex', patt]}
         result = self.query_builder.get_SQLA_query(query).all()
         for c in result[:]:
             result += self._get_collections_referencing_this_collection(c)
         return result
 
-    def _update_collection_by_deletion_of_referenced_form(self, collection,
-                                                          referenced_form):
+    def update_collection_by_deletion_of_referenced_form(self, collection,
+                                                         referenced_form):
         """Update a collection based on the deletion of a form it references.
         This function is called in :class:`Forms` when a form is deleted. It is
         called on each collection that references the deleted form and the
@@ -614,7 +614,7 @@ def _remove_references_to_this_form(contents, form_id):
     :returns: the modified ``contents`` string.
     """
     patt = re.compile(FORM_REFERENCE_PATTERN.pattern.replace(
-        '\d+', str(form_id)))
+        r'\d+', str(form_id)))
     return patt.sub('', contents)
 
 
@@ -627,7 +627,8 @@ def _remove_references_to_this_collection(contents, collection_id):
     :returns: the modified ``contents`` string.
     """
     patt = re.compile(
-        COLLECTION_REFERENCE_PATTERN.pattern.replace('\d+', str(collection_id)))
+        COLLECTION_REFERENCE_PATTERN.pattern.replace(
+            r'\d+', str(collection_id)))
     return patt.sub('', contents)
 
 

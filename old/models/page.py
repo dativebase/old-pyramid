@@ -16,8 +16,10 @@
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime
-from .meta import Base, now
+from sqlalchemy.types import Integer, Unicode, UnicodeText
+
+from old.models.meta import Base, now
+
 
 class Page(Base):
 
@@ -27,7 +29,7 @@ class Page(Base):
         return '<Page (%s)>' % self.id
 
     id = Column(Integer, Sequence('page_seq_id', optional=True),
-            primary_key=True)
+                primary_key=True)
     name = Column(Unicode(255), unique=True)
     heading = Column(Unicode(255))
     markup_language = Column(Unicode(100))

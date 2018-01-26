@@ -62,9 +62,8 @@ def save_reduced_copy(file_, settings):
         elif file_.MIME_type == 'audio/x-wav':
             format_ = settings.get('preferred_lossy_audio_format', 'ogg')
             return save_wav_as(file_, format_, files_path, reduced_files_path)
-        else:
-            LOGGER.debug('Not an image or a WAV file: not reducing')
-            return None
+        LOGGER.debug('Not an image or a WAV file: not reducing')
+        return None
     LOGGER.debug('File has no filename or create_reduced_size_file_copies is'
                  ' falsey: not reducing')
     return None
@@ -120,7 +119,7 @@ def save_wav_as(file_, format_, files_path, reduced_files_path):
             out_path = os.path.join(reduced_files_path, out_name)
             with open(os.devnull, "w") as fnull:
                 call(['ffmpeg', '-i', in_path, out_path], stdout=fnull,
-                      stderr=fnull)
+                     stderr=fnull)
             if os.path.isfile(out_path):
                 return out_name
             return None

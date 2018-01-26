@@ -45,6 +45,7 @@ import pickle
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(SCRIPT_DIR)
 
+# pylint: disable=wrong-import-position
 import parser
 if not 'PhonologyFST' in dir(parser):
     # Import the *local* parser module
@@ -57,15 +58,18 @@ CONFIG_PATH = os.path.join(SCRIPT_DIR, CONFIG_FILE)
 CACHE_FILE = 'cache.pickle'
 CACHE_PATH = os.path.join(SCRIPT_DIR, CACHE_FILE)
 
+
 def get_config():
     with open(CONFIG_PATH, 'rb') as filei:
         return pickle.load(filei)
+
 
 def get_phonology():
     return parser.PhonologyFST(
         parent_directory = SCRIPT_DIR,
         word_boundary_symbol = get_config()['phonology']['word_boundary_symbol']
     )
+
 
 def get_morphology():
     return parser.MorphologyFST(
@@ -77,6 +81,7 @@ def get_morphology():
         rules_generated = get_config()['morphology']['rules_generated']
     )
 
+
 def get_language_model():
     return parser.LanguageModel(
         parent_directory = SCRIPT_DIR,
@@ -86,19 +91,20 @@ def get_language_model():
         categorial = get_config()['language_model']['categorial']
     )
 
+
 def get_parser():
     return parser.MorphologicalParser(
         parent_directory = SCRIPT_DIR,
         word_boundary_symbol = get_config()['parser']['word_boundary_symbol'],
         morpheme_delimiters = get_config()['parser']['morpheme_delimiters'],
-        phonology = phonology,
-        morphology = morphology,
-        language_model = language_model,
+        phonology = get_phonology(),
+        morphology = get_morphology(),
+        language_model = get_language_model(),
         cache = parser.Cache(path=CACHE_PATH)
     )
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     for input_ in sys.argv[1:]:
         parse = get_parser().pretty_parse(input_)[input_]
         if parse:

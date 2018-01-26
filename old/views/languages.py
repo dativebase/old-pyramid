@@ -23,5 +23,4 @@ class Languages(ReadonlyResources):
                 self._eagerload_model(
                     self.request.dbsession.query(self.model_cls)).get(id_),
                 id_)
-        else:
-            return self.request.dbsession.query(self.model_cls).get(id_), id_
+        return self.request.dbsession.query(self.model_cls).get(id_), id_

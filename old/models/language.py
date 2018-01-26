@@ -16,7 +16,7 @@
 
 from sqlalchemy import Column
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Unicode, DateTime
+from sqlalchemy.types import Unicode
 from .meta import Base, now
 
 class Language(Base):

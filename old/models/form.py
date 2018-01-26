@@ -16,9 +16,12 @@
 
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Date
 from sqlalchemy.orm import relation
 from .meta import Base, now
+
+
+# pylint: disable=no-member,too-many-locals
 
 
 class FormFile(Base):
@@ -169,7 +172,8 @@ class Form(Base):
                 if extract_morphemes:
                     morpheme_sequence = morpheme_splitter(mb_word)[::2]
                     gloss_sequence = morpheme_splitter(mg_word)[::2]
-                    for pos, morpheme, gloss in zip(pos_sequence[::2], morpheme_sequence, gloss_sequence):
+                    for pos, morpheme, gloss in zip(
+                            pos_sequence[::2], morpheme_sequence,
+                            gloss_sequence):
                         morphemes.append((pos, (morpheme, gloss)))
         return pos_sequences, morphemes
-

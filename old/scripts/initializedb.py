@@ -17,7 +17,6 @@
 import logging
 import os
 import sys
-import transaction
 
 from pyramid.paster import (
     get_appsettings,
@@ -25,14 +24,11 @@ from pyramid.paster import (
 )
 from pyramid.scripts.common import parse_vars
 
+from old import db_session_factory_registry
 import old.lib.helpers as h
 import old.models.modelbuilders as omb
-
-from ..models.meta import Base
-from ..models import (
-    get_engine,
-    get_session_factory,
-)
+from old.models.meta import Base
+from old.models import get_engine
 
 
 LOGGER = logging.getLogger(__name__)
@@ -56,7 +52,6 @@ def main(argv=None):
     settings = get_appsettings(config_uri, options=options)
     engine = get_engine(settings)
     Base.metadata.create_all(engine)
-    session_factory = get_session_factory(engine)
 
     try:
         dbsession = db_session_factory_registry.get_session(settings)()

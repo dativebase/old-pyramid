@@ -1,8 +1,14 @@
-from pyramid.response import Response
-from pyramid.view import view_config
-from old.views.resources import Resources
+import logging
 
-from sqlalchemy.exc import DBAPIError
+from old.views.resources import ReadonlyResources
 
-class Morphologicalparserbackups(Resources):
-    pass
+
+LOGGER = logging.getLogger(__name__)
+
+
+class Morphologicalparserbackups(ReadonlyResources):
+
+    def __init__(self, request):
+        self.model_name = 'MorphologicalParserBackup'
+        self.hmn_member_name = 'morphological parser backup'
+        super().__init__(request)

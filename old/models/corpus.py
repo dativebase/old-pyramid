@@ -14,20 +14,25 @@
 
 """Corpus model"""
 
+import logging
+
 from sqlalchemy import Column, Sequence, ForeignKey
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, DateTime, Boolean
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean
 from sqlalchemy.orm import relation
-from .meta import Base, now
-import logging
-log = logging.getLogger(name=__name__)
+
+from old.models.meta import Base, now
+
+
+LOGGER = logging.getLogger(name=__name__)
+
 
 class CorpusForm(Base):
 
     __tablename__ = 'corpusform'
 
     id = Column(Integer, Sequence('corpusform_seq_id', optional=True),
-            primary_key=True)
+                primary_key=True)
     corpus_id = Column(Integer, ForeignKey('corpus.id'))
     form_id = Column(Integer, ForeignKey('form.id'))
     datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
@@ -38,7 +43,7 @@ class CorpusTag(Base):
     __tablename__ = 'corpustag'
 
     id = Column(Integer, Sequence('corpustag_seq_id', optional=True),
-            primary_key=True)
+                primary_key=True)
     corpus_id = Column(Integer, ForeignKey('corpus.id'))
     tag_id = Column(Integer, ForeignKey('tag.id'))
     datetime_modified = Column(mysql.DATETIME(fsp=6), default=now)
@@ -121,7 +126,7 @@ class Corpus(Base):
     def get_int(cls, input_):
         try:
             return int(input_)
-        except Exception:
+        except (TypeError, ValueError):
             return None
 
     @classmethod

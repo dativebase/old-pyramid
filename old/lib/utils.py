@@ -21,7 +21,6 @@ A number of functions, classes and constants used throughout the application.
 
 """
 
-import codecs
 import configparser
 import datetime
 import errno
@@ -241,6 +240,7 @@ def remove_all_white_space(string_):
 
 
 def esc_RE_meta_chars(string_):
+    # pylint: disable=anomalous-backslash-in-string
     """Escapes regex metacharacters so that we can formulate an SQL regular
     expression based on an arbitrary, user-specified inventory of
     graphemes/polygraphs::
@@ -464,7 +464,8 @@ def generate_salt():
 
 def encrypt_password(password, salt):
     """Use PassLib's pbkdf2 implementation to generate a hash from a password.
-    Cf. http://packages.python.org/passlib/lib/passlib.hash.pbkdf2_digest.html#passlib.hash.pbkdf2_sha512
+    Cf. http://packages.python.org/passlib/lib/passlib.hash.pbkdf2_digest.html\
+        #passlib.hash.pbkdf2_sha512
     """
     return pbkdf2_sha512.encrypt(password, salt=salt)
 
@@ -552,37 +553,38 @@ def send_password_reset_email_to(user, new_password, settings, app_url,
     return failures
 
 
-def compile_query(query, settings):
-    """Return the SQLAlchemy query as a bona fide MySQL query.  Taken from
-    http://stackoverflow.com/questions/4617291/how-do-i-get-a-raw-compiled-sql-query-from-a-sqlalchemy-expression.
-    """
-    rdbms_name = get_RDBMS_name(settings)
-    if rdbms_name == 'mysql':
-        from sqlalchemy.sql import compiler
-        # TODO: MySQLdb (i.e., MySQL-python) does not work with Python 3. See
-        # http://stackoverflow.com/questions/14732533/pyramid-python3-sqlalchemy-and-mysql
-        # for drivers that do, i.e.,:
-        # - http://packages.python.org/oursql/
-        # - https://github.com/petehunt/PyMySQL/
-        # - https://launchpad.net/myconnpy
-        from MySQLdb.converters import conversions, escape
-        # an object representing the dialect; dialect.name will be 'sqlite' or
-        # 'mysql'
-        dialect = query.session.bind.dialect
-        # The query as SQL with variable names instead of values, e.g., 'WHERE
-        # form.transcription like :transcription_1'
-        statement = query.statement
-        comp = compiler.SQLCompiler(dialect, statement)
-        enc = dialect.encoding
-        params = []
-        for key in comp.positiontup:
-            val = comp.params[key]
-            if isinstance(val, str):
-                val = val.encode(enc)
-            params.append(escape(val, conversions) )
-        return (comp.string.encode(enc) % tuple(params)).decode(enc)
-    else:
-        return str(query)
+# def compile_query(query, settings):
+#     """Return the SQLAlchemy query as a bona fide MySQL query.  Taken from
+#     http://stackoverflow.com/questions/4617291/\
+#     how-do-i-get-a-raw-compiled-sql-query-from-a-sqlalchemy-expression.
+#     """
+#     rdbms_name = get_RDBMS_name(settings)
+#     if rdbms_name == 'mysql':
+#         from sqlalchemy.sql import compiler
+#         # TODO: MySQLdb (i.e., MySQL-python) does not work with Python 3. See
+#         # http://stackoverflow.com/questions/14732533/pyramid-python3-sqlalchemy-and-mysql
+#         # for drivers that do, i.e.,:
+#         # - http://packages.python.org/oursql/
+#         # - https://github.com/petehunt/PyMySQL/
+#         # - https://launchpad.net/myconnpy
+#         from MySQLdb.converters import conversions, escape
+#         # an object representing the dialect; dialect.name will be 'sqlite' or
+#         # 'mysql'
+#         dialect = query.session.bind.dialect
+#         # The query as SQL with variable names instead of values, e.g., 'WHERE
+#         # form.transcription like :transcription_1'
+#         statement = query.statement
+#         comp = compiler.SQLCompiler(dialect, statement)
+#         enc = dialect.encoding
+#         params = []
+#         for key in comp.positiontup:
+#             val = comp.params[key]
+#             if isinstance(val, str):
+#                 val = val.encode(enc)
+#             params.append(escape(val, conversions) )
+#         return (comp.string.encode(enc) % tuple(params)).decode(enc)
+#     else:
+#         return str(query)
 
 
 ################################################################################
@@ -670,8 +672,7 @@ def foma_output_file2dict(file_, remove_word_boundaries=True):
     def word_boundary_remover(x):
         if (x[0:1], x[-1:]) == (WORD_BOUNDARY_SYMBOL, WORD_BOUNDARY_SYMBOL):
             return x[1:-1]
-        else:
-            return x
+        return x
     remover = word_boundary_remover if remove_word_boundaries else (lambda x: x)
     result = {}
     for line in file_:
@@ -772,20 +773,19 @@ def pretty_print_bytes(num_bytes):
         return 'File size unavailable.'
     if num_bytes > YIB:
         return '%.3g YIB' % (num_bytes / YIB)
-    elif num_bytes > ZIB:
+    if num_bytes > ZIB:
         return '%.3g ZIB' % (num_bytes / ZIB)
-    elif num_bytes > EIB:
+    if num_bytes > EIB:
         return '%.3g EIB' % (num_bytes / EIB)
-    elif num_bytes > PIB:
+    if num_bytes > PIB:
         return '%.3g PIB' % (num_bytes / PIB)
-    elif num_bytes > TIB:
+    if num_bytes > TIB:
         return '%.3g TIB' % (num_bytes / TIB)
-    elif num_bytes > GIB:
+    if num_bytes > GIB:
         return '%.3g GIB' % (num_bytes / GIB)
-    elif num_bytes > MIB:
+    if num_bytes > MIB:
         return '%.3g MIB' % (num_bytes / MIB)
-    elif num_bytes > KIB:
-        return '%.3g KIB' % (num_bytes / KIB)
+    return '%.3g KIB' % (num_bytes / KIB)
 
 
 def chunker(sequence, size):

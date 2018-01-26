@@ -19,11 +19,14 @@ non-relational table, because keeping a copy of every single change relationally
 seemed like more trouble than it's worth.
 """
 
+import json
+
 from sqlalchemy import Column, Sequence
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from .meta import Base, now
-import json
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Date
+
+from old.models.meta import Base, now
+
 
 class FormBackup(Base):
     """Class for creating OLD FormBackup models.
@@ -35,6 +38,7 @@ class FormBackup(Base):
     The load method converts the JSON objects into Python Column objects, thus
     allowing the FormBackup to behave more like a Form object.
     """
+    # pylint: disable=too-many-instance-attributes,too-many-locals,too-many-branches,too-many-statements
 
     __tablename__ = "formbackup"
 
@@ -71,7 +75,7 @@ class FormBackup(Base):
     source = Column(UnicodeText)
     translations = Column(UnicodeText)
     tags = Column(UnicodeText)
-    files = Column(UnicodeText) 
+    files = Column(UnicodeText)
     modifier = Column(UnicodeText)
 
     def vivify(self, form_dict):

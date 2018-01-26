@@ -23,8 +23,9 @@ import json
 
 from sqlalchemy import Column, Sequence
 from sqlalchemy.dialects import mysql
-from sqlalchemy.types import Integer, Unicode, UnicodeText, Date, DateTime
-from .meta import Base, now
+from sqlalchemy.types import Integer, Unicode, UnicodeText, Date
+
+from old.models.meta import Base, now
 
 
 class CollectionBackup(Base):

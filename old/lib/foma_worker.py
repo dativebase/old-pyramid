@@ -46,14 +46,11 @@ http://www.ibm.com/developerworks/aix/library/au-threadingpython/.
 """
 
 import logging
-import os
 import queue
 import threading
 from uuid import uuid4
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from paste.deploy import appconfig
+from sqlalchemy.orm import scoped_session
 
 import old.lib.constants as oldc
 import old.lib.helpers as h
@@ -272,9 +269,6 @@ def generate_and_compile_parser(**kwargs):
     """Write the parser's morphophonology FST script to file and compile it if
     ``compile_`` is True.  Generate the language model and pickle it.
     """
-    config_dir, config_file = os.path.split(kwargs['config_path'])
-    settings = appconfig('config:{}'.format(config_file),
-                         relative_to=config_dir)
     try:
         dbsession = get_dbsession_from_settings(kwargs['settings'])
         parser = dbsession.query(old_models.MorphologicalParser).get(

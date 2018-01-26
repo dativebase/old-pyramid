@@ -8,8 +8,6 @@ import inflect
 from sqlalchemy.sql import asc
 from sqlalchemy.exc import OperationalError
 
-import transaction
-
 from old.lib.constants import (
     ALLOWED_FILE_TYPES,
     COLLECTION_TYPES,
@@ -34,6 +32,9 @@ from old.lib.dbutils import (
 import old.lib.helpers as h
 import old.lib.schemata as old_schemata
 import old.models as old_models
+
+
+# pylint: disable=no-self-use
 
 
 LOGGER = logging.getLogger(__name__)
@@ -301,8 +302,7 @@ class ReadonlyResources:
                 self._eagerload_model(
                     self.request.dbsession.query(self.model_cls)).get(id_),
                 id_)
-        else:
-            return self.request.dbsession.query(self.model_cls).get(id_), id_
+        return self.request.dbsession.query(self.model_cls).get(id_), id_
 
     ###########################################################################
     # Utilities
@@ -312,9 +312,8 @@ class ReadonlyResources:
         user = self.logged_in_user
         if self.db.user_is_unrestricted(user):
             return query
-        else:
-            return _filter_restricted_models_from_query(self.model_name, query,
-                                                        user)
+        return _filter_restricted_models_from_query(self.model_name, query,
+                                                    user)
 
     def _rsrc_not_exist(self, id_):
         return 'There is no %s with %s %s' % (self.hmn_member_name,
@@ -341,9 +340,8 @@ class ReadonlyResources:
                 order_by_params, self.primary_key)
             query_builder.clear_errors()
             return query.order_by(order_by_expression)
-        else:
-            model_ = getattr(old_models, query_builder.model_name)
-            return query.order_by(asc(getattr(model_, self.primary_key)))
+        model_ = getattr(old_models, query_builder.model_name)
+        return query.order_by(asc(getattr(model_, self.primary_key)))
 
 
 class Resources(abc.ABC, ReadonlyResources):
@@ -557,13 +555,11 @@ class Resources(abc.ABC, ReadonlyResources):
             if resource_restricted or prev_vers_restricted :
                 self.request.response.status_int = 403
                 return UNAUTHORIZED_MSG
-            else :
-                return {self.member_name: resource_model,
-                        'previous_versions': unrestricted_previous_versions}
-        else:
-            self.request.response.status_int = 404
-            return {'error': 'No %s or %s backups match %s' % (
-                self.hmn_collection_name, self.hmn_member_name, id_)}
+            return {self.member_name: resource_model,
+                    'previous_versions': unrestricted_previous_versions}
+        self.request.response.status_int = 404
+        return {'error': 'No %s or %s backups match %s' % (
+            self.hmn_collection_name, self.hmn_member_name, id_)}
 
     ###########################################################################
     # Private methods for write-able resources
