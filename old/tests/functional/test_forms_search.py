@@ -40,7 +40,7 @@ import old.models.modelbuilders as omb
 LOGGER = logging.getLogger(__name__)
 
 
-url = old_models.Form._url()
+url = old_models.Form._url(old_name=TestView.old_name)
 
 
 

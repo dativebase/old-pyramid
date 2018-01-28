@@ -37,13 +37,13 @@ from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
 LOGGER = logging.getLogger(__name__)
 
 
-url = MorphologicalParser._url()
-mgy_url = old_models.Morphology._url()
-mlm_url = old_models.MorphemeLanguageModel._url()
-ph_url = old_models.Phonology._url()
-cp_url = old_models.Corpus._url()
-fm_url = old_models.Form._url()
-fs_url = old_models.FormSearch._url()
+url = MorphologicalParser._url(old_name=TestView.old_name)
+mgy_url = old_models.Morphology._url(old_name=TestView.old_name)
+mlm_url = old_models.MorphemeLanguageModel._url(old_name=TestView.old_name)
+ph_url = old_models.Phonology._url(old_name=TestView.old_name)
+cp_url = old_models.Corpus._url(old_name=TestView.old_name)
+fm_url = old_models.Form._url(old_name=TestView.old_name)
+fs_url = old_models.FormSearch._url(old_name=TestView.old_name)
 
 
 def pretty_parses(parses):
@@ -241,7 +241,7 @@ class TestMorphologicalparsersView(TestView):
         # and exit the test.
         if not h.foma_installed():
             response = self.app.put(
-                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_id),
+                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_id),
                 headers=self.json_headers,
                 extra_environ=self.extra_environ_contrib, status=400)
 
@@ -251,7 +251,7 @@ class TestMorphologicalparsersView(TestView):
 
         # Compile the morphology's script
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -335,7 +335,7 @@ class TestMorphologicalparsersView(TestView):
 
         # Compile the morphology's script
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=impoverished_morphology_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=impoverished_morphology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -454,7 +454,7 @@ define phonology eDrop .o. breakDrop;
 
         # Generate the files of the language model
         response = self.app.put(
-            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=morpheme_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=self.old_name, id=morpheme_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -489,7 +489,7 @@ define phonology eDrop .o. breakDrop;
 
         # Generate the files of the language model
         response = self.app.put(
-            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=categorial_language_model_id),
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=self.old_name, id=categorial_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -541,7 +541,7 @@ define phonology eDrop .o. breakDrop;
 
         # Generate the parser's morphophonology FST and compile it.
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=self.old_name, 
                 id=morphological_parser_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -562,7 +562,7 @@ define phonology eDrop .o. breakDrop;
         # Test applyup on the mophological parser's morphophonology FST
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -577,7 +577,7 @@ define phonology eDrop .o. breakDrop;
         params = json.dumps({'transcriptions': [transcription1, transcription1, transcription3]})
         response = self.app.put(
             '/{old_name}/morphologicalparsers/{id}/parse'.format(
-                old_name=oldc.OLD_NAME_DFLT,
+                old_name=self.old_name,
                 id=morphological_parser_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -589,7 +589,7 @@ define phonology eDrop .o. breakDrop;
         # flookup will be initiated.
         params = json.dumps({'transcriptions': [transcription1, transcription1, transcription3, 'abc']})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -620,7 +620,7 @@ define phonology eDrop .o. breakDrop;
 
         # Generate the parser's morphophonology FST and compile it.
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=self.old_name, 
                 id=morphological_parser_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -643,7 +643,7 @@ define phonology eDrop .o. breakDrop;
         # will too.
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -654,7 +654,7 @@ define phonology eDrop .o. breakDrop;
         # Test applydown on the mophological parser's morphophonology FST
         params = json.dumps({'morpheme_sequences': [transcription1_impoverished_parse]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/applydown'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -663,7 +663,7 @@ define phonology eDrop .o. breakDrop;
         # Test how well the morphological parser parses some test words.
         params = json.dumps({'transcriptions': [transcription1]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -696,7 +696,7 @@ define phonology eDrop .o. breakDrop;
 
         # Generate the parser's morphophonology FST and compile it.
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=self.old_name, 
                 id=morphological_parser_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -718,7 +718,7 @@ define phonology eDrop .o. breakDrop;
         # work just like parser #1.
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -729,7 +729,7 @@ define phonology eDrop .o. breakDrop;
         # Test applydown on the mophological parser's morphophonology FST
         params = json.dumps({'morpheme_sequences': [transcription1_correct_parse]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/applydown'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -738,7 +738,7 @@ define phonology eDrop .o. breakDrop;
         # Test how well the morphological parser parses some test words.
         params = json.dumps({'transcriptions': [transcription1]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -768,7 +768,7 @@ define phonology eDrop .o. breakDrop;
 
         # Generate the parser's morphophonology FST and compile it.
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=self.old_name, 
                 id=morphological_parser_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
 
@@ -791,7 +791,7 @@ define phonology eDrop .o. breakDrop;
         # form sequences. 
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -802,7 +802,7 @@ define phonology eDrop .o. breakDrop;
         # Test applydown on the mophological parser's morphophonology FST
         params = json.dumps({'morpheme_sequences': [transcription1_impoverished_parse]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/applydown'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -811,7 +811,7 @@ define phonology eDrop .o. breakDrop;
         # Test how well the morphological parser parses some test words.
         params = json.dumps({'transcriptions': [transcription1]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -837,7 +837,7 @@ define phonology eDrop .o. breakDrop;
                 Parse.parser_id==parser_4_id).all()])
 
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=self.old_name, 
                 id=parser_4_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -852,7 +852,7 @@ define phonology eDrop .o. breakDrop;
         # Perform the same parse request as previously and expect the same results.
         params = json.dumps({'transcriptions': [transcription1]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=self.old_name, 
                 id=parser_4_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -902,7 +902,7 @@ define phonology eDrop .o. breakDrop;
         # will create a new LMTree pickle file.
         response = self.app.put(
             '/{old_name}/morphemelanguagemodels/{id}/generate'.format(
-                old_name=oldc.OLD_NAME_DFLT, id=categorial_language_model_id),
+                old_name=self.old_name, id=categorial_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         lm_generate_attempt = resp['generate_attempt']
@@ -922,7 +922,7 @@ define phonology eDrop .o. breakDrop;
         params = json.dumps({'transcriptions': [transcription1]})
         response = self.app.put(
             '/{old_name}/morphologicalparsers/{id}/parse'.format(
-                old_name=oldc.OLD_NAME_DFLT, id=parser_4_id),
+                old_name=self.old_name, id=parser_4_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert resp[transcription1] == transcription1_correct_parse
@@ -935,7 +935,7 @@ define phonology eDrop .o. breakDrop;
             'morpheme_sequences': [likely_word, unlikely_word]})
         response = self.app.put(
             '/{old_name}/morphemelanguagemodels/{id}/get_probabilities'.format(
-                old_name=oldc.OLD_NAME_DFLT, id=categorial_language_model_id),
+                old_name=self.old_name, id=categorial_language_model_id),
             ms_params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         likely_word_log_prob = resp[likely_word]
@@ -948,7 +948,7 @@ define phonology eDrop .o. breakDrop;
         # Expect it to now parse tombait as tombe-ait fall-3IMP V-Agr
         response = self.app.put(
             '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(
-                old_name=oldc.OLD_NAME_DFLT, id=parser_4_id),
+                old_name=self.old_name, id=parser_4_id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp = response.json_body
         morphological_parser_compile_attempt = resp['compile_attempt']
@@ -966,7 +966,7 @@ define phonology eDrop .o. breakDrop;
         params = json.dumps({'transcriptions': [transcription1]})
         response = self.app.put(
             '/{old_name}/morphologicalparsers/{id}/parse'.format(
-                old_name=oldc.OLD_NAME_DFLT,
+                old_name=self.old_name,
                 id=parser_4_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -986,7 +986,7 @@ define phonology eDrop .o. breakDrop;
             extra_environ=self.extra_environ_admin)
         params = json.dumps({'transcriptions': [transcription1]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=self.old_name, 
                 id=morphological_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -996,7 +996,7 @@ define phonology eDrop .o. breakDrop;
         # phonology and a morphology) while the generate attempt will fail because there 
         # will be no LM object to copy attribute values and file objects from.
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=self.old_name, 
                 id=parser_4_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -1253,7 +1253,7 @@ define phonology eDrop .o. breakDrop;
 
         # Test servecompiled
         response = self.app.get(
-            '/{old_name}/morphologicalparsers/{id}/servecompiled'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/servecompiled'.format(old_name=self.old_name, 
                 id=morphological_parser_1_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         binary_path = os.path.join(morphological_parser_1_dir, 'morphophonology.foma')
@@ -1264,7 +1264,7 @@ define phonology eDrop .o. breakDrop;
 
         # Test export
         response = self.app.get(
-            '/{old_name}/morphologicalparsers/{id}/export'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/export'.format(old_name=self.old_name, 
                 id=morphological_parser_1_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         assert response.content_type == 'application/zip'
@@ -1327,14 +1327,12 @@ define phonology eDrop .o. breakDrop;
         tmp_script_path = os.path.join(self.test_datasets_path, 'tmp.sh')
         if not os.path.isfile(old_dump_file_path):
             return
-        config = db.get_config(config_filename='test.ini')
-        SQLAlchemyURL = config['sqlalchemy.url']
-        if not SQLAlchemyURL.split(':')[0] == 'mysql':
+        rdbms = self.settings.get('rdbms')
+        if rdbms != 'mysql':
             return
-        rdbms, username, password, db_name = SQLAlchemyURL.split(':')
-        username = username[2:]
-        password = password.split('@')[0]
-        db_name = db_name.split('/')[-1]
+        username = self.settings.get('user')
+        password = self.settings.get('password')
+        db_name = self.settings.get('name')
         # First dump the existing database so we can load it later.
         # Note: the --single-transaction option seems to be required (on Mac MySQL 5.6 using InnoDB tables ...)
         # see http://forums.mysql.com/read.php?10,108835,112951#msg-112951
@@ -1691,7 +1689,7 @@ define phonology eDrop .o. breakDrop;
 
         # Generate the morphology's script without compiling it.
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologies/{id}/generate'.format(old_name=self.old_name, 
                 id=louie_morphology_id), headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -1737,7 +1735,7 @@ define phonology eDrop .o. breakDrop;
 
         # Generate the files of the language model
         response = self.app.put(
-            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphemelanguagemodels/{id}/generate'.format(old_name=self.old_name, 
                 id=louie_language_model_id),
             {}, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
@@ -1799,7 +1797,7 @@ define phonology eDrop .o. breakDrop;
         else:
             # Generate the parser's morphophonology FST, compile it and generate the morphemic language model
             response = self.app.put(
-                '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, 
+                '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=self.old_name, 
                     id=louie_parser_id), headers=self.json_headers,
                 extra_environ=self.extra_environ_admin)
             resp = response.json_body
@@ -1807,7 +1805,7 @@ define phonology eDrop .o. breakDrop;
 
             # Generate the parser's morphophonology FST, compile it and generate the morphemic language model
             response = self.app.put(
-                '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, 
+                '/{old_name}/morphologicalparsers/{id}/generate_and_compile'.format(old_name=self.old_name, 
                     id=louie_parser_id), headers=self.json_headers,
                 extra_environ=self.extra_environ_admin)
             # Poll ``GET /morphologicalparsers/mophological_parser_id`` until ``compile_attempt`` has changed.
@@ -1841,7 +1839,7 @@ define phonology eDrop .o. breakDrop;
         # Test applyup on the mophological parser's morphophonology FST
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/applyup'.format(old_name=self.old_name, 
                 id=louie_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body
@@ -1855,7 +1853,7 @@ define phonology eDrop .o. breakDrop;
         # Test how well the morphological parser parses some test words.
         params = json.dumps({'transcriptions': [transcription1, transcription2]})
         response = self.app.put(
-            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologicalparsers/{id}/parse'.format(old_name=self.old_name, 
                 id=louie_parser_id), params, self.json_headers,
             self.extra_environ_admin)
         resp = response.json_body

@@ -41,8 +41,8 @@ LOGGER = logging.getLogger(__name__)
 
 # Recreate the Pylons ``url`` global function that gives us URL paths for a
 # given (resource) route name plus path variables as **kwargs
-url = CollectionBackup._url()
-coll_url = Collection._url()
+url = CollectionBackup._url(old_name=TestView.old_name)
+coll_url = Collection._url(old_name=TestView.old_name)
 
 
 

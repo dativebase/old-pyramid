@@ -59,8 +59,10 @@ LOGGER = logging.getLogger(__name__)
 def get_old_directory_path(directory_name, settings):
     """Return the absolute path to an OLD directory in /store."""
     try:
-        store = settings['permanent_store']
-        return os.path.join(store, RSRC_TO_DIR[directory_name])
+        return os.path.join(
+            settings['permanent_store'],
+            settings['old_name'],
+            RSRC_TO_DIR[directory_name])
     except KeyError as error:
         print('Exception when joining store path to directory_name'
               ' {}'.format(directory_name))
@@ -142,7 +144,7 @@ get_file_modification_time = get_modification_time
 
 def create_user_directory(user, settings):
     """Create a directory named ``user.username`` in
-    ``<permanent_store>/users/``.
+    ``<permanent_store>/<old_name>/users/``.
     """
     try:
         make_directory_safely(os.path.join(
@@ -155,7 +157,7 @@ def create_user_directory(user, settings):
 
 def destroy_user_directory(user, settings):
     """Destroys a directory named ``user.username`` in
-    ``<permanent_store>/users/``.
+    ``<permanent_store>/<old_name>/users/``.
     """
     try:
         rmtree(os.path.join(get_old_directory_path('users', settings),
@@ -179,7 +181,7 @@ def rename_user_directory(old_name, new_name, settings):
 
 
 def destroy_all_directories(directory_name, settings):
-    """Remove all subdirectories from ``<permanent_store>/directory_name``,
+    """Remove all subdirectories from ``<permanent_store>/<old_name>/directory_name``,
     e.g., all in /store/corpora/.
     """
     try:
@@ -495,49 +497,34 @@ def get_value_from_gmail_config(gmail_config, key, default=None):
         return default
 
 
-def get_gmail_config(settings):
-    try:
-        here = settings['here']
-    except (TypeError, KeyError):
-        raise Exception('The settings object was inadequate.')
-    gmail_config_path = os.path.join(here, 'gmail.ini')
-    gmail_config = configparser.ConfigParser()
-    try:
-        gmail_config.read(gmail_config_path)
-        return gmail_config
-    except configparser.Error:
-        return None
-
-
 def send_password_reset_email_to(user, new_password, settings, app_url,
                                  language_id='old'):
     """Send the "password reset" email to the user. If
     password_reset_smtp_server is set to smtp.gmail.com in the settings dict,
     then the email will be sent using smtp.gmail.com and the system will expect
-    a gmail.ini file with valid gmail_from_address and gmail_from_password
-    values. If the settings config file is test.ini and there is a
-    test_email_to value, then that value will be the target of the email --
-    this allows testers to verify that an email is in fact being received.
+    gmail_from_address and gmail_from_password keys in the settings dict
+    valuating to a valid Gmail address/password pair. If we are testing and
+    there is a test_email_to setting, then that value will be the target of the
+    email -- this allows testers to verify that an email is in fact being
+    received.
     """
     to_address = user.email
-    if (os.path.split(settings['__file__'])[-1] == 'test.ini' and
-            settings.get('test_email_to')):
-        to_address = settings.get('test_email_to')
+    test_email_to = settings.get('test_email_to')
+    testing = settings.get('testing') == '1'
+    if testing and test_email_to:
+        to_address = test_email_to
     password_reset_smtp_server = settings.get('password_reset_smtp_server')
     app_name = language_id.upper() + ' OLD' if language_id != 'old' else 'OLD'
     if password_reset_smtp_server == 'smtp.gmail.com':
-        gmail_config = get_gmail_config(settings)
-        from_address = get_value_from_gmail_config(
-            gmail_config, 'gmail_from_address')
-        from_password = get_value_from_gmail_config(
-            gmail_config, 'gmail_from_password')
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        from_address = settings['gmail_from_address']
+        from_password = settings['gmail_from_password']
+        server = smtplib.SMTP(password_reset_smtp_server, 587)
         server.ehlo()
         server.starttls()
         server.login(from_address, from_password)
     else:
         from_address = '%s@old.org' % language_id
-        server = smtplib.SMTP('localhost')
+        server = smtplib.SMTP(password_reset_smtp_server)
     to_addresses = [to_address]
     message = ''.join([
         'From: %s <%s>\n' % (app_name, from_address),

@@ -8,34 +8,45 @@ from setuptools import setup, find_packages
 # lines then modify the info.py controller so that it stores the appropriate
 # version.
 VERSION = '2.0.0'
+
 p = re.compile('(^\s*[\'"]version[\'"]:\s*[\'"])([0-9\.]+)([\'"].*$)')
 wd = os.path.dirname(os.path.realpath(__file__))
 infopth = os.path.join(wd, 'old', 'views', 'info.py')
 lines = []
+
+
 def fixer(match):
     return '%s%s%s' % (match.group(1), VERSION, match.group(3))
+
+
 with open(infopth) as f:
     for line in f:
         if p.search(line):
             lines.append(p.sub(fixer, line))
         else:
             lines.append(line)
+
 with open(infopth, 'w') as f:
     f.write(''.join(lines))
+
 pkgfile = os.path.join(wd, 'old', '__init__.py')
 lines = []
+
 with open(pkgfile) as f:
     for line in f:
         if line.startswith('__version__'):
             lines.append('__version__ = \'%s\'\n' % VERSION)
         else:
             lines.append(line)
+
 with open(pkgfile, 'w') as f:
     f.write(''.join(lines))
 
 here = os.path.abspath(os.path.dirname(__file__))
+
 with open(os.path.join(here, 'README.rst')) as f:
     README = f.read()
+
 with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 

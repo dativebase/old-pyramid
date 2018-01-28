@@ -16,7 +16,6 @@ import json
 import logging
 
 from old.lib.dbutils import DBUtils
-from old.lib.constants import OLD_NAME_DFLT
 import old.models as old_models
 import old.models.modelbuilders as omb
 from old.tests import TestView
@@ -27,10 +26,10 @@ LOGGER = logging.getLogger(__name__)
 
 def url(route_name):
     return {
-        'authenticate': '/{}/login/authenticate'.format(OLD_NAME_DFLT),
-        'logout': '/{}/login/logout'.format(OLD_NAME_DFLT),
+        'authenticate': '/{}/login/authenticate'.format(TestView.old_name),
+        'logout': '/{}/login/logout'.format(TestView.old_name),
         'email_reset_password': '/{}/login/email_reset_password'.format(
-            OLD_NAME_DFLT)
+            TestView.old_name)
     }.get(route_name, '')
 
 

@@ -1,4 +1,0 @@
-# pip install oursql-0.9.4.zip was failing on Ubuntu 14.04 ...
--r base.txt
-
-https://launchpad.net/oursql/py3k/py3k-0.9.4/+download/oursql-0.9.4.zip

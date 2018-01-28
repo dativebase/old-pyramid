@@ -19,7 +19,6 @@ import pprint
 import re
 from time import sleep
 
-from old.lib.constants import OLD_NAME_DFLT
 from old.lib.bibtex import ENTRY_TYPES
 from old.lib.dbutils import DBUtils
 import old.lib.helpers as h
@@ -33,7 +32,7 @@ from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
 LOGGER = logging.getLogger(__name__)
 
 
-url = Source._url()
+url = Source._url(old_name=TestView.old_name)
 
 
 ################################################################################
@@ -1190,7 +1189,7 @@ class TestSourcesView(TestView):
         dbsession = self.dbsession
         db = DBUtils(dbsession, self.settings)
         query_builder = SQLAQueryBuilder(dbsession, 'Source', settings=self.settings)
-        response = self.app.get('/{old_name}/sources/new_search'.format(old_name=OLD_NAME_DFLT), headers=self.json_headers,
+        response = self.app.get('/{old_name}/sources/new_search'.format(old_name=self.old_name), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = response.json_body
         assert resp['search_parameters'] == query_builder.get_search_parameters()

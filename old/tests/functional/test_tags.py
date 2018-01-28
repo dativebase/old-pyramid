@@ -36,7 +36,7 @@ def create_tag_from_index(index):
 
 # Recreate the Pylons ``url`` global function that gives us URL paths for a
 # given (resource) route name plus path variables as **kwargs
-url = Tag._url()
+url = Tag._url(old_name=TestView.old_name)
 
 
 ###############################################################################

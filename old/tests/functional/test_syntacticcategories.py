@@ -28,8 +28,8 @@ from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
 LOGGER = logging.getLogger(__name__)
 
 
-url = SyntacticCategory._url()
-fm_url = old_models.Form._url()
+url = SyntacticCategory._url(old_name=TestView.old_name)
+fm_url = old_models.Form._url(old_name=TestView.old_name)
 
 
 

@@ -38,9 +38,9 @@ LOGGER = logging.getLogger(__name__)
 
 # Recreate the Pylons ``url`` global function that gives us URL paths for a
 # given (resource) route name plus path variables as **kwargs
-url = Collection._url()
-forms_url = old_models.Form._url()
-files_url = old_models.File._url()
+url = Collection._url(old_name=TestView.old_name)
+forms_url = old_models.Form._url(old_name=TestView.old_name)
+files_url = old_models.File._url(old_name=TestView.old_name)
 
 
 MARKUP_LANGUAGE_TO_FUNC = {

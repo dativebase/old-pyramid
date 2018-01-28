@@ -23,7 +23,6 @@ from uuid import uuid4
 
 from sqlalchemy.sql import desc
 
-from old.lib.constants import OLD_NAME_DFLT
 from old.lib.dbutils import DBUtils
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 import old.models.modelbuilders as omb
@@ -41,8 +40,8 @@ LOGGER = logging.getLogger(__name__)
 
 # Recreate the Pylons ``url`` global function that gives us URL paths for a
 # given (resource) route name plus path variables as **kwargs
-url = Form._url()
-files_url = old_models.File._url()
+url = Form._url(old_name=TestView.old_name)
+files_url = old_models.File._url(old_name=TestView.old_name)
 
 
 ###############################################################################
@@ -2331,7 +2330,7 @@ class TestFormsView(TestView):
         dbsession.expire(administrator)
         sleep(1)
         params = json.dumps({'forms': form_ids})
-        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
+        response = self.app.post('/{}/forms/remember'.format(self.old_name),
             params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -2346,7 +2345,7 @@ class TestFormsView(TestView):
         bad_params = form_ids[:]
         bad_params.append('a')
         bad_params = json.dumps({'forms': bad_params})
-        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
+        response = self.app.post('/{}/forms/remember'.format(self.old_name),
             bad_params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -2357,7 +2356,7 @@ class TestFormsView(TestView):
         bad_params = form_ids[:]
         bad_params.append(bad_id)
         bad_params = json.dumps({'forms': bad_params})
-        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
+        response = self.app.post('/{}/forms/remember'.format(self.old_name),
             bad_params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -2365,7 +2364,7 @@ class TestFormsView(TestView):
 
         # Bad JSON parameters will return its own 400 error.
         bad_JSON = '[%d, %d, %d' % tuple(form_ids)
-        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
+        response = self.app.post('/{}/forms/remember'.format(self.old_name),
             bad_JSON, headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -2374,7 +2373,7 @@ class TestFormsView(TestView):
 
         # An empty list ...
         empty_list = json.dumps([])
-        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
+        response = self.app.post('/{}/forms/remember'.format(self.old_name),
             empty_list, headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=404)
         resp = response.json_body
@@ -2384,7 +2383,7 @@ class TestFormsView(TestView):
         # Re-issue the same remember request that succeeded previously.  Expect
         # user.remembered_forms to be unchanged (i.e., auto-duplicate removal)
         params = json.dumps({'forms': form_ids})
-        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
+        response = self.app.post('/{}/forms/remember'.format(self.old_name),
             params, headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -2426,7 +2425,7 @@ class TestFormsView(TestView):
         # returned.
         extra_environ_viewer = {'test.authentication.role': 'viewer'}
         params = json.dumps({'forms': form_ids})
-        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
+        response = self.app.post('/{}/forms/remember'.format(self.old_name),
             params, headers=self.json_headers,
             extra_environ=extra_environ_viewer, status=403)
         resp = response.json_body
@@ -2440,7 +2439,7 @@ class TestFormsView(TestView):
         # Finally, request to remember only the restricted form as a viewer.
         # Expect a 403 error.
         params = json.dumps({'forms': [form1_id]})
-        response = self.app.post('/{}/forms/remember'.format(OLD_NAME_DFLT),
+        response = self.app.post('/{}/forms/remember'.format(self.old_name),
             params, headers=self.json_headers,
             extra_environ=extra_environ_viewer, status=403)
         resp = response.json_body

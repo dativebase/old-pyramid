@@ -1,4 +1,3 @@
-import os
 import logging
 import json
 
@@ -108,9 +107,7 @@ def email_reset_password(request):
                 salt = salt.encode('utf8')
             user.password = str(h.encrypt_password(new_password, salt))
             request.dbsession.add(user)
-            if (    os.path.basename(
-                    request.registry.settings['__file__']) ==
-                    'test.ini'):
+            if request.registry.settings.get('testing', '0') == '1':
                 return {'valid_username': True, 'password_reset': True,
                         'new_password': new_password}
             return {'valid_username': True, 'password_reset': True}

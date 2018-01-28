@@ -26,7 +26,7 @@ from old.models import ElicitationMethod
 LOGGER = logging.getLogger(__name__)
 
 
-url = ElicitationMethod._url()
+url = ElicitationMethod._url(old_name=TestView.old_name)
 
 
 

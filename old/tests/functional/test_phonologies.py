@@ -29,11 +29,9 @@ import old.models.modelbuilders as omb
 from old.models import Phonology, PhonologyBackup
 
 LOGGER = logging.getLogger(__name__)
-OLD_NAME_DFLT = oldc.OLD_NAME_DFLT
 
 
-url = Phonology._url()
-
+url = Phonology._url(old_name=TestView.old_name)
 
 
 class TestPhonologiesView(TestView):
@@ -570,7 +568,7 @@ class TestPhonologiesView(TestView):
         # returned and exit the test.
         if not h.foma_installed():
             response = self.app.put(
-                '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+                '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology1_id),
                 headers=self.json_headers,
                 extra_environ=self.extra_environ_contrib, status=400)
             resp = response.json_body
@@ -579,7 +577,7 @@ class TestPhonologiesView(TestView):
 
         # Attempt to get the compiled script before it has been created.
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/servecompiled'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/servecompiled'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -587,7 +585,7 @@ class TestPhonologiesView(TestView):
 
         # Compile the phonology's script
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -616,7 +614,7 @@ class TestPhonologiesView(TestView):
 
         # Get the compiled foma script.
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/servecompiled'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/servecompiled'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         phonology_binary_path = os.path.join(self.phonologies_path, 'phonology_%d' % phonology1_id,
@@ -629,7 +627,7 @@ class TestPhonologiesView(TestView):
 
         # Attempt to get the comopiled foma script of a non-existent phonology.
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/servecompiled'.format(old_name=OLD_NAME_DFLT, id=123456789),
+            '/{old_name}/phonologies/{id}/servecompiled'.format(old_name=self.old_name, id=123456789),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=404)
         resp = response.json_body
@@ -664,7 +662,7 @@ class TestPhonologiesView(TestView):
 
         # Attempt to compile the malformed phonology's script and expect to fail
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -715,7 +713,7 @@ class TestPhonologiesView(TestView):
 
         # Attempt to compile the malformed phonology's script and expect to fail
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         compile_attempt = resp['compile_attempt']
@@ -764,7 +762,7 @@ class TestPhonologiesView(TestView):
 
         # Attempt to compile the malformed phonology's script and expect to fail
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -818,7 +816,7 @@ class TestPhonologiesView(TestView):
 
         # Compile the phonology's script
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -871,7 +869,7 @@ class TestPhonologiesView(TestView):
 
         # Compile the phonology's script
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -900,7 +898,7 @@ class TestPhonologiesView(TestView):
 
         # Compile the first phonology's script again
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -960,7 +958,7 @@ class TestPhonologiesView(TestView):
         if not h.foma_installed():
             params = json.dumps({'transcriptions': 'nit-wa'})
             response = self.app.put(
-                '/{old_name}/phonologies/{id}/applydown'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+                '/{old_name}/phonologies/{id}/applydown'.format(old_name=self.old_name, id=phonology1_id),
                 params, self.json_headers, self.extra_environ_admin,
                 status=400)
             resp = response.json_body
@@ -969,7 +967,7 @@ class TestPhonologiesView(TestView):
 
         # Compile the phonology's script
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -996,7 +994,7 @@ class TestPhonologiesView(TestView):
         # the ``transcriptions`` key can be a string (as here) or a list of strings.
         params = json.dumps({'transcriptions': 'nit-wa'})
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/applydown'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/applydown'.format(old_name=self.old_name, id=phonology1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         phonology_dir_path = os.path.join(self.phonologies_path,
@@ -1012,7 +1010,7 @@ class TestPhonologiesView(TestView):
         params = json.dumps({'transcriptions': 'nit-wa'})
         response = self.app.put(
             '/{old_name}/phonologies/{id}/phonologize'.format(
-                old_name=OLD_NAME_DFLT, id=phonology1_id),
+                old_name=self.old_name, id=phonology1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert resp[u'nit-wa'] == [u'nita']
@@ -1080,7 +1078,7 @@ class TestPhonologiesView(TestView):
 
         params = json.dumps({'transcriptions': list(tests.keys())})
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/applydown'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/applydown'.format(old_name=self.old_name, id=phonology1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert set(resp.keys()) == set(tests.keys())
@@ -1096,7 +1094,7 @@ class TestPhonologiesView(TestView):
         # Attempt to phonologize an empty list; expect a 400 error
         params = json.dumps({'transcriptions': []})
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/applydown'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/applydown'.format(old_name=self.old_name, id=phonology1_id),
             params, self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['transcriptions'] == 'Please enter a value'
@@ -1104,7 +1102,7 @@ class TestPhonologiesView(TestView):
         # Attempt to phonologize an improperly formatted JSON string; expect a 400 error
         params = json.dumps({'transcriptions': [u'nit-wa']})[:-2]
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/applydown'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/applydown'.format(old_name=self.old_name, id=phonology1_id),
             params, self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp == oldc.JSONDecodeErrorResponse
@@ -1112,7 +1110,7 @@ class TestPhonologiesView(TestView):
         # Attempt to phonologize with a non-existent phonology id; expect to fail
         params = json.dumps({'transcriptions': 'nit-wa'})
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/applydown'.format(old_name=OLD_NAME_DFLT, id=123456789),
+            '/{old_name}/phonologies/{id}/applydown'.format(old_name=self.old_name, id=123456789),
                 params, self.json_headers, self.extra_environ_admin,
                 status=404)
         resp = response.json_body
@@ -1134,7 +1132,7 @@ class TestPhonologiesView(TestView):
 
         params = json.dumps({'transcriptions': 'nit-wa'})
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/applydown'.format(old_name=OLD_NAME_DFLT, id=phonology2_id),
+            '/{old_name}/phonologies/{id}/applydown'.format(old_name=self.old_name, id=phonology2_id),
                 params, self.json_headers, self.extra_environ_admin,
                 status=400)
         resp = response.json_body
@@ -1173,7 +1171,7 @@ class TestPhonologiesView(TestView):
         # and exit the test.
         if not h.foma_installed():
             response = self.app.get(
-                '/{old_name}/phonologies/{id}/runtests'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+                '/{old_name}/phonologies/{id}/runtests'.format(old_name=self.old_name, id=phonology1_id),
                 headers=self.json_headers,
                 extra_environ=self.extra_environ_admin, status=400)
             resp = response.json_body
@@ -1182,7 +1180,7 @@ class TestPhonologiesView(TestView):
 
         # Compile the phonology's script
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -1209,7 +1207,7 @@ class TestPhonologiesView(TestView):
 
         # Request the tests be run.
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/runtests'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/runtests'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -1258,7 +1256,7 @@ class TestPhonologiesView(TestView):
 
         # Compile the phonology's script
         response = self.app.put(
-            '/{old_name}/phonologies/{id}/compile'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/compile'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -1283,7 +1281,7 @@ class TestPhonologiesView(TestView):
 
         # Request the tests be run.
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/runtests'.format(old_name=OLD_NAME_DFLT, id=phonology1_id),
+            '/{old_name}/phonologies/{id}/runtests'.format(old_name=self.old_name, id=phonology1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -1394,7 +1392,7 @@ class TestPhonologiesView(TestView):
         extra_environ = {'test.authentication.role': 'contributor',
                             'test.application_settings': True}
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/history'.format(old_name=OLD_NAME_DFLT, id=phonology_id),
+            '/{old_name}/phonologies/{id}/history'.format(old_name=self.old_name, id=phonology_id),
             headers=self.json_headers, extra_environ=extra_environ)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -1429,7 +1427,7 @@ class TestPhonologiesView(TestView):
         # as the one retrieved above
         phonology_UUID = resp['phonology']['UUID']
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/history'.format(old_name=OLD_NAME_DFLT, id=phonology_UUID),
+            '/{old_name}/phonologies/{id}/history'.format(old_name=self.old_name, id=phonology_UUID),
             headers=self.json_headers, extra_environ=extra_environ)
         resp_UUID = response.json_body
         assert resp == resp_UUID
@@ -1439,13 +1437,13 @@ class TestPhonologiesView(TestView):
         bad_id = 103
         bad_UUID = str(uuid4())
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/history'.format(old_name=OLD_NAME_DFLT, id=bad_id),
+            '/{old_name}/phonologies/{id}/history'.format(old_name=self.old_name, id=bad_id),
             headers=self.json_headers, extra_environ=extra_environ,
             status=404)
         resp = response.json_body
         assert resp['error'] == 'No phonologies or phonology backups match %d' % bad_id
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/history'.format(old_name=OLD_NAME_DFLT, id=bad_UUID),
+            '/{old_name}/phonologies/{id}/history'.format(old_name=self.old_name, id=bad_UUID),
             headers=self.json_headers, extra_environ=extra_environ,
             status=404)
         resp = response.json_body
@@ -1457,7 +1455,7 @@ class TestPhonologiesView(TestView):
 
         # ... and get its history again, this time using the phonology's UUID
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/history'.format(old_name=OLD_NAME_DFLT, id=phonology_UUID),
+            '/{old_name}/phonologies/{id}/history'.format(old_name=self.old_name, id=phonology_UUID),
             headers=self.json_headers, extra_environ=extra_environ)
         by_UUID_resp = response.json_body
         assert by_UUID_resp['phonology'] is None
@@ -1490,7 +1488,7 @@ class TestPhonologiesView(TestView):
         # Get the deleted phonology's history again, this time using its id.  The 
         # response should be the same as the response received using the UUID.
         response = self.app.get(
-            '/{old_name}/phonologies/{id}/history'.format(old_name=OLD_NAME_DFLT, id=phonology_id),
+            '/{old_name}/phonologies/{id}/history'.format(old_name=self.old_name, id=phonology_id),
             headers=self.json_headers, extra_environ=extra_environ)
         by_phonology_id_resp = response.json_body
         assert by_phonology_id_resp == by_UUID_resp

@@ -31,7 +31,6 @@ import logging
 import os
 import re
 
-from old.lib.constants import OLD_NAME_DFLT
 from old.lib.dbutils import DBUtils
 import old.lib.helpers as h
 import old.models as old_models
@@ -42,7 +41,7 @@ from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
 LOGGER = logging.getLogger(__name__)
 
 
-url = old_models.File._url()
+url = old_models.File._url(old_name=TestView.old_name)
 
 
 
@@ -190,7 +189,7 @@ class TestFilesSearchView(TestView):
             print(file_.name)
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', '=', 'name_10.jpg']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == 1
@@ -221,7 +220,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'like', '%1%']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if '1' in f['name']]
@@ -231,7 +230,7 @@ class TestFilesSearchView(TestView):
         # as expected in SQLAQueryBuilder.
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'like', '%N%']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if 'N' in f['name']]
@@ -241,7 +240,7 @@ class TestFilesSearchView(TestView):
             {'query': {'filter': ['or', [
                 ['File', 'name', 'like', 'N%'],
                 ['File', 'name', 'like', 'n%']]]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if 'N' in f['name'] or 'n' in f['name']]
@@ -270,7 +269,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'regex', '[345]2']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if re.search('[345]2', f['name'])]
@@ -281,7 +280,7 @@ class TestFilesSearchView(TestView):
         # as expected in SQLAQueryBuilder.
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'regex', '^N']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['name'][0] == 'N']
@@ -289,7 +288,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'regex', '^[Nn]']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['name'][0] in [u'N', 'n']]
@@ -298,7 +297,7 @@ class TestFilesSearchView(TestView):
         # Beginning and end of string anchors
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'regex', '^[Nn]ame_1.jpg$']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['name'] in [u'Name_1.jpg', 'name_1.jpg']]
@@ -307,7 +306,7 @@ class TestFilesSearchView(TestView):
         # Quantifiers
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'regex', '1{1,}']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if re.search('1{1,}', f['name'])]
@@ -316,7 +315,7 @@ class TestFilesSearchView(TestView):
         # Quantifiers
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'regex', '[123]{2,}']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if re.search('[123]{2,}', f['name'])]
@@ -326,7 +325,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'regex', '[123]{3,2}']}})
         response = self.app.post(
-            '/{}/files/search'.format(OLD_NAME_DFLT), json_query, self.json_headers,
+            '/{}/files/search'.format(self.old_name), json_query, self.json_headers,
             self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['error'] == 'The specified search parameters generated an invalid database query'
@@ -354,7 +353,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps(
             {'query': {'filter': ['File', 'description', '=', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['description'] is None]
@@ -363,7 +362,7 @@ class TestFilesSearchView(TestView):
         # Same as above but with a double negative
         json_query = json.dumps(
             {'query': {'filter': ['not', ['File', 'description', '!=', None]]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == len(result_set)
@@ -398,7 +397,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps(
             {'query': {'filter': ['not', ['File', 'description', '=', None]]}})
         json_query = json_query[:-1]  # Cut off the end to make it bad!
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['error'] == \
@@ -505,7 +504,7 @@ class TestFilesSearchView(TestView):
         # search_parser.py does not allow the contains relation (OLDSearchParseError)
         json_query = json.dumps(
             {'query': {'filter': ['File', 'name', 'contains', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert 'File.name.contains' in resp['errors']
@@ -513,7 +512,7 @@ class TestFilesSearchView(TestView):
         # old_models.File.tags.__eq__('abcdefg') will raise a custom OLDSearchParseError
         json_query = json.dumps(
             {'query': {'filter': ['File', 'tags', '=', 'abcdefg']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['InvalidRequestError'] == \
@@ -521,7 +520,7 @@ class TestFilesSearchView(TestView):
 
         # old_models.File.tags.regexp('xyz') will raise a custom OLDSearchParseError
         json_query = json.dumps({'query': {'filter': ['File', 'tags', 'regex', 'xyz']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['Malformed OLD query error'] == 'The submitted query was malformed'
@@ -529,7 +528,7 @@ class TestFilesSearchView(TestView):
 
         # old_models.File.tags.like('name') will raise a custom OLDSearchParseError
         json_query = json.dumps({'query': {'filter': ['File', 'tags', 'like', 'abc']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['File.tags.like'] == \
@@ -537,7 +536,7 @@ class TestFilesSearchView(TestView):
 
         # old_models.File.tags.__eq__('tag') will raise a custom OLDSearchParseError
         json_query = json.dumps({'query': {'filter': ['File', 'tags', '__eq__', 'tag']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert 'InvalidRequestError' in resp['errors']
@@ -632,7 +631,7 @@ class TestFilesSearchView(TestView):
             ]
         ]}}
         json_query = json.dumps(query)
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if '2' in f['name']]
@@ -646,7 +645,7 @@ class TestFilesSearchView(TestView):
             ]
         ]}}
         json_query = json.dumps(query)
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if '2' in f['name'] or '1' in f['name']]
@@ -661,7 +660,7 @@ class TestFilesSearchView(TestView):
             ]
         ]}}
         json_query = json.dumps(query)
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if '2' in f['name'] or '1' in f['name']
@@ -758,14 +757,14 @@ class TestFilesSearchView(TestView):
         # = date
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '=', jan1.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if isofy(f['date_elicited']) == jan1.isoformat()]
         assert len(resp) == len(result_set)
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '=', jan3.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if isofy(f['date_elicited']) == jan3.isoformat()]
@@ -775,7 +774,7 @@ class TestFilesSearchView(TestView):
         # The implicit query is 'is not null and != 2012-01-01'
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '!=', jan1.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if isofy(f['date_elicited']) is not None and
@@ -783,7 +782,7 @@ class TestFilesSearchView(TestView):
         assert len(resp) == len(result_set)
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '!=', jan3.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if isofy(f['date_elicited']) is not None and
@@ -795,7 +794,7 @@ class TestFilesSearchView(TestView):
             'or', [['File', 'date_elicited', '!=', jan1.isoformat()],
                 ['File', 'date_elicited', '=', None]]]}}
         json_query = json.dumps(query)
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if isofy(f['date_elicited']) != jan1.isoformat()]
@@ -804,14 +803,14 @@ class TestFilesSearchView(TestView):
         # < date
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '<', jan1.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['date_elicited'] is not None and f['date_elicited'] < jan1]
         assert len(resp) == len(result_set)
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '<', jan3.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['date_elicited'] is not None and f['date_elicited'] < jan3]
@@ -820,7 +819,7 @@ class TestFilesSearchView(TestView):
         # <= date
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '<=', jan3.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['date_elicited'] is not None and f['date_elicited'] <= jan3]
@@ -829,14 +828,14 @@ class TestFilesSearchView(TestView):
         # > date
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '>', jan1.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['date_elicited'] is not None and f['date_elicited'] > jan2]
         assert len(resp) == len(result_set)
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '>', '0001-01-01']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['date_elicited'] is not None and
@@ -846,7 +845,7 @@ class TestFilesSearchView(TestView):
         # >= date
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '>=', jan1.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['date_elicited'] is not None and f['date_elicited'] >= jan1]
@@ -854,7 +853,7 @@ class TestFilesSearchView(TestView):
 
         # =/!= None
         json_query = json.dumps({'query': {'filter': ['File', 'date_elicited', '=', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['date_elicited'] is None]
@@ -862,7 +861,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps(
             {'query': {'filter': ['File', 'date_elicited', '__ne__', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['date_elicited'] is not None]
@@ -950,14 +949,14 @@ class TestFilesSearchView(TestView):
         # = datetime
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '=', today_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] == today_timestamp]
         assert len(resp) == len(result_set)
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '=', yesterday_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] == yesterday_timestamp]
@@ -966,14 +965,14 @@ class TestFilesSearchView(TestView):
         # != datetime -- *NOTE:* the NULL datetime_entered values will not be counted.
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '!=', today_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] != today_timestamp]
         assert len(resp) == len(result_set)
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '!=', yesterday_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] != yesterday_timestamp]
@@ -984,7 +983,7 @@ class TestFilesSearchView(TestView):
             ['or', [['File', 'datetime_entered', '!=', today_timestamp.isoformat()],
                 ['File', 'datetime_entered', '=', None]]]}}
         json_query = json.dumps(query)
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is None or
@@ -994,7 +993,7 @@ class TestFilesSearchView(TestView):
         # < datetime
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '<', today_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is not None and
@@ -1004,7 +1003,7 @@ class TestFilesSearchView(TestView):
         # <= datetime
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '<=', today_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is not None and
@@ -1014,7 +1013,7 @@ class TestFilesSearchView(TestView):
         # > datetime
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '>', today_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is not None and
@@ -1024,7 +1023,7 @@ class TestFilesSearchView(TestView):
         # ValueError: year=1 is before 1900; the datetime strftime() methods require year >= 1900
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '>', '1901-01-01T09:08:07']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is not None and
@@ -1034,7 +1033,7 @@ class TestFilesSearchView(TestView):
         # >= datetime
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '>=', yesterday_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is not None and
@@ -1044,7 +1043,7 @@ class TestFilesSearchView(TestView):
         # =/!= None
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '=', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is None]
@@ -1052,7 +1051,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps(
             {'query': {'filter': ['File', 'datetime_entered', '__ne__', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is not None]
@@ -1065,7 +1064,7 @@ class TestFilesSearchView(TestView):
             ['and', [['File', 'datetime_entered', '>', midnight_today.isoformat()],
                             ['File', 'datetime_entered', '<', midnight_tomorrow.isoformat()]]]}}
         json_query = json.dumps(query)
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['datetime_entered'] is not None and
@@ -1172,7 +1171,7 @@ class TestFilesSearchView(TestView):
         # = int
         json_query = json.dumps(
             {'query': {'filter': ['File', 'enterer', 'id', '=', contributor.id]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['enterer']['id'] == contributor.id]
@@ -1180,7 +1179,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps({'query': {'filter':
             ['File', 'speaker', 'id', '=', test_models['speakers'][0]['id']]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['speaker'] and
@@ -1190,7 +1189,7 @@ class TestFilesSearchView(TestView):
         # in array of ints
         json_query = json.dumps({'query': {'filter':
             ['File', 'speaker', 'id', 'in', [s['id'] for s in test_models['speakers']]]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['speaker'] and
@@ -1200,7 +1199,7 @@ class TestFilesSearchView(TestView):
         # <
         json_query = json.dumps({'query': {'filter':
             ['File', 'speaker', 'id', '<', 15]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['speaker'] and
@@ -1210,7 +1209,7 @@ class TestFilesSearchView(TestView):
         # regex
         json_query = json.dumps({'query': {'filter':
             ['File', 'speaker', 'id', 'regex', '5']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['speaker'] and
@@ -1219,7 +1218,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps({'query': {'filter':
             ['File', 'speaker', 'id', 'regex', '[56]']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['speaker'] and
@@ -1229,7 +1228,7 @@ class TestFilesSearchView(TestView):
         # like
         json_query = json.dumps({'query': {'filter':
             ['File', 'speaker', 'id', 'like', '%5%']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['speaker'] and
@@ -1239,7 +1238,7 @@ class TestFilesSearchView(TestView):
         # regex on parent_file.filename
         json_query = json.dumps({'query': {'filter':
             ['File', 'parent_file', 'filename', 'regex', '[13579]']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['parent_file'] and
@@ -1255,7 +1254,7 @@ class TestFilesSearchView(TestView):
 
         # tag.name =
         json_query = json.dumps({'query': {'filter': ['Tag', 'name', '=', 'name_6.jpg']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if 'name_6.jpg' in [t['name'] for t in f['tags']]]
@@ -1263,7 +1262,7 @@ class TestFilesSearchView(TestView):
 
         # tag.name = (using any())
         json_query = json.dumps({'query': {'filter': ['File', 'tags', 'name', '=', 'name_6.jpg']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == len(result_set)
@@ -1271,7 +1270,7 @@ class TestFilesSearchView(TestView):
         # form.transcription like
         json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'like', '%transcription 6%']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files
@@ -1281,7 +1280,7 @@ class TestFilesSearchView(TestView):
         # form.transcription regexp
         json_query = json.dumps({'query': {'filter':
             ['Form', 'transcription', 'regex', 'transcription [12]']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files
@@ -1292,7 +1291,7 @@ class TestFilesSearchView(TestView):
         names = [u'name 77', 'name 79', 'name 99']
         json_query = json.dumps({'query': {'filter':
             ['Tag', 'name', 'in_', names]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if set(names) & set([t['name'] for t in f['tags']])]
@@ -1301,7 +1300,7 @@ class TestFilesSearchView(TestView):
         # tag.name <
         json_query = json.dumps({'query': {'filter':
             ['Tag', 'name', '<', 'name 2']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if [t for t in f['tags'] if t['name'] < 'name 2']]
@@ -1310,7 +1309,7 @@ class TestFilesSearchView(TestView):
         # form.datetime_entered
         json_query = json.dumps({'query': {'filter':
             ['Form', 'datetime_entered', '>', yesterday_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files
@@ -1319,7 +1318,7 @@ class TestFilesSearchView(TestView):
 
         json_query = json.dumps({'query': {'filter':
             ['Form', 'datetime_entered', '<', yesterday_timestamp.isoformat()]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files
@@ -1329,14 +1328,14 @@ class TestFilesSearchView(TestView):
         # To search for the presence/absence of tags/forms, one must use the
         # tags/forms attributes of the File old_models.
         json_query = json.dumps({'query': {'filter': ['File', 'tags', '=', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if not f['tags']]
         assert len(resp) == len(result_set)
 
         json_query = json.dumps({'query': {'filter': ['File', 'forms', '!=', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if f['forms']]
@@ -1344,14 +1343,14 @@ class TestFilesSearchView(TestView):
 
         # Using anything other than =/!= on Form.tags/files/collections will raise an error.
         json_query = json.dumps({'query': {'filter': ['File', 'tags', 'like', None]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['File.tags.like'] == 'The relation like is not permitted for File.tags'
 
         json_query = json.dumps({'query': {'filter':
             ['File', 'forms', '=', 'form 2']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['InvalidRequestError'] == \
@@ -1396,7 +1395,7 @@ class TestFilesSearchView(TestView):
                 ['or', [
                     ['File', 'datetime_entered', '>', today_timestamp.isoformat()],
                     ['File', 'date_elicited', '>', jan1.isoformat()]]]]]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if
@@ -1416,7 +1415,7 @@ class TestFilesSearchView(TestView):
                 ['and', [
                     ['not', ['File', 'name', 'regex', patt]],
                     ['File', 'date_elicited', '!=', None]]]]]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         result_set = [f for f in files if
@@ -1445,7 +1444,7 @@ class TestFilesSearchView(TestView):
                 ['not', ['not', ['not', ['Tag', 'name', '=', 'name 7']]]]
             ]
         ]}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
                         self.json_headers, self.extra_environ_admin)
         resp = response.json_body
 
@@ -1532,7 +1531,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps({'query': {
                 'filter': ['File', 'name', 'regex', '[nN]'],
                 'order_by': ['File', 'name', 'asc']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == len(files)
@@ -1543,7 +1542,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps({'query': {
                 'filter': ['File', 'name', 'regex', '[nN]'],
                 'order_by': ['File', 'name', 'desc']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == len(files)
@@ -1554,7 +1553,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps({'query': {
                 'filter': ['File', 'name', 'regex', '[nN]'],
                 'order_by': ['File', 'name']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == len(files)
@@ -1565,7 +1564,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps({'query': {
                 'filter': ['File', 'name', 'regex', '[nN]'],
                 'order_by': ['File', 'name', 'descending']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
             self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert len(resp) == len(files)
@@ -1576,7 +1575,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps({'query': {
                 'filter': ['File', 'name', 'regex', '[nN]'],
                 'order_by': ['File']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['OrderByError'] == 'The provided order by expression was invalid.'
@@ -1585,7 +1584,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps({'query': {
                 'filter': ['File', 'name', 'regex', '[nN]'],
                 'order_by': ['File', 'foo', 'desc']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['File.foo'] == 'Searching on File.foo is not permitted'
@@ -1594,7 +1593,7 @@ class TestFilesSearchView(TestView):
         json_query = json.dumps({'query': {
                 'filter': ['File', 'name', 'regex', '[nN]'],
                 'order_by': ['Foo', 'id', 'desc']}})
-        response = self.app.post('/{}/files/search'.format(OLD_NAME_DFLT), json_query,
+        response = self.app.post('/{}/files/search'.format(self.old_name), json_query,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['Foo'] == 'Searching the File model by joining on the Foo model is not possible'

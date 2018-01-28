@@ -27,8 +27,8 @@ import old.models.modelbuilders as omb
 LOGGER = logging.getLogger(__name__)
 
 
-url = PhonologyBackup._url()
-ph_url = Phonology._url()
+url = PhonologyBackup._url(old_name=TestView.old_name)
+ph_url = Phonology._url(old_name=TestView.old_name)
 
 
 

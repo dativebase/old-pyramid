@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import random
+import sys
 from time import sleep
 from unittest import TestCase
 
@@ -34,7 +35,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 import webtest
 
-from old import main, db_session_factory_registry
+from old import (
+    main,
+    db_session_factory_registry,
+    override_settings_with_env_vars
+)
 import old.lib.helpers as h
 from old.lib.dbutils import (
     get_model_names,
@@ -61,14 +66,14 @@ def add_SEARCH_to_web_test_valid_methods():
     webtest.lint.valid_methods = tuple(new_valid_methods)
 
 
-CONFIG_FILE = 'test.ini'
+CONFIG_FILE = 'config.ini'
 SETTINGS = appconfig('config:{}'.format(CONFIG_FILE), relative_to='.')
+SETTINGS = override_settings_with_env_vars(SETTINGS)
 CONFIG = {
     '__file__': SETTINGS['__file__'],
     'here': SETTINGS['here']
 }
 APP = webtest.TestApp(main(CONFIG, **SETTINGS))
-dburl = SETTINGS['sqlalchemy.url']
 Session = db_session_factory_registry.get_session(SETTINGS)
 
 
@@ -85,6 +90,7 @@ class TestView(TestCase):
 
     inflect_p = inflect.engine()
     inflect_p.classical()
+    old_name = SETTINGS['old_name']
 
     @classmethod
     def tearDownClass(cls):
@@ -121,7 +127,7 @@ class TestView(TestCase):
         self.Session = Session
         self.dbsession = Session()
         self.app = APP
-        setup_logging('test.ini#loggers')
+        setup_logging('config.ini#loggers')
         self._setattrs()
         self._setcreateparams()
 

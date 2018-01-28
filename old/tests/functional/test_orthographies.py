@@ -28,7 +28,7 @@ from old.models import Orthography
 LOGGER = logging.getLogger(__name__)
 
 
-url = Orthography._url()
+url = Orthography._url(old_name=TestView.old_name)
 
 
 ################################################################################

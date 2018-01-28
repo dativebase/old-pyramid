@@ -27,7 +27,7 @@ from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 LOGGER = logging.getLogger(__name__)
 
 
-url = Language._url()
+url = Language._url(old_name=TestView.old_name)
 
 
 class TestLanguagesView(TestView):

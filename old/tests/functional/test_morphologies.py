@@ -36,10 +36,10 @@ from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
 LOGGER = logging.getLogger(__name__)
 
 
-url = Morphology._url()
-fm_url = old_models.Form._url()
-fs_url = old_models.FormSearch._url()
-cp_url = old_models.Corpus._url()
+url = Morphology._url(old_name=TestView.old_name)
+fm_url = old_models.Form._url(old_name=TestView.old_name)
+fs_url = old_models.FormSearch._url(old_name=TestView.old_name)
+cp_url = old_models.Corpus._url(old_name=TestView.old_name)
 
 
 
@@ -350,7 +350,7 @@ class TestMorphologiesView(TestView):
         # and exit the test.
         if not h.foma_installed():
             response = self.app.put(
-                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_1_id),
                 headers=self.json_headers,
                 extra_environ=self.extra_environ_contrib, status=400)
             resp = response.json_body
@@ -359,7 +359,7 @@ class TestMorphologiesView(TestView):
 
         # Attempt to get the compiled script before it has been created.
         response = self.app.get(
-            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=self.old_name, id=morphology_1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=400)
         resp = response.json_body
@@ -369,7 +369,7 @@ class TestMorphologiesView(TestView):
         # NOTE: this will update the morphology (since a script value will be generated for the first time)
         # and will result in the generation of a new morphology backup old_models.
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -434,7 +434,7 @@ class TestMorphologiesView(TestView):
 
         # Get the compiled foma script.
         response = self.app.get(
-            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=self.old_name, id=morphology_1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         morphology_binary_path = os.path.join(self.morphologies_path, 'morphology_%d' % morphology_1_id,
@@ -446,7 +446,7 @@ class TestMorphologiesView(TestView):
 
         # Attempt to get the compiled foma script of a non-existent morphology.
         response = self.app.get(
-            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=oldc.OLD_NAME_DFLT, id=123456789),
+            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=self.old_name, id=123456789),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin, status=404)
         resp = response.json_body
@@ -454,7 +454,7 @@ class TestMorphologiesView(TestView):
 
         # Compile the first morphology's script again
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         resp = response.json_body
@@ -486,7 +486,7 @@ class TestMorphologiesView(TestView):
                 oldc.RARE_DELIMITER, oldc.RARE_DELIMITER)
         params = json.dumps({'morpheme_sequences': morpheme_sequence})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=morphology_1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -504,7 +504,7 @@ class TestMorphologiesView(TestView):
                 oldc.RARE_DELIMITER, oldc.RARE_DELIMITER, oldc.RARE_DELIMITER, oldc.RARE_DELIMITER)
         params = json.dumps({'morpheme_sequences': invalid_morpheme_sequence})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=morphology_1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -517,7 +517,7 @@ class TestMorphologiesView(TestView):
         ms2 = 'tombe%sfall%sV-s%sPL%sPHI' % (oldc.RARE_DELIMITER, oldc.RARE_DELIMITER, oldc.RARE_DELIMITER, oldc.RARE_DELIMITER)
         params = json.dumps({'morpheme_sequences': [ms1, ms2]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=morphology_1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -530,7 +530,7 @@ class TestMorphologiesView(TestView):
         morpheme_sequence = 'chien-s'
         params = json.dumps({'morpheme_sequences': morpheme_sequence})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=morphology_1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -547,7 +547,7 @@ class TestMorphologiesView(TestView):
         ms5 = 'poule!t-s'
         params = json.dumps({'morpheme_sequences': [ms1, ms2, ms3, ms4, ms5]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=morphology_1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert resp[ms1] == ['vache%scow%sN-s%sPL%sPHI' % (oldc.RARE_DELIMITER, oldc.RARE_DELIMITER, 
@@ -561,7 +561,7 @@ class TestMorphologiesView(TestView):
 
         # Compile the second morphology's script (the one with only a rules corpus)
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_2_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_2_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -601,7 +601,7 @@ class TestMorphologiesView(TestView):
         # Compile the third morphology's script (the one with an empty rules corpus)
         # This one will not compile.
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_3_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_3_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -647,7 +647,7 @@ class TestMorphologiesView(TestView):
         resp = response.json_body
         assert resp['extract_morphemes_from_rules_corpus'] is True
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -694,7 +694,7 @@ class TestMorphologiesView(TestView):
 
         # Compile the fourth morphology's script (include unknowns)
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_4_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_4_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -721,7 +721,7 @@ class TestMorphologiesView(TestView):
 
         # Compile the fifth morphology's script (rich upper and lower)
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_5_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_5_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -753,7 +753,7 @@ class TestMorphologiesView(TestView):
         ms2 = 'tombe\u2980fall\u2980V-ait\u29803SG.IMPV\u2980AGR'
         params = json.dumps({'morpheme_sequences': [ms1, ms2]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_5_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=morphology_5_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert resp[ms1] == [ms1]
@@ -761,7 +761,7 @@ class TestMorphologiesView(TestView):
 
         # Compile the sixth morphology's script (impoverished upper and rich lower)
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_6_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_6_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -795,7 +795,7 @@ class TestMorphologiesView(TestView):
         ms2 = 'tombe\u2980fall\u2980V-ait\u29803SG.IMPV\u2980AGR'
         params = json.dumps({'morpheme_sequences': [ms1, ms2]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_6_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=morphology_6_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert resp[ms1] == [ms1o]
@@ -1038,7 +1038,7 @@ class TestMorphologiesView(TestView):
         # This will also result in the generation of a new morphology backup.
         if h.foma_installed():
             response = self.app.put(
-                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_1_id),
                 headers=self.json_headers,
                 extra_environ=self.extra_environ_contrib)
             resp = response.json_body
@@ -1183,7 +1183,7 @@ class TestMorphologiesView(TestView):
 
         # Compile the morphology and get an altogether new script, i.e., one in the lexc formalism this time
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=morphology_1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
 
@@ -1209,7 +1209,7 @@ class TestMorphologiesView(TestView):
 
         # Get the compiled foma script.
         response = self.app.get(
-            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=self.old_name, id=morphology_1_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         foma_file = open(morphology_binary_path, 'rb')
@@ -1224,7 +1224,7 @@ class TestMorphologiesView(TestView):
                 oldc.RARE_DELIMITER, oldc.RARE_DELIMITER)
         params = json.dumps({'morpheme_sequences': [ms1, ms2, ms3]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=morphology_1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert resp[ms1] == ['chien-s']
@@ -1238,7 +1238,7 @@ class TestMorphologiesView(TestView):
         ms4 = 'tombe-ait'
         params = json.dumps({'morpheme_sequences': [ms1, ms2, ms3, ms4]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=morphology_1_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=morphology_1_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert resp[ms1] == ['vache%scow%sN-s%sPL%sPHI' % (oldc.RARE_DELIMITER, oldc.RARE_DELIMITER, oldc.RARE_DELIMITER, oldc.RARE_DELIMITER)]
@@ -1306,14 +1306,12 @@ class TestMorphologiesView(TestView):
         tmp_script_path = os.path.join(self.test_datasets_path, 'tmp.sh')
         if not os.path.isfile(old_dump_file_path):
             return
-        config = db.get_config(config_filename='test.ini')
-        SQLAlchemyURL = config['sqlalchemy.url']
-        if not SQLAlchemyURL.split(':')[0] == 'mysql':
+        rdbms = self.settings.get('rdbms')
+        if rdbms != 'mysql':
             return
-        rdbms, username, password, db_name = SQLAlchemyURL.split(':')
-        username = username[2:]
-        password = password.split('@')[0]
-        db_name = db_name.split('/')[-1]
+        username = self.settings.get('user')
+        password = self.settings.get('password')
+        db_name = self.settings.get('name')
         # First dump the existing database so we can load it later.
         # Note: the --single-transaction option seems to be required (on Mac MySQL 5.6 using InnoDB tables ...)
         # see http://forums.mysql.com/read.php?10,108835,112951#msg-112951
@@ -1424,7 +1422,7 @@ class TestMorphologiesView(TestView):
 
         # Generate the morphology's script without compiling it.
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/generate'.format(old_name=self.old_name, id=large_morphology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -1477,7 +1475,7 @@ class TestMorphologiesView(TestView):
 
         # Generate the morphology's script (and lexicon) again. regardless of whether we have a pregenerated one
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/generate'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/generate'.format(old_name=self.old_name, id=large_morphology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_contrib)
         resp = response.json_body
@@ -1568,7 +1566,7 @@ class TestMorphologiesView(TestView):
         else:
             # Compile the morphology's script
             response = self.app.put(
-                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=large_morphology_id),
                 headers=self.json_headers,
                 extra_environ=self.extra_environ_contrib)
             resp = response.json_body
@@ -1619,7 +1617,7 @@ class TestMorphologiesView(TestView):
 
         # Get the compiled foma script.
         response = self.app.get(
-            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=oldc.OLD_NAME_DFLT, 
+            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=self.old_name, 
             id=large_morphology_id), headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         foma_file = open(morphology_binary_path, 'rb')
@@ -1649,7 +1647,7 @@ class TestMorphologiesView(TestView):
         phoneme_sequence_1 = seqs[0][1]
         params = json.dumps({'morpheme_sequences': morpheme_sequence_1})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -1668,7 +1666,7 @@ class TestMorphologiesView(TestView):
                 or 'e\u0301cureuil-s')
         params = json.dumps({'morpheme_sequences': invalid_morpheme_sequence})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -1683,7 +1681,7 @@ class TestMorphologiesView(TestView):
         phoneme_sequence_3 = seqs[2][1]
         params = json.dumps({'morpheme_sequences': [morpheme_sequence_1, morpheme_sequence_2, morpheme_sequence_3]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -1696,7 +1694,7 @@ class TestMorphologiesView(TestView):
         # Test applyup
         params = json.dumps({'morpheme_sequences': phoneme_sequence_1})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -1707,7 +1705,7 @@ class TestMorphologiesView(TestView):
         # Test applyup with multiple input sequences
         params = json.dumps({'morpheme_sequences': [phoneme_sequence_1, phoneme_sequence_2, phoneme_sequence_3]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert morpheme_sequence_1 in resp[phoneme_sequence_1]
@@ -1748,7 +1746,7 @@ class TestMorphologiesView(TestView):
         else:
             # Compile the morphology's script
             response = self.app.put(
-                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+                '/{old_name}/morphologies/{id}/generate_and_compile'.format(old_name=self.old_name, id=large_morphology_id),
                 headers=self.json_headers,
                 extra_environ=self.extra_environ_contrib)
             resp = response.json_body
@@ -1780,7 +1778,7 @@ class TestMorphologiesView(TestView):
 
         # Get the compiled foma script.
         response = self.app.get(
-            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/servecompiled'.format(old_name=self.old_name, id=large_morphology_id),
             headers=self.json_headers,
             extra_environ=self.extra_environ_admin)
         foma_file = open(morphology_binary_path, 'rb')
@@ -1793,7 +1791,7 @@ class TestMorphologiesView(TestView):
         # Test applydown with a valid morpheme sequence.
         params = json.dumps({'morpheme_sequences': morpheme_sequence_1})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -1809,7 +1807,7 @@ class TestMorphologiesView(TestView):
         # Test applydown with an invalid form|gloss-form|gloss sequence.
         params = json.dumps({'morpheme_sequences': invalid_morpheme_sequence})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -1820,7 +1818,7 @@ class TestMorphologiesView(TestView):
         # Test applydown with multiple morpheme sequences.
         params = json.dumps({'morpheme_sequences': [morpheme_sequence_1, morpheme_sequence_2, morpheme_sequence_3]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applydown'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applydown'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -1833,7 +1831,7 @@ class TestMorphologiesView(TestView):
         # Test applyup
         params = json.dumps({'morpheme_sequences': phoneme_sequence_1})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         morphology_dir_path = os.path.join(self.morphologies_path,
@@ -1844,7 +1842,7 @@ class TestMorphologiesView(TestView):
         # Test applyup with multiple input sequences
         params = json.dumps({'morpheme_sequences': [phoneme_sequence_1, phoneme_sequence_2, phoneme_sequence_3]})
         response = self.app.put(
-            '/{old_name}/morphologies/{id}/applyup'.format(old_name=oldc.OLD_NAME_DFLT, id=large_morphology_id),
+            '/{old_name}/morphologies/{id}/applyup'.format(old_name=self.old_name, id=large_morphology_id),
             params, self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert morpheme_sequence_1 in resp[phoneme_sequence_1]

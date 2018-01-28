@@ -25,7 +25,7 @@ import old.models.modelbuilders as omb
 LOGGER = logging.getLogger(__name__)
 
 
-url = ApplicationSettings._url()
+url = ApplicationSettings._url(old_name=TestView.old_name)
 
 
 

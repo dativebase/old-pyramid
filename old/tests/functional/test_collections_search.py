@@ -38,7 +38,7 @@ from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
 LOGGER = logging.getLogger(__name__)
 
 
-url = Collection._url()
+url = Collection._url(old_name=TestView.old_name)
 
 
 # Global temporal objects -- useful for creating the data upon which to search

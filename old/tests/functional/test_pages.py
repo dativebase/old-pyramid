@@ -29,7 +29,7 @@ from old.models import Page
 LOGGER = logging.getLogger(__name__)
 
 
-url = Page._url()
+url = Page._url(old_name=TestView.old_name)
 
 
 ################################################################################

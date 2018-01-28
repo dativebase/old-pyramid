@@ -1,5 +1,4 @@
 import logging
-import os
 
 import inflect
 from pyramid.response import Response
@@ -144,8 +143,7 @@ def fix_for_tests(request):
     """Modifies the request if certain environment variables are present.
     Purpose is to simulate different login states for testing.
     """
-    if (os.path.basename(request.registry.settings.get('__file__', '')) ==
-            'test.ini'):
+    if request.registry.settings.get('testing', '0') == '1':
         if 'test.authentication.role' in request.environ:
             role = request.environ['test.authentication.role']
             user = request.dbsession.query(User).filter(

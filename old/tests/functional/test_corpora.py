@@ -37,8 +37,8 @@ from old.tests import TestView
 LOGGER = logging.getLogger(__name__)
 
 
-url = Corpus._url()
-fs_url = old_models.FormSearch._url()
+url = Corpus._url(old_name=TestView.old_name)
+fs_url = old_models.FormSearch._url(old_name=TestView.old_name)
 
 
 class TestCorporaView(TestView):

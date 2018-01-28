@@ -85,20 +85,61 @@ environment, clone the OLD source, and use pip to install its dependencies::
     $ cd old-pyramid
     $ pip install -r requirements.txt -e .
 
-Modify the Pyramid config file (development.ini) to your liking, choosing
-SQLite or MySQL as RDBMS.
 
-Create the database tables and directory structure::
+Build the Database Tables
+===============================================================================
 
-    $ initialize_old_db development.ini
+Modify the config file (config.ini) to your liking, choosing SQLite or MySQL as
+RDBMS and supplying appropriate values for the database name, user, etc. Then
+create the database tables and directory structure::
 
-Serve::
+    $ initialize_old_db config.ini
 
-    $ pserve development.ini
 
-Now if you navigate to http://localhost:6543/ you should see a big JSON object
-that describes the OLD's API. If you install `Dative`_, you can use it to
+Serve the OLD
+===============================================================================
+
+You can use `pserve`_ to serve the OLD::
+
+    $ pserve config.ini
+
+Alternatively, use the serve.sh convenience shell script, providing host and
+port values as environment variables, if desired::
+
+    $ OLD_PORT=62008 ./serve.sh
+
+Now if you navigate to http://localhost:62008/old/ you should see a big JSON
+object that describes the OLD's API. If you install `Dative`_, you can use it to
 interact with the OLD.
+
+
+Environment Variable Configuration
+===============================================================================
+
+Serving the OLD and building its database tables requires configuration which
+can come from directly modifying the config file (config.ini) or from setting
+specific environment variables. The latter approach is recommended and the
+following environment variables are recognized by the OLD. See the comments in
+the config file for what is expected in these variables.
+
+- ``OLD_DB_RDBMS``
+- ``OLD_DB_USER``
+- ``OLD_DB_PASSWORD``
+- ``OLD_DB_HOST``
+- ``OLD_DB_PORT``
+- ``OLD_DB_DIRPATH``
+- ``OLD_TESTING``
+- ``OLD_NAME_TESTS``
+- ``OLD_CREATE_REDUCED_SIZE_FILE_COPIES``
+- ``OLD_PREFERRED_LOSSY_AUDIO_FORMAT``
+- ``SQLALCHEMY_POOL_RECYCLE``
+- ``OLD_PERMANENT_STORE``
+- ``OLD_ADD_LANGUAGE_DATA``
+- ``OLD_EMPTY_DATABASE``
+- ``OLD_PASSWORD_RESET_SMTP_SERVER``
+- ``OLD_TEST_EMAIL_TO``
+- ``OLD_GMAIL_FROM_ADDRESS``
+- ``OLD_GMAIL_FROM_PASSWORD``
 
 
 Technical
@@ -119,8 +160,10 @@ For Developers
 
 To run tests you must have MySQL v. 5.6 or greater installed. (The tests are
 not guaranteed to pass currently with SQLite or earlier versions of MySQL.) If
-MySQL is installed, make sure that there is a MySQL database called
-``oldtests`` accessible to the user ``old``::
+MySQL is installed, make sure that the MySQL database and user corresponding to
+your configuration exist. For example, if your testing configuration expects a
+database named ``oldtests`` accessible to the user ``old`` with password
+``demo``, do the following::
 
     mysql> CREATE DATABASE oldtests
         DEFAULT CHARACTER SET utf8
@@ -128,23 +171,31 @@ MySQL is installed, make sure that there is a MySQL database called
     mysql> CREATE USER 'old'@'localhost' IDENTIFIED BY 'demo';
     mysql> GRANT ALL PRIVILEGES ON oldtests.* TO 'old'@'localhost';
 
-Make sure that the test config file ``test.ini`` has the SQLite line commented
-out and the MySQL (with oursql driver) lines un-commented::
-
-    #sqlalchemy.url = sqlite:///%(here)s/test-old.sqlite
-    sqlalchemy.url = mysql+oursql://old:demo@localhost:3306/oldtests
-    sqlalchemy.pool_recycle = 3600
-    $ pytest
+Make sure that your configuration matches your test database, i.e., modify the
+config file to have appropriate corresponding values, e.g., ``db.user = old``,
+or, better yet, set the corresponding environment variables e.g.,
+``OLD_DB_USER=old``. Also, make sure to turn testing on in the configuration:
+``OLD_TESTING=1``.
 
 Then run the tests::
 
-    $ pytest old/tests -v
+    $ pytest
+
+The convenience script test.sh will turn testing on for you and will then run
+the tests::
+
+    $ ./test.sh
 
 The tests can also be run with tox using specific Python versions::
 
     $ tox -e py34
     $ tox -e py35
     $ tox -e py36
+
+To run all tests across all supported Python versions, including the pylint
+linting tests::
+
+    $ tox
 
 
 .. _`OLD Web Site`: http://www.onlinelinguisticdatabase.org/
@@ -158,3 +209,4 @@ The tests can also be run with tox using specific Python versions::
 .. _`Pylons`: http://upcoming.pylonsproject.org/about-pylons-framework.html
 .. _`Pylons OLD source`: https://github.com/dativebase/old
 .. _`Dative/OLD Vagrant/Ansible deploy scripts`: https://github.com/dativebase/deploy-dative-old
+.. _`pserve`: https://docs.pylonsproject.org/projects/pyramid/en/latest/pscripts/pserve.html

@@ -21,7 +21,6 @@ import inflect
 
 from old.lib.constants import OLD_NAME_DFLT
 
-
 inflect_p = inflect.engine()
 inflect_p.classical()
 
@@ -44,42 +43,43 @@ class URL:
     RSRC_HIST_PATH = '/{old_name}/{collection_name}/{id_}/history'
     RSRC_SRCH_POST_PATH = '/{old_name}/{collection_name}/search'
 
-    def __init__(self, collection_name='resources'):
+    def __init__(self, collection_name='resources', old_name=OLD_NAME_DFLT):
         self.collection_name = collection_name
+        self.old_name = old_name
 
     def __call__(self, route_name, **kwargs):
         # pylint: disable=too-many-return-statements
         if route_name in ('index', 'create', 'search'):
             return self.RSRCS_PATH.format(
                 collection_name=self.collection_name,
-                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
+                old_name=self.old_name)
         if route_name in ('show', 'delete', 'update'):
             return self.RSRC_PATH.format(
                 collection_name=self.collection_name,
                 id_=kwargs.get('id'),
-                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
+                old_name=self.old_name)
         if route_name == 'new':
             return self.RSRC_NEW_PATH.format(
                 collection_name=self.collection_name,
-                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
+                old_name=self.old_name)
         if route_name == 'edit':
             return self.RSRC_EDIT_PATH.format(
                 collection_name=self.collection_name,
                 id_=kwargs.get('id'),
-                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
+                old_name=self.old_name)
         if route_name == 'history':
             return self.RSRC_HIST_PATH.format(
                 collection_name=self.collection_name,
                 id_=kwargs.get('id'),
-                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
+                old_name=self.old_name)
         if route_name == 'new_search':
             return self.RSRC_NEW_SRCH_PATH.format(
                 collection_name=self.collection_name,
-                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
+                old_name=self.old_name)
         if route_name == 'search_post':
             return self.RSRC_SRCH_POST_PATH.format(
                 collection_name=self.collection_name,
-                old_name=kwargs.get('old_name', OLD_NAME_DFLT))
+                old_name=self.old_name)
         return None
 
 
@@ -106,7 +106,7 @@ class Model(object):
         return r
 
     @classmethod
-    def _url(cls):
+    def _url(cls, old_name=None):
         # pylint: disable=no-member
         __url = getattr(cls, '__url', None)
         if not __url:
@@ -114,7 +114,11 @@ class Model(object):
                 collection_name = 'applicationsettings'
             else:
                 collection_name = inflect_p.plural(cls.__tablename__)
-            cls.__url = URL(collection_name)
+            if old_name:
+                cls.__url = URL(collection_name=collection_name,
+                                old_name=old_name)
+            else:
+                cls.__url = URL(collection_name=collection_name)
         return cls.__url
 
     # Maps names of tables to the sets of attributes required for mini-dict creation

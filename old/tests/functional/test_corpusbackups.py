@@ -36,9 +36,9 @@ LOGGER = logging.getLogger(__name__)
 
 # Recreate the Pylons ``url`` global function that gives us URL paths for a
 # given (resource) route name plus path variables as **kwargs
-url = CorpusBackup._url()
-crps_url = Corpus._url()
-fs_url = old_models.FormSearch._url()
+url = CorpusBackup._url(old_name=TestView.old_name)
+crps_url = Corpus._url(old_name=TestView.old_name)
+fs_url = old_models.FormSearch._url(old_name=TestView.old_name)
 
 
 class TestCorpusbackupsView(TestView):

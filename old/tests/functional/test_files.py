@@ -42,8 +42,8 @@ LOGGER = logging.getLogger(__name__)
 
 # Recreate the Pylons ``url`` global function that gives us URL paths for a
 # given (resource) route name plus path variables as **kwargs
-url = File._url()
-forms_url = old_models.Form._url()
+url = File._url(old_name=TestView.old_name)
+forms_url = old_models.Form._url(old_name=TestView.old_name)
 
 
 class TestFilesView(TestView):
@@ -1990,7 +1990,7 @@ class TestFilesView(TestView):
 
         # Retrieve the file data as the admin who entered it
         response = self.app.get(
-            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, wav_file_id),
+            '/{}/files/{}/serve'.format(self.old_name, wav_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert wav_file_base64.encode('utf8') == response_base64
@@ -2000,7 +2000,7 @@ class TestFilesView(TestView):
         # Attempt to retrieve the file without authentication and expect to
         # fail (401).
         response = self.app.get(
-            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, wav_file_id),
+            '/{}/files/{}/serve'.format(self.old_name, wav_file_id),
             headers=self.json_headers, status=401)
         resp = response.json_body
         assert resp['error'] == 'Authentication is required to access this resource.'
@@ -2009,7 +2009,7 @@ class TestFilesView(TestView):
         # Attempt to retrieve the restricted file data as the contrib and
         # expect to fail.
         response = self.app.get(
-            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, wav_file_id),
+            '/{}/files/{}/serve'.format(self.old_name, wav_file_id),
             headers=self.json_headers, extra_environ=extra_environ_contrib,
             status=403)
         resp = response.json_body
@@ -2038,7 +2038,7 @@ class TestFilesView(TestView):
         # Attempt to retrieve the externally hosted file's "data" and
         # expect a 400 response.
         response = self.app.get(
-            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, eh_file_id),
+            '/{}/files/{}/serve'.format(self.old_name, eh_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin,
             status=400)
         resp = response.json_body
@@ -2067,7 +2067,7 @@ class TestFilesView(TestView):
         # Retrieve the parent file's file data when requesting that of the
         # child.
         response = self.app.get(
-            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, sr_file_id),
+            '/{}/files/{}/serve'.format(self.old_name, sr_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert wav_file_base64.encode('utf8') == response_base64
@@ -2077,7 +2077,7 @@ class TestFilesView(TestView):
         if (    self.create_reduced_size_file_copies and
                 h.command_line_program_installed('ffmpeg')):
             response = self.app.get(
-                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, wav_file_id),
+                '/{}/files/{}/serve_reduced'.format(self.old_name, wav_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin)
             response_base64 = b64encode(response.body)
@@ -2086,7 +2086,7 @@ class TestFilesView(TestView):
 
         else:
             response = self.app.get(
-                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, wav_file_id),
+                '/{}/files/{}/serve_reduced'.format(self.old_name, wav_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin, status=404)
             resp = response.json_body
@@ -2096,7 +2096,7 @@ class TestFilesView(TestView):
         # Retrieve the reduced file of the wav-subinterval-referencing file above
         if self.create_reduced_size_file_copies and h.command_line_program_installed('ffmpeg'):
             response = self.app.get(
-                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, sr_file_id),
+                '/{}/files/{}/serve_reduced'.format(self.old_name, sr_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin)
 
@@ -2106,7 +2106,7 @@ class TestFilesView(TestView):
             assert response.content_type == guess_type('x.%s' % self.preferred_lossy_audio_format)[0]
         else:
             response = self.app.get(
-                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, sr_file_id),
+                '/{}/files/{}/serve_reduced'.format(self.old_name, sr_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin, status=404)
             resp = response.json_body
@@ -2132,7 +2132,7 @@ class TestFilesView(TestView):
 
         # Get the image file's contents
         response = self.app.get(
-            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, jpg_file_id),
+            '/{}/files/{}/serve'.format(self.old_name, jpg_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert jpg_file_base64.encode('utf8') == response_base64
@@ -2142,7 +2142,7 @@ class TestFilesView(TestView):
         # Get the reduced image file's contents
         if self.create_reduced_size_file_copies and Image:
             response = self.app.get(
-                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, jpg_file_id),
+                '/{}/files/{}/serve_reduced'.format(self.old_name, jpg_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin)
             response_base64 = b64encode(response.body)
@@ -2150,7 +2150,7 @@ class TestFilesView(TestView):
             assert guess_type(jpg_filename)[0] == response.headers['Content-Type']
         else:
             response = self.app.get(
-                '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, jpg_file_id),
+                '/{}/files/{}/serve_reduced'.format(self.old_name, jpg_file_id),
                 headers=self.json_headers,
                 extra_environ=extra_environ_admin, status=404)
             resp = response.json_body
@@ -2178,7 +2178,7 @@ class TestFilesView(TestView):
 
         # Get the .ogg file's contents
         response = self.app.get(
-            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, ogg_file_id),
+            '/{}/files/{}/serve'.format(self.old_name, ogg_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert ogg_file_base64.encode('utf8') == response_base64
@@ -2187,7 +2187,7 @@ class TestFilesView(TestView):
 
         # Attempt to get the reduced image file's contents and expect to fail
         response = self.app.get(
-            '/{}/files/{}/serve_reduced'.format(oldc.OLD_NAME_DFLT, ogg_file_id),
+            '/{}/files/{}/serve_reduced'.format(self.old_name, ogg_file_id),
             headers=self.json_headers, extra_environ=extra_environ_admin,
             status=404)
         resp = response.json_body
@@ -2195,7 +2195,7 @@ class TestFilesView(TestView):
 
         # Invalid id
         response = self.app.get(
-            '/{}/files/{}/serve'.format(oldc.OLD_NAME_DFLT, 123456789012),
+            '/{}/files/{}/serve'.format(self.old_name, 123456789012),
             headers=self.json_headers, extra_environ=extra_environ_admin,
             status=404)
         resp = response.json_body

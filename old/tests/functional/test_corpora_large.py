@@ -24,7 +24,6 @@ from sqlalchemy.sql import and_
 
 from old.lib.constants import (
     JSONDecodeErrorResponse,
-    OLD_NAME_DFLT,
     UNAUTHORIZED_MSG
 )
 from old.lib.dbutils import DBUtils
@@ -45,7 +44,7 @@ from old.tests import (
 LOGGER = logging.getLogger(__name__)
 
 
-url = Corpus._url()
+url = Corpus._url(old_name=TestView.old_name)
 
 
 class TestCorporaLargeView(TestView):
@@ -87,9 +86,9 @@ class TestCorporaLargeView(TestView):
 
         .. note::
 
-            In order to run ``mysqldump`` with the MySQL user listed in
-            ``test.ini``, that user must have permission to lock and update
-            tables (alter and file privileges may also be required ...)::
+            In order to run ``mysqldump`` the MySQL user must have permission
+            to lock and update tables (alter and file privileges may also be
+            required ...)::
 
                 mysql -u root -p<root_password>
                 grant lock tables, update on old_test.* to 'old'@'localhost';
@@ -156,7 +155,7 @@ class TestCorporaLargeView(TestView):
                         'type': t
                     })
                     params = json.dumps(params)
-                    response = self.app.post('/{}/syntacticcategories'.format(OLD_NAME_DFLT), params, self.json_headers,
+                    response = self.app.post('/{}/syntacticcategories'.format(self.old_name), params, self.json_headers,
                                     self.extra_environ_admin)
                     cat_id = response.json_body['id']
                     categories[n] = cat_id
@@ -171,7 +170,7 @@ class TestCorporaLargeView(TestView):
                         'syntactic_category': categories.get(sc, '')
                     })
                     params = json.dumps(params)
-                    self.app.post('/{}/forms'.format(OLD_NAME_DFLT), params, self.json_headers,
+                    self.app.post('/{}/forms'.format(self.old_name), params, self.json_headers,
                                     self.extra_environ_admin)
             else:
                 if model == 'SyntacticCategory':
@@ -373,7 +372,7 @@ class TestCorporaLargeView(TestView):
             'description': 'Query to return all sentences in the database.',
             'search': query
         })
-        response = self.app.post('/{old_name}/formsearches'.format(old_name=OLD_NAME_DFLT), params, self.json_headers,
+        response = self.app.post('/{old_name}/formsearches'.format(old_name=self.old_name), params, self.json_headers,
                                     self.extra_environ_admin)
         resp = response.json_body
         form_search_id = resp['id']
@@ -382,7 +381,7 @@ class TestCorporaLargeView(TestView):
         params = json.dumps({
             'query': query,
             'paginator': {'page': 1, 'items_per_page': 1}})
-        response = self.app.post('/{old_name}/forms/search'.format(old_name=OLD_NAME_DFLT), params,
+        response = self.app.post('/{old_name}/forms/search'.format(old_name=self.old_name), params,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         sentence_count = resp['paginator']['count']
@@ -422,7 +421,7 @@ class TestCorporaLargeView(TestView):
         if h.command_line_program_installed('tgrep2'):
             # Failed tgrep2 search with invalid corpus id.
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=tgrep2pattern.encode('utf8'),
                 headers=self.json_headers,
                 environ=self.extra_environ_admin, status=400)
@@ -434,7 +433,7 @@ class TestCorporaLargeView(TestView):
         # Write the corpus to file
         sleep(1)
         params = json.dumps({'format': 'treebank'})
-        response = self.app.put('/%s/corpora/%d/writetofile' % (OLD_NAME_DFLT, corpus_id), params,
+        response = self.app.put('/%s/corpora/%d/writetofile' % (self.old_name, corpus_id), params,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp2 = response.json_body
         corpus_dir_contents = os.listdir(corpus_dir)
@@ -464,14 +463,14 @@ class TestCorporaLargeView(TestView):
         # Attempt to retrieve the gzipped corpus file via request as a restricted
         # user and expect to fail.  This is because there is one restricted
         # sentential form in the db, cf. the ``initialize`` "test".
-        response = self.app.get('/%s/corpora/%d/servefile/%d' % (OLD_NAME_DFLT,
+        response = self.app.get('/%s/corpora/%d/servefile/%d' % (self.old_name,
             corpus_id, corpus_file_id), params, status=403,
             headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = response.json_body
         assert resp == UNAUTHORIZED_MSG
 
         # Retrieve the gzipped corpus file via request.
-        response = self.app.get('/%s/corpora/%d/servefile/%d' % (OLD_NAME_DFLT,
+        response = self.app.get('/%s/corpora/%d/servefile/%d' % (self.old_name,
             corpus_id, corpus_file_id), params,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         unzipped_corpus_file_content = decompress_gzip_string(response.body)
@@ -492,7 +491,7 @@ class TestCorporaLargeView(TestView):
             'description': 'Query to return all sentences in the database that have even-numbered ids or are restricted.',
             'search': query
         })
-        response = self.app.post('/{old_name}/formsearches'.format(old_name=OLD_NAME_DFLT), params, self.json_headers,
+        response = self.app.post('/{old_name}/formsearches'.format(old_name=self.old_name), params, self.json_headers,
                                     self.extra_environ_admin)
         resp = response.json_body
         form_search_id = resp['id']
@@ -501,7 +500,7 @@ class TestCorporaLargeView(TestView):
         params = json.dumps({
             'query': query,
             'paginator': {'page': 1, 'items_per_page': 1}})
-        response = self.app.post('/%s/forms/search' % OLD_NAME_DFLT, params,
+        response = self.app.post('/%s/forms/search' % self.old_name, params,
                                     self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         sentence_count = resp['paginator']['count']
@@ -535,7 +534,7 @@ class TestCorporaLargeView(TestView):
         # Write the corpus to file
         sleep(1)
         params = json.dumps({'format': 'treebank'})
-        response = self.app.put('/%s/corpora/%d/writetofile' % (OLD_NAME_DFLT, corpus_id), params,
+        response = self.app.put('/%s/corpora/%d/writetofile' % (self.old_name, corpus_id), params,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp2 = response.json_body # Response is a JSON repr. of the corpus
         corpus_dir_contents = os.listdir(corpus_dir)
@@ -568,14 +567,14 @@ class TestCorporaLargeView(TestView):
         # Attempt to retrieve the gzipped corpus file via request as a restricted
         # user and expect to fail.  This is because the one restricted sentential 
         # form in the db is in the corpus.
-        response = self.app.get('/%s/corpora/%d/servefile/%d' % (OLD_NAME_DFLT,
+        response = self.app.get('/%s/corpora/%d/servefile/%d' % (self.old_name,
             corpus_id, corpus_file_id), params, status=403,
             headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = response.json_body
         assert resp == UNAUTHORIZED_MSG
 
         # Retrieve the gzipped corpus file via request.
-        response = self.app.get('/%s/corpora/%d/servefile/%d' % (OLD_NAME_DFLT,
+        response = self.app.get('/%s/corpora/%d/servefile/%d' % (self.old_name,
             corpus_id, corpus_file_id), params,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         unzipped_corpus_file_content = decompress_gzip_string(response.body)
@@ -584,7 +583,7 @@ class TestCorporaLargeView(TestView):
         # Write the corpus to file again without any changes and expect a vacuous recreation
         sleep(1)
         params = json.dumps({'format': 'treebank'})
-        response = self.app.put('/%s/corpora/%d/writetofile' % (OLD_NAME_DFLT, corpus_id), params,
+        response = self.app.put('/%s/corpora/%d/writetofile' % (self.old_name, corpus_id), params,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         old_resp2 = resp2
         resp2 = response.json_body # Response is a JSON repr. of the corpus
@@ -604,7 +603,7 @@ class TestCorporaLargeView(TestView):
         json_query = json.dumps(query)
         if not h.command_line_program_installed('tgrep2'):
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                 environ=self.extra_environ_admin, status=400)
             resp = response.json_body
@@ -612,7 +611,7 @@ class TestCorporaLargeView(TestView):
         else:
             # TGrep2-search the corpus-as-treebank
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                 environ=self.extra_environ_admin)
             resp = response.json_body
@@ -624,7 +623,7 @@ class TestCorporaLargeView(TestView):
             query['tgrep2pattern'] = tgrep2pattern
             json_query = json.dumps(query)
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                 environ=self.extra_environ_admin)
             resp = response.json_body
@@ -637,7 +636,7 @@ class TestCorporaLargeView(TestView):
             query['tgrep2pattern'] = tgrep2pattern
             json_query = json.dumps(query)
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                 environ=self.extra_environ_admin)
             resp = response.json_body
@@ -648,7 +647,7 @@ class TestCorporaLargeView(TestView):
 
             # Failed tgrep2 search with invalid corpus id.
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, 123456789),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, 123456789),
                 method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                 environ=self.extra_environ_admin, status=404)
             resp = response.json_body
@@ -656,7 +655,7 @@ class TestCorporaLargeView(TestView):
 
             # Restricted user will not get all of the results.
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                 environ=self.extra_environ_view)
             resp = response.json_body
@@ -666,7 +665,7 @@ class TestCorporaLargeView(TestView):
             # Failed TGrep2 search: bad JSON in request body
             json_query = json_query[:-1]
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                 environ=self.extra_environ_admin, status=400)
             resp = response.json_body
@@ -675,7 +674,7 @@ class TestCorporaLargeView(TestView):
             # Failed TGrep2 search: malformed params
             tgrep2pattern = json.dumps({'TGrep2pattern': 'NP-SBJ < DT . VP'})
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=tgrep2pattern.encode('utf8'),
                 headers=self.json_headers,
                 environ=self.extra_environ_admin, status=400)
@@ -686,7 +685,7 @@ class TestCorporaLargeView(TestView):
             # Empty string TGrep2 pattern results in no forms being returned.
             tgrep2pattern = json.dumps({'tgrep2pattern': ''})
             response = self.app.request(
-                '/{}/corpora/{}/tgrep2'.format(OLD_NAME_DFLT, corpus_id),
+                '/{}/corpora/{}/tgrep2'.format(self.old_name, corpus_id),
                 method='SEARCH', body=tgrep2pattern.encode('utf8'),
                 headers=self.json_headers, environ=self.extra_environ_admin)
             resp = response.json_body
@@ -747,7 +746,7 @@ class TestCorporaLargeView(TestView):
         # Search the corpus for forms beginning in vowels.
         query = json.dumps({"query": {"filter": ['Form', 'transcription', 'regex', '^[AEIOUaeiou]']},
                 "paginator": {'page': 1, 'items_per_page': 10}})
-        response = self.app.post('/%s/corpora/%d/search' % (OLD_NAME_DFLT, corpus_id), query,
+        response = self.app.post('/%s/corpora/%d/search' % (self.old_name, corpus_id), query,
             self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         matches = resp['items']
@@ -762,14 +761,14 @@ class TestCorporaLargeView(TestView):
 
         # Vacuous search of the corpus returns everything.
         query = json.dumps({"query": {"filter": ['Form', 'transcription', 'like', '%']}})
-        response = self.app.post('/%s/corpora/%d/search' % (OLD_NAME_DFLT, corpus_id), query,
+        response = self.app.post('/%s/corpora/%d/search' % (self.old_name, corpus_id), query,
             self.json_headers, self.extra_environ_admin)
         resp = response.json_body
         assert set([f['id'] for f in resp]) == set(long_sentence_ids)
 
         # Vacuous search as the viewer returns everything that is not restricted.
         query = json.dumps({"query": {"filter": ['Form', 'transcription', 'like', '%']}})
-        response = self.app.post('/%s/corpora/%d/search' % (OLD_NAME_DFLT, corpus_id), query,
+        response = self.app.post('/%s/corpora/%d/search' % (self.old_name, corpus_id), query,
             self.json_headers, self.extra_environ_view)
         resp2 = response.json_body
         # Viewer will get 1 or 2 forms fewer (2 are restricted, 1 assuredly a long sentence.)
@@ -777,14 +776,14 @@ class TestCorporaLargeView(TestView):
 
         # Failed search with an invalid corpus id
         query = json.dumps({"query": {"filter": ['Form', 'transcription', 'like', '%']}})
-        response = self.app.post('/%s/corpora/123456789/search' % OLD_NAME_DFLT, query,
+        response = self.app.post('/%s/corpora/123456789/search' % self.old_name, query,
             self.json_headers, self.extra_environ_admin, status=404)
         resp = response.json_body
         assert resp['error'] == 'There is no corpus with id 123456789'
 
         # Failed search with an invalid query
         query = json.dumps({"query": {"filter": ['Form', 'thingamafracasicle', 'like', '%']}})
-        response = self.app.post('/%s/corpora/%d/search' % (OLD_NAME_DFLT, corpus_id), query,
+        response = self.app.post('/%s/corpora/%d/search' % (self.old_name, corpus_id), query,
             self.json_headers, self.extra_environ_admin, status=400)
         resp = response.json_body
         assert resp['errors']['Form.thingamafracasicle'] == 'There is no attribute thingamafracasicle of Form'
@@ -860,7 +859,7 @@ class TestCorporaLargeView(TestView):
         # Write the corpus to file as a treebank
         sleep(1)
         params = json.dumps({u'format': 'treebank'})
-        response = self.app.put('/%s/corpora/%d/writetofile' % (OLD_NAME_DFLT, corpus_id), params,
+        response = self.app.put('/%s/corpora/%d/writetofile' % (self.old_name, corpus_id), params,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         resp2 = response.json_body
         corpus_dir_contents = os.listdir(corpus_dir)
@@ -889,14 +888,14 @@ class TestCorporaLargeView(TestView):
 
         # Attempt to retrieve the gzipped corpus file via request as a restricted
         # user and expect to fail.
-        response = self.app.get('/%s/corpora/%d/servefile/%d' % (OLD_NAME_DFLT,
+        response = self.app.get('/%s/corpora/%d/servefile/%d' % (self.old_name,
             corpus_id, corpus_file_id), status=403,
             headers=self.json_headers, extra_environ=self.extra_environ_contrib)
         resp = response.json_body
         assert resp == UNAUTHORIZED_MSG
 
         # Retrieve the gzipped corpus file via request.
-        response = self.app.get('/%s/corpora/%d/servefile/%d' % (OLD_NAME_DFLT,
+        response = self.app.get('/%s/corpora/%d/servefile/%d' % (self.old_name,
             corpus_id, corpus_file_id),
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         assert len(response.body) < len(corpus_file_content)
@@ -906,7 +905,7 @@ class TestCorporaLargeView(TestView):
         # Write the corpus to file as a list of transcriptions, one per line.
         sleep(1)
         params = json.dumps({u'format': 'transcriptions only'})
-        response = self.app.put('/%s/corpora/%d/writetofile' % (OLD_NAME_DFLT, corpus_id), params,
+        response = self.app.put('/%s/corpora/%d/writetofile' % (self.old_name, corpus_id), params,
             headers=self.json_headers, extra_environ=self.extra_environ_admin)
         old_resp2 = resp2
         resp2 = response.json_body

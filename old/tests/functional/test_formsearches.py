@@ -17,7 +17,6 @@ import datetime
 import logging
 import json
 
-from old.lib.constants import OLD_NAME_DFLT
 from old.lib.dbutils import DBUtils
 from time import sleep
 from old.tests import TestView, add_SEARCH_to_web_test_valid_methods
@@ -30,7 +29,7 @@ from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 LOGGER = logging.getLogger(__name__)
 
 
-url = FormSearch._url()
+url = FormSearch._url(old_name=TestView.old_name)
 
 
 
@@ -653,7 +652,7 @@ class TestFormsearchesView(TestView):
         dbsession = self.dbsession
         db = DBUtils(dbsession, self.settings)
         query_builder = SQLAQueryBuilder(dbsession, 'FormSearch', settings=self.settings)
-        response = self.app.get('/{}/formsearches/new_search'.format(OLD_NAME_DFLT), headers=self.json_headers,
+        response = self.app.get('/{}/formsearches/new_search'.format(self.old_name), headers=self.json_headers,
                                 extra_environ=self.extra_environ_view)
         resp = response.json_body
         assert resp['search_parameters'] == query_builder.get_search_parameters()

@@ -5,7 +5,7 @@ linguistic analysis.
 import datetime
 import logging
 import os
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse, ParseResult
 
 from pyramid.authentication import (
     AuthTktAuthenticationPolicy,
@@ -163,25 +163,16 @@ class MyRequest(Request):
             return db_session_factory_registry.get_session(settings)()
         self.session_getter = session_getter
 
-    def get_old_name(self):
+    def get_old_name_from_request(self):
+        """The name of this OLD is extracted from the user-provided URL on
+        every request. This is necessary because the OLD is stateless: all
+        state is held in the db and a location on the filesystem, which are
+        specified by the user-provided URL.
+        """
         return urlparse(self.url).path.lstrip('/').split('/')[0]
 
-    @staticmethod
-    def get_new_path(scheme, path, old_name):
-        if scheme == 'sqlite':
-            return os.path.join(os.path.dirname(path), '{}.sqlite'.format(old_name))
-        return old_name
-
     def get_sqlalchemy_url(self):
-        old_name = self.get_old_name()
-        settings_sqlalchemy_url = self.registry.settings['sqlalchemy.url']
-        if old_name == OLD_NAME_DFLT:
-            return settings_sqlalchemy_url
-        parsed_sqla_url = urlparse(settings_sqlalchemy_url)
-        new_path = self.get_new_path(parsed_sqla_url.scheme,
-                                     parsed_sqla_url.path, old_name)
-        parsed_sqla_url = parsed_sqla_url._replace(path=new_path)
-        return urlunparse(parsed_sqla_url).replace('sqlite:', 'sqlite://', 1)
+        return build_sqlalchemy_url(self.registry.settings)
 
     @property
     def dbsession(self):
@@ -193,6 +184,7 @@ class MyRequest(Request):
         """
         settings = {k: v for k, v in self.registry.settings.items()
                     if k.startswith('sqlalchemy.')}
+        self.registry.settings['old_name'] = self.get_old_name_from_request()
         settings['sqlalchemy.url'] = self.get_sqlalchemy_url()
         self._session = db_session_factory_registry.get_session(settings)()
         self.add_finished_callback(self.close_dbsession)
@@ -203,14 +195,76 @@ class MyRequest(Request):
         self._session.commit()
 
 
+# The environment variables in the keys of this dict, if set, will override the
+# corresponding values in the Pyramid settings dict. See
+# ``override_settings_with_env_vars``.
+ENV_VAR_MAP = {
+    'OLD_DB_RDBMS': 'db.rdbms',
+    'OLD_DB_USER': 'db.user',
+    'OLD_DB_PASSWORD': 'db.password',
+    'OLD_DB_HOST': 'db.host',
+    'OLD_DB_PORT': 'db.port',
+    'OLD_NAME_TESTS': 'old_name_tests',
+    'OLD_DB_DIRPATH': 'db.dirpath',
+    'OLD_TESTING': 'testing',
+    'OLD_CREATE_REDUCED_SIZE_FILE_COPIES': 'create_reduced_size_file_copies',
+    'OLD_PREFERRED_LOSSY_AUDIO_FORMAT': 'preferred_lossy_audio_format',
+    'SQLALCHEMY_POOL_RECYCLE': 'sqlalchemy.pool_recycle',
+    'OLD_PERMANENT_STORE': 'permanent_store',
+    'OLD_ADD_LANGUAGE_DATA': 'add_language_data',
+    'OLD_EMPTY_DATABASE': 'empty_database',
+    'OLD_PASSWORD_RESET_SMTP_SERVER': 'password_reset_smtp_server',
+    'OLD_TEST_EMAIL_TO': 'test_email_to',
+    'OLD_GMAIL_FROM_ADDRESS': 'gmail_from_address',
+    'OLD_GMAIL_FROM_PASSWORD': 'gmail_from_password'
+}
+
+
+def build_sqlalchemy_url(settings):
+    old_name = settings['old_name']
+    if settings['db.rdbms'] == 'mysql':
+        return urlunparse(ParseResult(
+            scheme='mysql+oursql',
+            netloc='{user}:{password}@{host}:{port}'.format(
+                user=settings['db.user'],
+                password=settings['db.password'],
+                host=settings['db.host'],
+                port=settings['db.port']),
+            path='/{old_name}'.format(
+                old_name=old_name),
+            params='',
+            query='',
+            fragment=''))
+    _, ext = os.path.splitext(old_name)
+    if not ext:
+        old_name = '{old_name}.sqlite'.format(old_name=old_name)
+    return 'sqlite:///{dirpath}/{old_name}'.format(
+        dirpath=settings['db.dirpath'],
+        old_name=old_name)
+
+
+def override_settings_with_env_vars(settings):
+    """Override any values in the ``settings`` dict with the value of the
+    corresponding environment variable, if it is set.
+    """
+    for env_var, settings_key in ENV_VAR_MAP.items():
+        env_var_val = os.getenv(env_var)
+        if env_var_val is None:
+            continue
+        settings[settings_key] = env_var_val
+    settings['old_name'] = settings.get(
+        'old_name', settings.get('old_name_tests', OLD_NAME_DFLT))
+    settings['sqlalchemy.url'] = build_sqlalchemy_url(settings)
+    return settings
+
+
 def main(global_config, **settings):
     """This function returns a Pyramid WSGI application."""
     # pylint: disable=unused-argument
     start_foma_worker()
-    settings = expandvars_dict(settings)
+    settings = override_settings_with_env_vars(settings)
     config = Configurator(settings=settings, request_factory=MyRequest)
     config.include('pyramid_beaker')
-    config.include('pyramid_jinja2')
     config.include('.routes')
     config.add_renderer('json', get_json_renderer())
     config.scan()

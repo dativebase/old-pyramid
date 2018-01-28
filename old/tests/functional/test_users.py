@@ -29,7 +29,7 @@ from old.models import User
 LOGGER = logging.getLogger(__name__)
 
 
-url = User._url()
+url = User._url(old_name=TestView.old_name)
 
 
 

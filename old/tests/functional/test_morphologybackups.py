@@ -25,9 +25,9 @@ from old.models import Morphology
 LOGGER = logging.getLogger(__name__)
 
 
-url = old_models.MorphologyBackup._url()
-mgy_url = old_models.Morphology._url()
-cp_url = old_models.Corpus._url()
+url = old_models.MorphologyBackup._url(old_name=TestView.old_name)
+mgy_url = old_models.Morphology._url(old_name=TestView.old_name)
+cp_url = old_models.Corpus._url(old_name=TestView.old_name)
 
 
 

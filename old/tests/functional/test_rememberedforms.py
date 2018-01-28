@@ -18,7 +18,6 @@ import logging
 import re
 from time import sleep
 
-from old.lib.constants import OLD_NAME_DFLT
 from old.lib.dbutils import DBUtils
 import old.lib.helpers as h
 import old.models as old_models
@@ -222,7 +221,7 @@ class TestRememberedformsView(TestView):
         sleep(1)
         params = json.dumps({'forms': [f['id'] for f in forms]})
         response = self.app.put(
-            '/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id), params,
+            '/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id), params,
             self.json_headers, self.extra_environ_view_appset)
         resp = response.json_body
         viewer_remembered_forms = sorted(resp, key=lambda f: f['id'])
@@ -238,7 +237,7 @@ class TestRememberedformsView(TestView):
         # Try to clear the viewer's remembered forms as the contributor and
         # expect the request to be denied.
         params = json.dumps({'forms': []})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                 params, self.json_headers, self.extra_environ_contrib_appset, status=403)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -253,7 +252,7 @@ class TestRememberedformsView(TestView):
 
         # Remove the last of the viewer's remembered forms as the administrator.
         params = json.dumps({'forms': [f['id'] for f in viewer_remembered_forms][:-1]})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                                 params, self.json_headers, self.extra_environ_admin_appset)
         resp = response.json_body
         result_set = result_set[:-1]
@@ -269,7 +268,7 @@ class TestRememberedformsView(TestView):
 
         # Attempted update fails: bad user id
         params = json.dumps({'forms': []})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=100896),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=100896),
                 params, self.json_headers, self.extra_environ_admin_appset, status=404)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -277,7 +276,7 @@ class TestRememberedformsView(TestView):
 
         # Attempted update fails: invalid array of form ids
         params = json.dumps({'forms': ['a', 1000000087654]})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                 params, self.json_headers, self.extra_environ_admin_appset, status=400)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -286,7 +285,7 @@ class TestRememberedformsView(TestView):
 
         # Attempted update fails: array of form ids is bad JSON
         params = json.dumps({'forms': []})[:-1]
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                 params, self.json_headers, self.extra_environ_admin_appset, status=400)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -294,7 +293,7 @@ class TestRememberedformsView(TestView):
 
         # Clear the forms
         params = json.dumps({'forms': []})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                 params, self.json_headers, self.extra_environ_admin_appset)
         resp = response.json_body
         viewer = dbsession.query(old_models.User).filter(old_models.User.role=='viewer').first()
@@ -304,7 +303,7 @@ class TestRememberedformsView(TestView):
 
         # Attempt to clear the forms again and fail because the submitted data are not new.
         params = json.dumps({'forms': []})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                 params, self.json_headers, self.extra_environ_view_appset, status=400)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -313,7 +312,7 @@ class TestRememberedformsView(TestView):
         # Attempt to add all unrestricted forms to the viewer's remembered forms.
         # Fail because unauthenticated.
         params = json.dumps({'forms': [f['id'] for f in forms]})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                                     params, self.json_headers, status=401)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -322,7 +321,7 @@ class TestRememberedformsView(TestView):
         # Finally for the viewer, re-add all unrestricted forms to the viewer's
         # remembered forms for subsequent searches and GETs.
         params = json.dumps({'forms': [f['id'] for f in forms]})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                             params, self.json_headers, self.extra_environ_view_appset)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -336,7 +335,7 @@ class TestRememberedformsView(TestView):
         # The contributor is unrestricted.  Add all forms to this user's
         # remembered forms.
         params = json.dumps({'forms': [f['id'] for f in forms]})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=contributor_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=contributor_id),
                             params, self.json_headers, self.extra_environ_contrib_appset)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -346,7 +345,7 @@ class TestRememberedformsView(TestView):
         # with odd numbered ids.
         odd_numbered_form_ids = [f['id'] for f in forms if f['id'] % 2 != 0]
         params = json.dumps({'forms': odd_numbered_form_ids})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=contributor_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=contributor_id),
                             params, self.json_headers, self.extra_environ_contrib_appset)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -360,7 +359,7 @@ class TestRememberedformsView(TestView):
         # remembered forms.
         form_ids_for_admin = [f['id'] for f in forms if f['id'] % 2 != 0 and f['id'] > 25]
         params = json.dumps({'forms': form_ids_for_admin})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=administrator_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=administrator_id),
                             params, self.json_headers, self.extra_environ_contrib_appset, status=403)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -370,7 +369,7 @@ class TestRememberedformsView(TestView):
         # ids greater than 25.
         form_ids_for_admin = [f['id'] for f in forms if f['id'] % 2 == 0 and f['id'] > 25]
         params = json.dumps({'forms': form_ids_for_admin})
-        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=administrator_id),
+        response = self.app.put('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=administrator_id),
                             params, self.json_headers, self.extra_environ_admin_appset)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -393,7 +392,7 @@ class TestRememberedformsView(TestView):
         ########################################################################
 
         # Get the viewer's remembered forms (show that a contributor can do this)
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                         headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = response.json_body
         result_set = [f for f in forms if 'restricted' not in [t['name'] for t in f['tags']]]
@@ -403,7 +402,7 @@ class TestRememberedformsView(TestView):
 
         # Test the paginator GET params.
         paginator = {'items_per_page': 7, 'page': 3}
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                         paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -413,7 +412,7 @@ class TestRememberedformsView(TestView):
         # Test the order_by GET params.
         order_by_params = {'order_by_model': 'Form', 'order_by_attribute': 'transcription',
                         'order_by_direction': 'desc'}
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                         order_by_params, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = response.json_body
         result_set_ordered = sorted(result_set, key=lambda f: f['transcription'], reverse=True)
@@ -423,7 +422,7 @@ class TestRememberedformsView(TestView):
         # Test the order_by *with* paginator.
         params = {'order_by_model': 'Form', 'order_by_attribute': 'transcription',
                         'order_by_direction': 'desc', 'items_per_page': 7, 'page': 3}
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
                         params, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = response.json_body
         assert len(resp['items']) == 7
@@ -432,7 +431,7 @@ class TestRememberedformsView(TestView):
         # Expect a 400 error when the order_by_direction param is invalid
         order_by_params = {'order_by_model': 'Form', 'order_by_attribute': 'transcription',
                         'order_by_direction': 'descending'}
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
             order_by_params, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset, status=400)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -442,7 +441,7 @@ class TestRememberedformsView(TestView):
         # param is invalid.
         order_by_params = {'order_by_model': 'Formosa', 'order_by_attribute': 'transcrumption',
                         'order_by_direction': 'desc'}
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
             order_by_params, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = response.json_body
         assert resp[0]['id'] == forms[0]['id']
@@ -450,14 +449,14 @@ class TestRememberedformsView(TestView):
         # Expect a 400 error when the paginator GET params are, empty, not
         # or integers that are less than 1
         paginator = {'items_per_page': 'a', 'page': ''}
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
             paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset, status=400)
         resp = response.json_body
         assert resp['errors']['items_per_page'] == 'Please enter an integer value'
         assert resp['errors']['page'] == 'Please enter a value'
 
         paginator = {'items_per_page': 0, 'page': -1}
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=viewer_id),
             paginator, headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset, status=400)
         resp = response.json_body
         assert resp['errors']['items_per_page'] == 'Please enter a number that is 1 or greater'
@@ -468,7 +467,7 @@ class TestRememberedformsView(TestView):
         ########################################################################
 
         # Get the contributor's remembered forms
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=contributor_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=contributor_id),
                         headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset)
         resp = response.json_body
         result_set = [f for f in forms if f['id'] % 2 != 0]
@@ -476,7 +475,7 @@ class TestRememberedformsView(TestView):
         assert set([f['id'] for f in result_set]) == set([f['id'] for f in resp])
 
         # Invalid user id returns a 404 error
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=200987654),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=200987654),
                 headers=self.json_headers, extra_environ=self.extra_environ_contrib_appset, status=404)
         resp = response.json_body
         assert response.content_type == 'application/json'
@@ -487,7 +486,7 @@ class TestRememberedformsView(TestView):
         ########################################################################
 
         # Get the administrator's remembered forms
-        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=administrator_id),
+        response = self.app.get('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=administrator_id),
                         headers=self.json_headers, extra_environ=self.extra_environ_admin_appset)
         resp = response.json_body
         result_set = [f for f in forms if f['id'] % 2 == 0 and f['id'] > 25]
@@ -564,7 +563,7 @@ class TestRememberedformsView(TestView):
             (f['date_elicited'] and jan1.isoformat() == f['date_elicited']))]
 
         # Search the viewer's remembered forms as the viewer
-        response = self.app.post('/{old_name}/rememberedforms/{id}/search'.format(old_name=OLD_NAME_DFLT, id=viewer_id),
+        response = self.app.post('/{old_name}/rememberedforms/{id}/search'.format(old_name=self.old_name, id=viewer_id),
                         json_query, self.json_headers, self.extra_environ_admin_appset)
         resp = response.json_body
         assert [f['id'] for f in result_set_viewer] == [f['id'] for f in resp]
@@ -574,7 +573,7 @@ class TestRememberedformsView(TestView):
         # Perform the same search as above on the contributor's remembered forms,
         # as the contributor.
         response = self.app.request(
-            '/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=contributor_id), method='SEARCH',
+            '/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=contributor_id), method='SEARCH',
             body=json_query.encode('utf8'), headers=self.json_headers,
             environ=self.extra_environ_contrib_appset)
         resp = response.json_body
@@ -587,7 +586,7 @@ class TestRememberedformsView(TestView):
         # Perform the same search as above on the contributor's remembered forms,
         # but search as the viewer and expect not to see the restricted forms,
         # i.e., those with ids > 50.
-        response = self.app.post('/{old_name}/rememberedforms/{id}/search'.format(old_name=OLD_NAME_DFLT, id=contributor_id),
+        response = self.app.post('/{old_name}/rememberedforms/{id}/search'.format(old_name=self.old_name, id=contributor_id),
                         json_query, self.json_headers, self.extra_environ_view_appset)
         resp = response.json_body
         result_set = [f for f in result_set_contributor if
@@ -597,7 +596,7 @@ class TestRememberedformsView(TestView):
         assert resp
 
         # Perform the search on the administrator's remembered forms as the viewer.
-        response = self.app.request('/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=administrator_id),
+        response = self.app.request('/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=administrator_id),
                         method='SEARCH', body=json_query.encode('utf8'), headers=self.json_headers,
                         environ=self.extra_environ_view_appset)
         resp = response.json_body
@@ -610,7 +609,7 @@ class TestRememberedformsView(TestView):
         # Perform the search on the administrator's remembered forms as the
         # contributor.
         response = self.app.post(
-            '/{old_name}/rememberedforms/{id}/search'.format(old_name=OLD_NAME_DFLT, id=administrator_id),
+            '/{old_name}/rememberedforms/{id}/search'.format(old_name=self.old_name, id=administrator_id),
             json_query_admin, self.json_headers,
             self.extra_environ_contrib_appset)
         resp = response.json_body
@@ -622,7 +621,7 @@ class TestRememberedformsView(TestView):
         # Perform the search on the administrator's remembered forms as the
         # administrator.
         response = self.app.request(
-            '/{old_name}/rememberedforms/{id}'.format(old_name=OLD_NAME_DFLT, id=administrator_id), method='SEARCH',
+            '/{old_name}/rememberedforms/{id}'.format(old_name=self.old_name, id=administrator_id), method='SEARCH',
             body=json_query_admin.encode('utf8'),
             headers=self.json_headers,
             environ=self.extra_environ_admin_appset)

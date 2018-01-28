@@ -37,7 +37,7 @@ LOGGER = logging.getLogger(__name__)
 def usage(argv):
     cmd = os.path.basename(argv[0])
     print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+          '(example: "%s config.ini")' % (cmd, cmd))
     sys.exit(1)
 
 
@@ -55,7 +55,6 @@ def main(argv=None):
 
     try:
         dbsession = db_session_factory_registry.get_session(settings)()
-        filename = os.path.basename(settings['__file__'])
         # Create the ``store`` directory and those for file, analysis and
         # corpora objects and their subdirectories.  See ``lib.utils.py`` for
         # details.
@@ -73,7 +72,8 @@ def main(argv=None):
         # If we are running tests, make sure the test db contains only language
         # data.
 
-        if filename == 'test.ini':
+        testing = settings.get('testing', '0')
+        if testing == '1':
             # Permanently drop any existing tables
             Base.metadata.drop_all(bind=dbsession.bind, checkfirst=True)
             LOGGER.info("Existing tables dropped.")

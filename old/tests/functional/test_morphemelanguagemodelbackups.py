@@ -24,10 +24,10 @@ from old.models import MorphemeLanguageModel, MorphemeLanguageModelBackup
 LOGGER = logging.getLogger(__name__)
 
 
-url = MorphemeLanguageModelBackup._url()
-mlm_url = MorphemeLanguageModel._url()
-fs_url = old_models.FormSearch._url()
-cp_url = old_models.Corpus._url()
+url = MorphemeLanguageModelBackup._url(old_name=TestView.old_name)
+mlm_url = MorphemeLanguageModel._url(old_name=TestView.old_name)
+fs_url = old_models.FormSearch._url(old_name=TestView.old_name)
+cp_url = old_models.Corpus._url(old_name=TestView.old_name)
 
 
 

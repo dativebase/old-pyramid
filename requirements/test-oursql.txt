@@ -1,6 +1,0 @@
--r base-oursql.txt
-
-pylint
-pytest==3.0.3
-pytest-cov
-WebTest >= 1.3.1
