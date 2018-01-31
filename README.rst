@@ -35,46 +35,52 @@ For additional information, see the `OLD Web Site`_.
 site`_, or the `Dative app`_ for more information.
 
 
-Installation
+Deployment
 ===============================================================================
 
-Docker
+Deploying the OLD means:
+
+1. downloading its source code and installing it, including its Python
+   dependencies;
+2. installing its operating system dependencies (e.g., Ffmpeg, foma);
+3. making configuration decisions, e.g., the name of the MySQL database to use;
+4. creating its database tables and needed directory structure; and
+5. serving it.
+
+
+Deploying locally using Vagrant and Ansible
 -------------------------------------------------------------------------------
 
-The OLD comes with a Dockerfile that can install and run the OLD on a docker
-container. *Warning*: this is still under development. First install docker.
-Then move to the directory containing the Dockerfile file and build the docker
-image by running::
-
-    $ docker build -t old:v1 .
-
-Then run the container::
-
-    $ docker run -d -p 8001:6543 old:v1
-
-Now an OLD should be available at http://127.0.0.1:8001.
-
-
-Install via Vagrant/Ansible
--------------------------------------------------------------------------------
-
-The easiest way to install the OLD and all of its dependencies (as well as
-Dative) is to do so on a virtual machine using the `Dative/OLD Vagrant/Ansible
-deploy scripts`_::
+The easiest way to deploy the OLD and Dative locally for development purposes
+is to do so on a virtual machine using the `Dative/OLD Vagrant/Ansible deploy
+scripts`_::
 
     $ git clone git@github.com:dativebase/deploy-dative-old.git
     $ cd deploy-dative-old/playbooks/dative-old
     $ ansible-galaxy install -f -p roles/ -r requirements.yml
     $ vagrant up
 
+If the above works, you should see something like the following::
+
+    PLAY RECAP *********************************************************************
+    dative-old-local           : ok=84   changed=31   unreachable=0    failed=0
+
+And Dative and the OLD should be accessible at the following URLs:
+
+- Dative at http://192.169.169.192:8000
+- OLD instance #1 at http://192.169.169.192/testold/
+- OLD instance #2 at http://192.169.169.192/testold2/
+
 The above commands assume you have Vagrant (>= 1.7) installed and Ansible (v.
 2.1.1.0) installed. These commands will install the OLD and its dependencies
 (foma, MITLM, ffmpeg, TGrep2) on a virtual machine running Ubuntu 14.04; they
-will configure and serve two OLD instances as well as the Dative GUI.
+will configure and serve two OLD instances as well as the Dative GUI. More
+details are available at
+https://github.com/dativebase/deploy-dative-old/tree/master/playbooks/dative-old.
 
 
-Manual Install
--------------------------------------------------------------------------------
+Installation
+===============================================================================
 
 To install the OLD manually from source, create and activate a Python3 virtual
 environment, clone the OLD source, and use pip to install its dependencies::
@@ -89,11 +95,21 @@ environment, clone the OLD source, and use pip to install its dependencies::
 Build the Database Tables
 ===============================================================================
 
-Modify the config file (config.ini) to your liking, choosing SQLite or MySQL as
-RDBMS and supplying appropriate values for the database name, user, etc. Then
-create the database tables and directory structure::
+You must manually create the MySQL database that you expect to use for each OLD
+instance. Here is an example (which assumes a pre-existing user named ``old``)::
 
-    $ initialize_old_db config.ini
+    mysql> CREATE DATABASE old DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin;
+    mysql> GRANT ALL PRIVILEGES ON old.* TO 'old'@'localhost';
+
+After installing the OLD, the `initialize_old` executable should be in your
+PATH. Calling it will create the database tables, add some default values
+(e.g., default users), and will create the directory structure scaffolding::
+
+    $ initialize_old config.ini
+
+To control the configuration (e.g., the database user, password, host, etc.)
+you can modify the config file ``config.ini`` or, better yet, use environment
+variables (see below).
 
 
 Serve the OLD
@@ -155,7 +171,7 @@ framework OLD, see the `Pylons OLD source`_ and the `Official OLD
 Documentation`_.
 
 
-For Developers
+Run the Tests
 ================================================================================
 
 To run tests you must have MySQL v. 5.6 or greater installed. (The tests are
@@ -170,10 +186,6 @@ database named ``oldtests`` accessible to the user ``old`` with password
         DEFAULT COLLATE utf8_bin;
     mysql> CREATE USER 'old'@'localhost' IDENTIFIED BY 'demo';
     mysql> GRANT ALL PRIVILEGES ON oldtests.* TO 'old'@'localhost';
-
-    mysql> DROP DATABASE old;
-    mysql> CREATE DATABASE old DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin;
-    mysql> GRANT ALL PRIVILEGES ON old.* TO 'old'@'localhost';
 
 Make sure that your configuration matches your test database, i.e., modify the
 config file to have appropriate corresponding values, e.g., ``db.user = old``,
