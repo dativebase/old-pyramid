@@ -91,32 +91,42 @@ class Collections(Resources):
         :request body: JSON object representing the resource to create.
         :returns: the newly created resource.
         """
+        LOGGER.info('Attempting to create a new collection.')
         schema = self.schema_cls()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning('Request body was not valid JSON')
             return JSONDecodeErrorResponse
         try:
             state, collections_referenced = self._get_create_state(values)
         except InvalidCollectionReferenceError as error:
             self.request.response.status_int = 400
-            return {'error': 'Invalid collection reference error: there is no'
-                             ' collection with id %d' % error.args[0]}
+            msg = ('Invalid collection reference error: there is no collection'
+                   ' with id {}.'.format(error.args[0]))
+            LOGGER.warning(msg)
+            return {'error': msg}
         except UnauthorizedCollectionReferenceError as error:
             self.request.response.status_int = 403
-            return {'error': 'Unauthorized collection reference error: you are'
-                             ' not authorized to access collection %d' %
-                             error.args[0]}
+            msg = ('Unauthorized collection reference error: you are not'
+                   ' authorized to access collection {}'.format(error.args[0]))
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             data = schema.to_python(values, state)
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(
+                'Attempt to create a collection resulted in an error(s): %s',
+                errors)
+            return {'errors': errors}
         resource = self._create_new_resource(data, collections_referenced)
         self.request.dbsession.add(resource)
         self.request.dbsession.flush()
         self._post_create(resource)
+        LOGGER.info('Created a new collection.')
         return resource.get_full_dict()
 
     def update(self):
@@ -128,57 +138,69 @@ class Collections(Resources):
         :returns: the updated collection model.
         """
         resource_model, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to update collection %s.', id_)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': 'There is no %s with id %s' % (self.member_name,
-                                                            id_)}
+            msg = 'There is no {} with id {}'.format(self.member_name, id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._model_access_unauth(resource_model) is not False:
             self.request.response.status_int = 403
+            LOGGER.warning(UNAUTHORIZED_MSG)
             return UNAUTHORIZED_MSG
         schema = self.schema_cls()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(JSONDecodeErrorResponse)
             return JSONDecodeErrorResponse
         try:
             state, collections_referenced = self._get_create_state(
                 values, collection_id=id_)
         except InvalidCollectionReferenceError as error:
             self.request.response.status_int = 400
-            return {'error': 'Invalid collection reference error: there is no'
-                             ' collection with id %d' % error.args[0]}
+            msg = ('Invalid collection reference error: there is no collection'
+                   ' with id {}'.format(error.args[0]))
+            LOGGER.warning(msg)
+            return {'error': msg}
         except UnauthorizedCollectionReferenceError as error:
             self.request.response.status_int = 403
-            return {'error': 'Unauthorized collection reference error: you are'
-                             ' not authorized to access collection %d' %
-                             error.args[0]}
+            msg = ('Unauthorized collection reference error: you are not'
+                   ' authorized to access collection {}'.format(error.args[0]))
+            LOGGER.warning(msg)
+            return {'error': msg}
         except CircularCollectionReferenceError as error:
             self.request.response.status_int = 400
-            return {
-                'error': 'Circular collection reference error: collection %d'
-                         ' references collection %d.' % (id_, error.args[0])}
+            msg = ('Circular collection reference error: collection {}'
+                   ' references collection {}.'.format(id_, error.args[0]))
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             data = schema.to_python(values, state)
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
-
+            errors =  error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
         collection_dict = resource_model.get_full_dict()
-        resource_model, restricted, contents_changed = \
+        resource_model, restricted, contents_changed = (
             self._update_resource_model(resource_model, data,
-                                        collections_referenced)
+                                        collections_referenced))
         # resource_model will be False if there are no changes (cf. update_collection).
         if not resource_model:
             self.request.response.status_int = 400
-            return {'error': 'The update request failed because the submitted'
-                             ' data were not new.'}
+            msg = ('The update request failed because the submitted data were'
+                   ' not new.')
+            LOGGER.warning(msg)
+            return {'error': msg}
         self._backup_resource(collection_dict)
         self._update_collections_that_reference_this_collection(
             resource_model, restricted=restricted,
             contents_changed=contents_changed)
         self.request.dbsession.add(resource_model)
         self.request.dbsession.flush()
+        LOGGER.info('Updated collection %s.', id_)
         return resource_model.get_full_dict()
 
     # Because collection creation/update is special, the following three

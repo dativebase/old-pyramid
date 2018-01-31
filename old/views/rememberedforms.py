@@ -87,10 +87,13 @@ class Rememberedforms(Resources):
             Restricted forms are filtered from the array on a per-user basis.
         """
         id_ = self.request.matchdict['id']
+        LOGGER.info('Returning the forms remembered by user %d.', id_)
         user = self.request.dbsession.query(User).get(int(id_))
         if not user:
             self.request.response.status_int = 404
-            return {'error': 'There is no user with id %s' % id_}
+            msg = 'There is no user with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         query = get_eagerloader('Form')(
             self.request.dbsession.query(Form))\
                 .filter(Form.memorizers.contains(user))
@@ -98,10 +101,13 @@ class Rememberedforms(Resources):
         try:
             query = self.add_order_by(query, get_params)
             query = self._filter_restricted_models(query)
+            LOGGER.info('Returned the forms remembered by user %d.', user.id)
             return add_pagination(query, get_params)
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
 
     def update(self):
         """Update a user's remembered forms and return them.
@@ -117,17 +123,22 @@ class Rememberedforms(Resources):
             non-administrators can only update their own.
         """
         id_ = self.request.matchdict['id']
+        LOGGER.info('Attempting to update the forms remembered by user %d.',
+                    id_)
         user = self.request.dbsession.query(
             User).options(subqueryload(User.remembered_forms)).get(id_)
         schema = FormIdsSchemaNullable
         if not user:
             self.request.response.status_int = 404
-            return {'error': 'There is no user with id %s' % id_}
+            msg = 'There is no user with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             values = json.loads(
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(JSONDecodeErrorResponse)
             return JSONDecodeErrorResponse
         state = SchemaState(
             full_dict=values,
@@ -137,7 +148,9 @@ class Rememberedforms(Resources):
             data = schema.to_python(values, state)
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
         forms = [f for f in data['forms'] if f]
         unrestricted_users = self.db.get_unrestricted_users()
         unrestricted_forms = [
@@ -147,11 +160,13 @@ class Rememberedforms(Resources):
         if set(user.remembered_forms) != set(unrestricted_forms):
             user.remembered_forms = unrestricted_forms
             user.datetime_modified = h.now()
+            LOGGER.info('Updated the forms remembered by user %d.', id_)
             return user.remembered_forms
         self.request.response.status_int = 400
-        return {
-            'error': 'The update request failed because the submitted data'
-                     ' were not new.'}
+        msg = ('The update request failed because the submitted data were not'
+               ' new.')
+        LOGGER.warning(msg)
+        return {'error': msg}
 
     def search(self):
         """Return the remembered forms of a user that match the input JSON
@@ -166,29 +181,41 @@ class Rememberedforms(Resources):
             where the ``order_by`` and ``paginator`` attributes are optional.
         """
         id_ = self.request.matchdict['id']
+        LOGGER.info('Attempting to search over the forms remembered by user'
+                    ' %d.', id_)
         user = self.request.dbsession.query(User).get(int(id_))
         if not user:
             self.request.response.status_int = 404
-            return {'error': 'There is no user with id %s' % id_}
+            msg = 'There is no user with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             python_search_params  = json.loads(
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(JSONDecodeErrorResponse)
             return JSONDecodeErrorResponse
         query = get_eagerloader('Form')(
             self.query_builder.get_SQLA_query(python_search_params.get('query')))
         query = query.filter(Form.memorizers.contains(user))
         query = self._filter_restricted_models(query)
         try:
-            return add_pagination(query, python_search_params.get('paginator'))
+            ret = add_pagination(query, python_search_params.get('paginator'))
+            LOGGER.info('Performed search over the forms remembered by user'
+                        ' %d.', id_)
+            return ret
         except (OLDSearchParseError, Invalid) as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
         except Exception:
             self.request.response.status_int = 400
-            return {'error': 'The specified search parameters generated an'
-                             ' invalid database query'}
+            msg = ('The specified search parameters generated an invalid'
+                   ' database query')
+            LOGGER.warning(msg)
+            return {'error': msg}
 
     def _get_create_data(self, data):
         pass

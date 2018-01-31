@@ -118,17 +118,22 @@ class Corpora(Resources):
             resembles the search action of the ``Rememberedforms`` view.
         """
         corpus, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to search over the forms in corpus %s', id_)
         if not corpus:
             self.request.response.status_int = 404
-            return {'error': 'There is no corpus with id %s' % id_}
+            msg = 'There is no corpus with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._model_access_unauth(corpus) is not False:
             self.request.response.status_int = 403
+            LOGGER.warning(oldc.UNAUTHORIZED_MSG)
             return oldc.UNAUTHORIZED_MSG
         try:
             python_search_params = json.loads(
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(oldc.JSONDecodeErrorResponse)
             return oldc.JSONDecodeErrorResponse
         try:
             query = eagerload_form(
@@ -136,7 +141,9 @@ class Corpora(Resources):
                     python_search_params.get('query')))
         except (OLDSearchParseError, Invalid) as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
         except Exception as error:  # FIX: too general exception
             LOGGER.warning('Filter expression %s raised an unexpected'
                            ' exception: %s.', self.request.body, error)
@@ -148,12 +155,15 @@ class Corpora(Resources):
         if not self.db.user_is_unrestricted(user):
             query = _filter_restricted_models_from_query(
                 'Form', query, user)
+        LOGGER.info('Search over the forms in corpus %s complete.', id_)
         return add_pagination(query, python_search_params.get('paginator'))
 
     def new_searchx(self):
         """Return the data necessary to search across the form resources within
         the corpus.
         """
+        LOGGER.info('Returning the data necessary to search across the form'
+                    ' resources within a corpus.')
         return {'search_parameters':
                 self.forms_query_builder.get_search_parameters()}
 
@@ -164,6 +174,8 @@ class Corpora(Resources):
             Contrast this action with `new_search`, which returns the data
             needed to search across the forms of a corpus.
         """
+        LOGGER.info('Returning the data necessary to search across corpus'
+                    ' resources.')
         return {'search_parameters':
                 self.query_builder.get_search_parameters()}
 
@@ -173,9 +185,13 @@ class Corpora(Resources):
         said types.
         """
         corpus, id_ = self._model_from_id()
+        LOGGER.info('Attempting to return the category sequence types of'
+                    ' validly morphologically analyzed words in corpus %s', id_)
         if not corpus:
             self.request.response.status_int = 404
-            return {'error': 'There is no corpus with id %s' % id_}
+            msg = 'There is no corpus with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         word_category_sequences = self._get_word_category_sequences(corpus)
         minimum_token_count = int(
             self.request.GET.get('minimum_token_count', 0))
@@ -183,6 +199,8 @@ class Corpora(Resources):
             word_category_sequences = [
                 (''.join(sequence), ids) for sequence, ids in
                 word_category_sequences if len(ids) >= minimum_token_count]
+        LOGGER.info('Returned the category sequence types of validly'
+                    ' morphologically analyzed words in corpus %s', id_)
         return word_category_sequences
 
     def writetofile(self):
@@ -194,20 +212,26 @@ class Corpora(Resources):
         :returns: the modified corpus model (or a JSON error message).
         """
         corpus, id_ = self._model_from_id()
+        LOGGER.info('Attempting to write corpus %s to a file on disk', id_)
         if not corpus:
             self.request.response.status_int = 404
-            return {'error': 'There is no corpus with id %s' % id_}
+            msg = 'There is no corpus with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         schema = CorpusFormatSchema
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(oldc.JSONDecodeErrorResponse)
             return oldc.JSONDecodeErrorResponse
         try:
             format_ = schema.to_python(values)['format']
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
         return self._write_to_file(corpus, format_)
 
     def servefile(self):
@@ -220,9 +244,13 @@ class Corpora(Resources):
         """
         corpus, id_ = self._model_from_id()
         file_id = self.request.matchdict['file_id']
+        LOGGER.info('Attempting to return file %s representation of corpus %s',
+                    file_id, id_)
         if not corpus:
             self.request.response.status_int = 404
-            return {'error': 'There is no corpus with id %s' % id_}
+            msg = 'There is no corpus with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             corpus_file = [cf for cf in corpus.files
                            if cf.id == int(file_id)][0]
@@ -233,11 +261,16 @@ class Corpora(Resources):
                 raise IndexError
         except IndexError:
             self.request.response.status_int = 400
-            return {'error': 'Unable to serve corpus file %d of corpus %d' % (
-                file_id, id)}
+            msg = 'Unable to serve corpus file {} of corpus {}'.format(
+                file_id, id)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not self._authorized_to_access_corpus_file(corpus_file):
             self.request.response.status_int = 403
+            LOGGER.warning(oldc.UNAUTHORIZED_MSG)
             return oldc.UNAUTHORIZED_MSG
+        LOGGER.info('Returned file %s representation of corpus %s',
+                    file_id, id_)
         return FileResponse(
             corpus_file_path,
             request=self.request,
@@ -251,13 +284,18 @@ class Corpora(Resources):
         :param str id: the ``id`` value of the corpus.
         :returns: an array of forms as JSON objects
         """
+        LOGGER.info('Attempting to search a corpus using Tgrep2')
         if not h.command_line_program_installed('tgrep2'):
             self.request.response.status_int = 400
-            return {'error': 'TGrep2 is not installed.'}
+            msg = 'TGrep2 is not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         corpus, id_ = self._model_from_id()
         if not corpus:
             self.request.response.status_int = 404
-            return {'error': 'There is no corpus with id %s' % id_}
+            msg = 'There is no corpus with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             tbk_corpus_file_obj = [cf for cf in corpus.files
                                    if cf.format == 'treebank'][0]
@@ -268,24 +306,26 @@ class Corpora(Resources):
                 raise IndexError
         except IndexError:
             self.request.response.status_int = 400
-            return {'error': 'Corpus %d has not been written to file as a'
-                             ' treebank.' % id_}
+            msg = ('Corpus {} has not been written to file as a'
+                   ' treebank.'.format(id_))
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             request_params = json.loads(
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(oldc.JSONDecodeErrorResponse)
             return oldc.JSONDecodeErrorResponse
         try:
             tgrep2pattern = request_params['tgrep2pattern']
             assert isinstance(tgrep2pattern, str)
         except (KeyError, AssertionError):
             self.request.response.status_int = 400
-            return {
-                'errors': {
-                    'tgrep2pattern':
-                        'A tgrep2pattern attribute must be supplied and must'
-                        ' have a string value'}}
+            msg = ('A tgrep2pattern attribute must be supplied and must have a'
+                   ' string value')
+            LOGGER.warning(msg)
+            return {'errors': {'tgrep2pattern': msg}}
         tmp_path = os.path.join(
             corpus_dir_path,
             '%s%s.txt' % (self.logged_in_user.username, h.generate_salt()))
@@ -322,6 +362,7 @@ class Corpora(Resources):
             result = {'paginator': paginator, 'items': []}
         else:
             result = []
+        LOGGER.info('Searched corpus %d using Tgrep2', id_)
         return result
 
     ###########################################################################
@@ -533,7 +574,9 @@ class Corpora(Resources):
         except Exception as error:
             destroy_file(corpus_file_path)
             self.request.response.status_int = 400
-            return error_msg(error)
+            error = error_msg(error)
+            LOGGER.warning(error['error'])
+            return error
         # Update/create the corpus_file object
         try:
             now = h.now()
@@ -552,7 +595,10 @@ class Corpora(Resources):
         except Exception as error:
             destroy_file(corpus_file_path)
             self.request.response.status_int = 400
-            return error_msg(error)
+            error = error_msg(error)
+            LOGGER.warning(error['error'])
+            return error
+        LOGGER.info('Wrote corpus %s to a file on disk', corpus.id)
         self.request.dbsession.flush()
         return corpus
 

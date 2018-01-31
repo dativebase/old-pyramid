@@ -96,10 +96,10 @@ class TestFilesSearchView(TestView):
 
     def _get_test_models(self, db):
         default_models = {
-            'tags': [t.__dict__ for t in db.get_tags()],
-            'forms': [f.__dict__ for f in db.get_forms()],
-            'speakers': [s.__dict__ for s in db.get_speakers()],
-            'users': [u.__dict__ for u in db.get_users()]
+            'tags': [t.get_dict() for t in db.get_tags()],
+            'forms': [f.get_dict() for f in db.get_forms()],
+            'speakers': [s.get_dict() for s in db.get_speakers()],
+            'users': [u.get_dict() for u in db.get_users()]
         }
         return default_models
 

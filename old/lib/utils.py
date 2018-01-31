@@ -401,7 +401,7 @@ def get_RDBMS_name(settings):
         # WARNING The exception below should be raised during production,
         # development and testing -- however, it must be replaced with the log
         # to allow Sphinx to import the controllers and build the API docs
-        # LOGGER.warn('The settings dict was inadequate.')
+        # LOGGER.warning('The settings dict was inadequate.')
         raise Exception('The settings dict was inadequate.')
 
 
@@ -497,6 +497,10 @@ def get_value_from_gmail_config(gmail_config, key, default=None):
         return default
 
 
+class OLDSendEmailError(Exception):
+    pass
+
+
 def send_password_reset_email_to(user, new_password, settings, app_url,
                                  language_id='old'):
     """Send the "password reset" email to the user. If
@@ -508,6 +512,8 @@ def send_password_reset_email_to(user, new_password, settings, app_url,
     email -- this allows testers to verify that an email is in fact being
     received.
     """
+    LOGGER.info('Attempting to send a password reset email to %s (%s).',
+                user.username, user.email)
     to_address = user.email
     test_email_to = settings.get('test_email_to')
     testing = settings.get('testing') == '1'
@@ -515,16 +521,27 @@ def send_password_reset_email_to(user, new_password, settings, app_url,
         to_address = test_email_to
     password_reset_smtp_server = settings.get('password_reset_smtp_server')
     app_name = language_id.upper() + ' OLD' if language_id != 'old' else 'OLD'
-    if password_reset_smtp_server == 'smtp.gmail.com':
-        from_address = settings['gmail_from_address']
-        from_password = settings['gmail_from_password']
-        server = smtplib.SMTP(password_reset_smtp_server, 587)
-        server.ehlo()
-        server.starttls()
-        server.login(from_address, from_password)
-    else:
-        from_address = '%s@old.org' % language_id
-        server = smtplib.SMTP(password_reset_smtp_server)
+    try:
+        if password_reset_smtp_server == 'smtp.gmail.com':
+            from_address = settings['gmail_from_address']
+            from_password = settings['gmail_from_password']
+            server = smtplib.SMTP(password_reset_smtp_server, 587)
+            server.ehlo()
+            server.starttls()
+            server.login(from_address, from_password)
+        else:
+            from_address = '%s@old.org' % language_id
+            server = smtplib.SMTP(password_reset_smtp_server)
+    except ConnectionRefusedError:
+        LOGGER.warning('Failed to instantiate an SMTP instance. Is thera an'
+                       ' SMTP server installed on this machine?', exc_info=True)
+        raise
+    except smtplib.SMTPException:
+        LOGGER.warning('Failed to instantiate an SMTP instance', exc_info=True)
+        raise
+    except KeyError:
+        LOGGER.warning('Failed to access required configuration', exc_info=True)
+        raise
     to_addresses = [to_address]
     message = ''.join([
         'From: %s <%s>\n' % (app_name, from_address),
@@ -535,9 +552,15 @@ def send_password_reset_email_to(user, new_password, settings, app_url,
         'Please change it once you have logged in.\n\n',
         '(Do not reply to this email.)'
     ])
-    failures = server.sendmail(from_address, to_addresses, message)
-    server.quit()
-    return failures
+    try:
+        failures = server.sendmail(from_address, to_addresses, message)
+    except smtplib.SMTPException as exc:
+        LOGGER.warning('Failed to send email: %s', exc)
+        raise
+    finally:
+        server.quit()
+    if failures:
+        raise OLDSendEmailError(failures)
 
 
 # def compile_query(query, settings):

@@ -118,12 +118,12 @@ class TestCollectionsSearchView(TestView):
 
     def _get_test_models(self, db):
         return {
-            'tags': [t.__dict__ for t in db.get_tags()],
-            'forms': [f.__dict__ for f in db.get_forms()],
-            'files': [f.__dict__ for f in db.get_files()],
-            'sources': [s.__dict__ for s in db.get_sources()],
-            'speakers': [s.__dict__ for s in db.get_speakers()],
-            'users': [u.__dict__ for u in db.get_users()]
+            'tags': [t.get_dict() for t in db.get_tags()],
+            'forms': [f.get_dict() for f in db.get_forms()],
+            'files': [f.get_dict() for f in db.get_files()],
+            'sources': [s.get_dict() for s in db.get_sources()],
+            'speakers': [s.get_dict() for s in db.get_speakers()],
+            'users': [u.get_dict() for u in db.get_users()]
         }
 
     def _create_test_data(self, db, dbsession, n=20):

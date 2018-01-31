@@ -125,10 +125,14 @@ class ReadonlyResources:
 
     def create(self):
         self.request.response.status_int = 404
+        LOGGER.warning('Failed attempt to create a read-only %s',
+                       self.hmn_member_name)
         return READONLY_RSLT
 
     def new(self):
         self.request.response.status_int = 404
+        LOGGER.warning('Failed attempt to get data for creating a read-only %s',
+                       self.hmn_member_name)
         return READONLY_RSLT
 
     def index(self):
@@ -137,6 +141,7 @@ class ReadonlyResources:
             parameters for ordering and pagination.
         :returns: a JSON-serialized array of resources objects.
         """
+        LOGGER.info('Attempting to read all %s', self.hmn_collection_name)
         query = self._eagerload_model(
             self.request.dbsession.query(self.model_cls))
         get_params = dict(self.request.GET)
@@ -146,10 +151,14 @@ class ReadonlyResources:
             result = add_pagination(query, get_params)
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning('Attempt to read all %s resulted in an error(s): %s',
+                           self.hmn_collection_name, errors)
+            return {'errors': errors}
         headers_ctl = self._headers_control(result)
         if headers_ctl is not False:
             return headers_ctl
+        LOGGER.info('Reading all %s', self.hmn_collection_name)
         return result
 
     def show(self):
@@ -158,27 +167,38 @@ class ReadonlyResources:
         :param str id: the ``id`` value of the resource to be returned.
         :returns: a resource model object.
         """
+        LOGGER.info('Attempting to read a single %s', self.hmn_member_name)
         resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
+            msg = self._rsrc_not_exist(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._model_access_unauth(resource_model) is not False:
             self.request.response.status_int = 403
+            LOGGER.warning(UNAUTHORIZED_MSG)
             return UNAUTHORIZED_MSG
+        LOGGER.info('Reading a single %s', self.hmn_member_name)
         if dict(self.request.GET).get('minimal'):
             return minimal_model(resource_model)
         return self._get_show_dict(resource_model)
 
     def update(self):
         self.request.response.status_int = 404
+        LOGGER.warning('Failed attempt to update a read-only %s',
+                       self.hmn_member_name)
         return READONLY_RSLT
 
     def edit(self):
         self.request.response.status_int = 404
+        LOGGER.warning('Failed attempt to get data for updating a read-only %s',
+                       self.hmn_member_name)
         return READONLY_RSLT
 
     def delete(self):
         self.request.response.status_int = 404
+        LOGGER.warning('Failed attempt to delete a read-only %s',
+                       self.hmn_member_name)
         return READONLY_RSLT
 
     def search(self):
@@ -192,18 +212,24 @@ class ReadonlyResources:
 
             where the ``order_by`` and ``paginator`` attributes are optional.
         """
+        LOGGER.info('Attempting to search over %s', self.hmn_collection_name)
         try:
             python_search_params = json.loads(
                 self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning('Request body was not valid JSON')
             return JSONDecodeErrorResponse
         try:
             sqla_query = self.query_builder.get_SQLA_query(
                 python_search_params.get('query'))
         except (OLDSearchParseError, Invalid) as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(
+                'Attempt to search over all %s resulted in an error(s): %s',
+                self.hmn_collection_name, errors)
+            return {'errors': errors}
         # Might be better to catch (OperationalError, AttributeError,
         # InvalidRequestError, RuntimeError):
         except Exception as error:  # FIX: too general exception
@@ -217,14 +243,23 @@ class ReadonlyResources:
         query = self._eagerload_model(sqla_query)
         query = self._filter_query(query)
         try:
-            return add_pagination(query, python_search_params.get('paginator'))
+            ret = add_pagination(query, python_search_params.get('paginator'))
         except OperationalError:
             self.request.response.status_int = 400
-            return {'error': 'The specified search parameters generated an'
-                             ' invalid database query'}
+            msg = ('The specified search parameters generated an invalid'
+                   ' database query')
+            LOGGER.warning(msg)
+            return {'error': msg}
         except Invalid as error:  # For paginator schema errors.
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(
+                'Attempt to search over all %s resulted in an error(s): %s',
+                self.hmn_collection_name, errors)
+            return {'errors': errors}
+        else:
+            LOGGER.info('Successful search over %s', self.hmn_collection_name)
+            return ret
 
     def new_search(self):
         """Return the data necessary to search over this type of resource.
@@ -232,6 +267,7 @@ class ReadonlyResources:
         :returns: ``{"search_parameters": {
             "attributes": { ... }, "relations": { ... }}``
         """
+        LOGGER.info('Returning search parameters for %s', self.hmn_member_name)
         return {'search_parameters':
                 self.query_builder.get_search_parameters()}
 
@@ -397,22 +433,29 @@ class Resources(abc.ABC, ReadonlyResources):
         :request body: JSON object representing the resource to create.
         :returns: the newly created resource.
         """
+        LOGGER.info('Attempting to create a new %s.', self.hmn_member_name)
         schema = self.schema_cls()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning('Request body was not valid JSON')
             return JSONDecodeErrorResponse
         state = self._get_create_state(values)
         try:
             data = schema.to_python(values, state)
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(
+                'Attempt to create a(n) %s resulted in an error(s): %s',
+                self.hmn_member_name, errors)
+            return {'errors': errors}
         resource = self._create_new_resource(data)
         self.request.dbsession.add(resource)
         self.request.dbsession.flush()
         self._post_create(resource)
+        LOGGER.info('Created a new %s.', self.hmn_member_name)
         return self._get_create_dict(resource)
 
     def new(self):
@@ -425,6 +468,8 @@ class Resources(abc.ABC, ReadonlyResources):
            parameters can affect the contents of the lists in the returned
            dictionary.
         """
+        LOGGER.info('Returning the data needed to create a new %s.',
+                    self.hmn_member_name)
         return self._get_new_edit_data(self.request.GET)
 
     def update(self):
@@ -436,35 +481,46 @@ class Resources(abc.ABC, ReadonlyResources):
         :returns: the updated resource model.
         """
         resource_model, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to update %s %s.', self.hmn_member_name, id_)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
+            msg = self._rsrc_not_exist(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._update_unauth(resource_model) is not False:
             self.request.response.status_int = 403
-            return self._update_unauth_msg_obj()
+            msg = self._update_unauth_msg_obj()
+            LOGGER.warning(msg)
+            return msg
         schema = self.schema_cls()
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(JSONDecodeErrorResponse)
             return JSONDecodeErrorResponse
         state = self._get_update_state(values, id_, resource_model)
         try:
             data = schema.to_python(values, state)
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
         resource_dict = resource_model.get_dict()
         resource_model = self._update_resource_model(resource_model, data)
         # resource_model will be False if there are no changes
         if not resource_model:
             self.request.response.status_int = 400
-            return {'error': 'The update request failed because the submitted'
-                             ' data were not new.'}
+            msg = ('The update request failed because the submitted data were'
+                   ' not new.')
+            LOGGER.warning(msg)
+            return {'error': msg}
         self._backup_resource(resource_dict)
         self.request.dbsession.add(resource_model)
         self.request.dbsession.flush()
         self._post_update(resource_model, resource_dict)
+        LOGGER.info('Updated %s %s.', self.hmn_member_name, id_)
         return self._get_update_dict(resource_model)
 
     def edit(self):
@@ -481,13 +537,19 @@ class Resources(abc.ABC, ReadonlyResources):
             existing resource of this type.
         """
         resource_model, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to return the data needed to update %s %s.',
+                    self.hmn_member_name, id_)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
+            msg = self._rsrc_not_exist(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._model_access_unauth(resource_model) is not False:
-            LOGGER.info('User not authorized to access edit action on model')
             self.request.response.status_int = 403
+            LOGGER.warning('User not authorized to access edit action on model')
             return UNAUTHORIZED_MSG
+        LOGGER.info('Returned the data needed to update %s %s.',
+                    self.hmn_member_name, id_)
         return {
             'data': self._get_new_edit_data(self.request.GET),
             self.member_name: self._get_edit_dict(resource_model)
@@ -500,15 +562,21 @@ class Resources(abc.ABC, ReadonlyResources):
         :returns: the deleted resource model.
         """
         resource_model, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to delete %s %s.', self.hmn_member_name, id_)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
+            msg = self._rsrc_not_exist(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._delete_unauth(resource_model) is not False:
             self.request.response.status_int = 403
-            return self._delete_unauth_msg_obj()
+            msg = self._delete_unauth_msg_obj()
+            LOGGER.warning(msg)
+            return msg
         error_msg = self._delete_impossible(resource_model)
         if error_msg:
             self.request.response.status_int = 403
+            LOGGER.warning(error_msg)
             return {'error': error_msg}
         # Not all Pylons controllers were doing this:
         resource_model.modifier = self.logged_in_user
@@ -518,6 +586,7 @@ class Resources(abc.ABC, ReadonlyResources):
         self.request.dbsession.delete(resource_model)
         self.request.dbsession.flush()
         self._post_delete(resource_model)
+        LOGGER.info('Deleted %s %s.', self.hmn_member_name, id_)
         return resource_dict
 
     ###########################################################################
@@ -542,6 +611,7 @@ class Resources(abc.ABC, ReadonlyResources):
             previous versions of the resource.
         """
         id_ = self.request.matchdict['id']
+        LOGGER.info('Requesting history of %s %s.', self.hmn_member_name, id_)
         resource_model, previous_versions = self.db\
             .get_model_and_previous_versions(self.model_name, id_)
         if resource_model or previous_versions:
@@ -554,12 +624,16 @@ class Resources(abc.ABC, ReadonlyResources):
                 previous_versions and not unrestricted_previous_versions)
             if resource_restricted or prev_vers_restricted :
                 self.request.response.status_int = 403
+                LOGGER.warning(UNAUTHORIZED_MSG)
                 return UNAUTHORIZED_MSG
+            LOGGER.info('Returned history of %s %s.', self.hmn_member_name, id_)
             return {self.member_name: resource_model,
                     'previous_versions': unrestricted_previous_versions}
         self.request.response.status_int = 404
-        return {'error': 'No %s or %s backups match %s' % (
-            self.hmn_collection_name, self.hmn_member_name, id_)}
+        msg = 'No %s or %s backups match %s' % (
+            self.hmn_collection_name, self.hmn_member_name, id_)
+        LOGGER.warning(msg)
+        return {'error': msg}
 
     ###########################################################################
     # Private methods for write-able resources

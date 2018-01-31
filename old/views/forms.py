@@ -311,12 +311,13 @@ class Forms(Resources):
         :returns: A list of form ``id`` values corresponding to the forms that
             were remembered.
         """
+        LOGGER.info('Attempting to remember forms for a user.')
         schema = FormIdsSchema
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
-            LOGGER.debug('Unable to JSON-parse request body %s in request to'
-                         ' /forms/remember', self.request.body)
+            LOGGER.warning('Unable to JSON-parse request body %s in request to'
+                           ' /forms/remember', self.request.body)
             self.request.response.status_int = 400
             return JSONDecodeErrorResponse
         user_model = self.logged_in_user
@@ -328,8 +329,8 @@ class Forms(Resources):
             data = schema.to_python(values, state)
         except Invalid as error:
             errors = error.unpack_errors()
-            LOGGER.debug('Validating values %s returned error %s', values,
-                         errors)
+            LOGGER.warning('Validating values %s returned error %s', values,
+                           errors)
             self.request.response.status_int = 400
             for err in errors['forms']:
                 if err and err.startswith('You are not authorized to access'):
@@ -339,18 +340,23 @@ class Forms(Resources):
         forms = [f for f in data['forms'] if f]
         if not forms:
             self.request.response.status_int = 404
-            return {'error': 'No valid form ids were provided.'}
+            msg = 'No valid form ids were provided.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         unrestricted_forms = [f for f in forms
                               if not self._model_access_unauth(f)]
         if not unrestricted_forms:
             self.request.response.status_int = 403
+            LOGGER.warning(UNAUTHORIZED_MSG)
             return UNAUTHORIZED_MSG
         user_model.remembered_forms += unrestricted_forms
         user_model.datetime_modified = h.now()
         self.request.dbsession.add(user_model)
         self.request.dbsession.flush()
         self.request.session['user'] = user_model.get_dict()
-        return [f.id for f in unrestricted_forms]
+        ret = [f.id for f in unrestricted_forms]
+        LOGGER.info('Remembered %d forms for user %d.', len(ret), user_model.id)
+        return ret
 
     def update_morpheme_references(self):
         """Update the morphological analysis-related attributes of all forms.
@@ -373,6 +379,8 @@ class Forms(Resources):
            is, therefore, deprecated (read: use it with caution) and may be
            removed in future versions of the OLD.
         """
+        LOGGER.info('Attempting to update the morphological analysis-related'
+                    ' attributes of all forms.')
         forms = self.db.get_forms()
         return self.update_morpheme_references_of_forms(
             self.db.get_forms(),

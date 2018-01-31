@@ -136,12 +136,12 @@ class TestLogin(TestView):
         params = json.dumps({'username': 'contributor'})
         response = self.app.post(
             url('email_reset_password'),
-            params, self.json_headers, status=[200, 500])
+            params, self.json_headers, status=[200, 400])
         resp = response.json_body
         assert (response.status_int == 200 and
                 resp['valid_username'] is True and
                 resp['password_reset'] is True) or (
-                    response.status_int == 500 and
+                    response.status_int == 400 and
                     resp['error'] == 'The server is unable to send email.')
         assert response.content_type == 'application/json'
 

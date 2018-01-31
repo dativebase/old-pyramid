@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from uuid import uuid4
 
@@ -11,6 +12,9 @@ import old.lib.helpers as h
 from old.lib.schemata import MorphemeSequencesSchema
 from old.models import MorphemeLanguageModelBackup
 from old.views.resources import Resources
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Morphemelanguagemodels(Resources):
@@ -34,10 +38,12 @@ class Morphemelanguagemodels(Resources):
             generation task has terminated.
         """
         langmod, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to generate morpheme language model %s.', id_)
         if not langmod:
             self.request.response.status_int = 404
-            return {'error':
-                    'There is no morpheme language model with id %s' % id_}
+            msg = 'There is no morpheme language model with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         args = {
             'morpheme_language_model_id': langmod.id,
             'user_id': self.logged_in_user.id,
@@ -50,6 +56,8 @@ class Morphemelanguagemodels(Resources):
             'func': 'generate_language_model',
             'args': args
         })
+        LOGGER.info('Added generation of morpheme language model %d to the foma'
+                    ' worker queue.', id_)
         return langmod
 
     def get_probabilities(self):
@@ -62,27 +70,37 @@ class Morphemelanguagemodels(Resources):
             probabilities as values.
         """
         langmod, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to get probabilities from morpheme language'
+                    ' model %s.', id_)
         if not langmod:
             self.request.response.status_int = 404
-            return {'error':
-                    'There is no morpheme language model with id %s' % id_}
+            msg = 'There is no morpheme language model with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             schema = MorphemeSequencesSchema()
             values = json.loads(self.request.body.decode(self.request.charset))
             data = schema.to_python(values)
             morpheme_sequences = [
                 h.normalize(ms) for ms in data['morpheme_sequences']]
-            return langmod.get_probabilities(morpheme_sequences)
+            ret = langmod.get_probabilities(morpheme_sequences)
+            LOGGER.info('Returned probabilities from morpheme language'
+                        ' model %s.', id_)
+            return ret
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(oldc.JSONDecodeErrorResponse)
             return oldc.JSONDecodeErrorResponse
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
         except Exception:
             self.request.response.status_int = 400
-            return {'error':
-                    'An error occurred while trying to generate probabilities.'}
+            msg = 'An error occurred while trying to generate probabilities.'
+            LOGGER.exception(msg)
+            return {'error': msg}
 
     def compute_perplexity(self):
         """Compute the perplexity of the LM's corpus according to the LM.
@@ -91,10 +109,13 @@ class Morphemelanguagemodels(Resources):
         ``evaluate_morpheme_language_model`` in lib/foma_worker.py.
         """
         langmod, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to compute the perplexity of morpheme language'
+                    ' model %s.', id_)
         if not langmod:
             self.request.response.status_int = 404
-            return {'error':
-                    'There is no morpheme language model with id %s' % id_}
+            msg = 'There is no morpheme language model with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         args = {
             'morpheme_language_model_id': langmod.id,
             'user_id': self.logged_in_user.id,
@@ -107,6 +128,8 @@ class Morphemelanguagemodels(Resources):
             'func': 'compute_perplexity',
             'args': args
         })
+        LOGGER.info('Added computation of perplexity of morpheme language model'
+                    ' %d to the foma worker queue.', id_)
         return langmod
 
     def serve_arpa(self):
@@ -116,18 +139,26 @@ class Morphemelanguagemodels(Resources):
         :returns: a stream of bytes -- the ARPA file of the LM.
         """
         langmod, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to serve the ARPA file of morpheme language'
+                    ' model %s.', id_)
         if not langmod:
             self.request.response.status_int = 404
-            return {'error':
-                    'There is no morpheme language model with id %s' % id_}
+            msg = 'There is no morpheme language model with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         arpa_path = langmod.get_file_path('arpa')
         if not os.path.isfile(arpa_path):
             self.request.response.status_int = 404
-            return {'error': 'The ARPA file for morpheme language model %s has'
-                             ' not been compiled yet.' % id_}
+            msg = ('The ARPA file for morpheme language model {} has not been'
+                   ' compiled yet.'.format(id_))
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not self._authorized_to_access_arpa_file(langmod):
             self.request.response.status_int = 403
+            LOGGER.warning(oldc.UNAUTHORIZED_MSG)
             return oldc.UNAUTHORIZED_MSG
+        LOGGER.info('Served the ARPA file of morpheme language'
+                    ' model %s.', id_)
         return FileResponse(
             arpa_path,
             request=self.request,

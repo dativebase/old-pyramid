@@ -49,6 +49,8 @@ class Formsearches(Resources):
         Note: different from (overrides) standard Resources::new: returns the
         query builder's search parameters.
         """
+        LOGGER.info('Returning the data necessary to create a new OLD form'
+                    ' search.')
         return {'search_parameters': self.query_builder.get_search_parameters()}
 
     def edit(self):
@@ -56,13 +58,16 @@ class Formsearches(Resources):
         resource_model, id_ = self._model_from_id(eager=True)
         if not resource_model:
             self.request.response.status_int = 404
-            return {'error': 'There is no %s with id %s' % (self.hmn_member_name,
-                                                            id_)}
+            msg = 'There is no {} with id {}'.format(self.hmn_member_name, id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._model_access_unauth(resource_model) is not False:
-            LOGGER.info('User not authorized to access edit action on model')
+            LOGGER.warning('User not authorized to access edit action on model')
             self.request.response.status_int = 403
             return UNAUTHORIZED_MSG
         data = {'search_parameters': self.query_builder.get_search_parameters()}
+        LOGGER.info('Returned the data necessary to edit OLD form search %d.',
+                    resource_model.id)
         return {'data': data, 'form_search': resource_model}
 
     def _get_create_state(self, values):

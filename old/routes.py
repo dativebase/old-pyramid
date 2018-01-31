@@ -178,14 +178,14 @@ UNAUTHORIZED_RESP = Response(
 def authenticate(func):
     """Authentication decorator."""
     def wrapper(context, request):
-        LOGGER.info('Authenticate decorator on %s', request.current_route_url())
         request = fix_for_tests(request)
         user = request.session.get('user')
         if user:
-            LOGGER.info('User authenticated: %s %s %s', user['first_name'],
-                        user['last_name'], user['id'])
+            LOGGER.info('User %s is authenticated (accessing %s).',
+                        user['username'], request.current_route_url())
             return func(context, request)
-        LOGGER.info('No user; failed to authenticate.')
+        LOGGER.info('No user is authenticated; cannot access %s.',
+                    request.current_route_url())
         return UNAUTHENTICATED_RESP
     return wrapper
 
@@ -219,7 +219,6 @@ def authorize(roles, users=None, user_id_is_args1=False):
     """
     def _authorize(func):
         def wrapper(context, request):
-            LOGGER.info('In Authorize decorator')
             # Check for authorization via role.
             user = request.session['user']
             role = user['role']
@@ -227,8 +226,10 @@ def authorize(roles, users=None, user_id_is_args1=False):
                 # Check for authorization via user.
                 if (users and role != 'administrator' and
                         user['id'] not in users):
-                    LOGGER.info('Failed authorization check; user id %s not'
-                                ' in %s.', user['id'], users)
+                    LOGGER.info('User %s is not authorized to make this request'
+                                ' (%s) because they are not in the set of'
+                                ' authorized users.', user['username'],
+                                request.current_route_url())
                     return UNAUTHORIZED_RESP
                 # Check whether the user id equals the id argument in the URL
                 # path. This is useful, e.g., when a user can only edit their
@@ -236,13 +237,19 @@ def authorize(roles, users=None, user_id_is_args1=False):
                 if (user_id_is_args1 and
                         role != 'administrator' and
                         int(user['id']) != int(request.matchdict['id'])):
-                    LOGGER.info('Failed authorization check; user id %s not'
-                                ' %s.', user['id'], request.matchdict['id'])
+                    LOGGER.info('User %s is not authorized to make this request'
+                                ' (%s) because they are not the unique user'
+                                ' authorized to do so.', user['username'],
+                                request.current_route_url())
                     return UNAUTHORIZED_RESP
+                LOGGER.info('User %s is authorized to make this request (%s).',
+                            user['username'], request.current_route_url())
                 return func(context, request)
             else:
-                LOGGER.info('Failed authorization check; user role %s not'
-                            ' in %s.', role, roles)
+                LOGGER.info('User %s is not authorized to make this request'
+                            ' (%s) because their role %s is not in the set of'
+                            ' authorized roles: %s.', user['username'],
+                            request.current_route_url(), role, ', '.join(roles))
                 return UNAUTHORIZED_RESP
         return wrapper
     return _authorize

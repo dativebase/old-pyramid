@@ -31,12 +31,17 @@ class Phonologies(Resources):
             :mod:`onlinelinguisticdatabase.lib.foma_worker`.
         """
         phonology, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to compile phonology %d', id_)
         if not phonology:
             self.request.response.status_int = 404
-            return {'error': 'There is no phonology with id %s' % id_}
+            msg = 'There is no phonology with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         FOMA_WORKER_Q.put({
             'id': h.generate_salt(),
             'func': 'compile_phonology',
@@ -48,6 +53,8 @@ class Phonologies(Resources):
                 'settings': self.request.registry.settings
             }
         })
+        LOGGER.info('Added compilation of phonolgy %d to the foma worker'
+                    ' queue.', id_)
         return phonology
 
     def servecompiled(self):
@@ -57,21 +64,27 @@ class Phonologies(Resources):
         :returns: a stream of bytes -- the compiled phonology script.
         """
         phonology, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to serve the compiled phonology %d', id_)
         if not phonology:
             self.request.response.status_int = 404
-            return {'error': 'There is no phonology with id %s' % id_}
+            msg = 'There is no phonology with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         compiled_path = phonology.get_file_path('binary')
         if not os.path.isfile(compiled_path):
             self.request.response.status_int = 400
-            return {'error': 'Phonology %d has not been compiled yet.' % (
-                phonology.id,)}
+            msg = 'Phonology {} has not been compiled yet.'.format(phonology.id)
+            LOGGER.warning(msg)
+            return {'error': msg}
+        LOGGER.info('Served the compiled phonology %d', id_)
         return FileResponse(
             compiled_path,
             request=self.request)
-        # content_type=content_type)  TODO: what is content type?
 
     def applydown(self):
         """Apply-down (i.e., phonologize) the input in the request body using a
@@ -86,29 +99,41 @@ class Phonologies(Resources):
             transcription from the request body and ``p1t1``, ``p2t1``, etc. are
             phonologized outputs of ``t1``.
         """
-
         phonology, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to call apply down on the compiled phonology'
+                    ' %d', id_)
         if not phonology:
             self.request.response.status_int = 404
-            return {'error': 'There is no phonology with id %s' % id_}
+            msg = 'There is no phonology with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         binary_path = phonology.get_file_path('binary')
         if not os.path.isfile(binary_path):
             self.request.response.status_int = 400
-            return {'error': 'Phonology %d has not been compiled yet.' % phonology.id}
+            msg = 'Phonology {} has not been compiled yet.'.format(phonology.id)
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             inputs = json.loads(self.request.body.decode(self.request.charset))
             inputs = MorphophonemicTranscriptionsSchema.to_python(inputs)
             inputs = [h.normalize(i) for i in inputs['transcriptions']]
-            return phonology.applydown(inputs)
+            ret = phonology.applydown(inputs)
+            LOGGER.info('Called apply down on the compiled phonology %d', id_)
+            return ret
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(oldc.JSONDecodeErrorResponse)
             return oldc.JSONDecodeErrorResponse
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
 
     def runtests(self):
         """Run the tests defined in the phonology's script against the phonology.
@@ -125,24 +150,35 @@ class Phonologies(Resources):
         :returns: if the phonology exists and foma is installed, a JSON object
             representing the results of the test.
         """
-        phonology, _ = self._model_from_id(eager=True)
+        phonology, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to run the tests defined in the compiled'
+                    ' phonology %d', id_)
         if not phonology:
             self.request.response.status_int = 404
-            return {'error': 'There is no phonology with id %s' % id}
+            msg = 'There is no phonology with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             test_results = phonology.run_tests()
             if test_results:
+                LOGGER.info('Ran the tests defined in the compiled phonology'
+                            ' %d', id_)
                 return test_results
             self.request.response.status_int = 400
-            return {'error': 'The script of phonology %d contains no'
-                             ' tests.' % phonology.id}
+            msg = 'The script of phonology {} contains no tests.'.format(
+                phonology.id)
+            LOGGER.warning(msg)
+            return {'error': msg}
         except AttributeError:
             self.request.response.status_int = 400
-            return {'error': 'Phonology {} has not been compiled yet.'.format(
-                phonology.id)}
+            msg = 'Phonology {} has not been compiled yet.'.format(phonology.id)
+            LOGGER.warning(msg)
+            return {'error': msg}
 
     def _get_user_data(self, data):
         return {

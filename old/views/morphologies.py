@@ -1,5 +1,6 @@
 import codecs
 import json
+import logging
 import os
 import pickle
 from uuid import uuid4
@@ -15,6 +16,9 @@ from old.lib.schemata import MorphemeSequencesSchema
 from old.views.resources import Resources
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class Morphologies(Resources):
 
     def show(self):
@@ -24,12 +28,16 @@ class Morphologies(Resources):
         :GET param str lexicon: if set to '1', the lexicon (dict) will be
             returned with the morphology
         """
+        LOGGER.info('Attempting to read a single morphology')
         morphology, id_ = self._model_from_id(eager=True)
         if not morphology:
             self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
+            msg = self._rsrc_not_exist(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._model_access_unauth(morphology) is not False:
             self.request.response.status_int = 403
+            LOGGER.warning(oldc.UNAUTHORIZED_MSG)
             return oldc.UNAUTHORIZED_MSG
         morphology_dict = morphology.get_dict()
         if self.request.GET.get('script') == '1':
@@ -47,6 +55,7 @@ class Morphologies(Resources):
                     morphology_dict['lexicon'] = pickle.load(filei)
             else:
                 morphology_dict['lexicon'] = {}
+        LOGGER.info('Reading morphology %d', id_)
         return morphology_dict
 
     def generate_and_compile(self):
@@ -61,6 +70,7 @@ class Morphologies(Resources):
             The script is compiled asynchronously in a worker thread. See
             :mod:`old.lib.foma_worker`.
         """
+        LOGGER.info('Attempting to generate and compile a morphology.')
         return self.generate_and_compile_morphology()
 
     def generate(self):
@@ -72,16 +82,21 @@ class Morphologies(Resources):
             model is returned;  ``GET /morphologies/id`` must be polled to
             determine when the generation task has terminated.
         """
+        LOGGER.info('Attempting to generate a morphology.')
         return self.generate_and_compile_morphology(compile_=False)
 
     def generate_and_compile_morphology(self, compile_=True):
-        morphology, _ = self._model_from_id(eager=True)
+        morphology, id_ = self._model_from_id(eager=True)
         if not morphology:
             self.request.response.status_int = 404
-            return {'error': 'There is no morphology with id %s' % id}
+            msg = 'There is no morphology with id {}'.format(id)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if compile_ and not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         FOMA_WORKER_Q.put({
             'id': h.generate_salt(),
             'func': 'generate_and_compile_morphology',
@@ -94,6 +109,8 @@ class Morphologies(Resources):
                 'settings': self.request.registry.settings
             }
         })
+        LOGGER.info('Added generation (and possible compilation) of'
+                    ' morphology %d to the foma worker queue.', id_)
         return morphology
 
     def servecompiled(self):
@@ -103,21 +120,30 @@ class Morphologies(Resources):
         :returns: a stream of bytes -- the compiled morphology script.
         """
         morphology, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to serve the compiled foma script of'
+                    ' morphology %d.', id_)
         if not morphology:
             self.request.response.status_int = 404
-            return {'error': 'There is no morphology with id %s' % id_}
+            msg = 'There is no morphology with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         compiled_path = morphology.get_file_path('binary')
         if not os.path.isfile(compiled_path):
             self.request.response.status_int = 400
-            return {'error': 'Morphology %d has not been compiled yet.' % (
-                morphology.id,)}
+            msg = 'Morphology {} has not been compiled yet.'.format(
+                morphology.id)
+            LOGGER.warning(msg)
+            return {'error': msg}
+        LOGGER.info('Served the compiled foma script of'
+                    ' morphology %d.', id_)
         return FileResponse(
             compiled_path,
             request=self.request)
-        # content_type=content_type)  TODO: what is content type?
 
     def applydown(self):
         """Call foma apply down on the input in the request body using a
@@ -131,6 +157,7 @@ class Morphologies(Resources):
             transcription from the request body and ``p1t1``, ``p2t1``, etc. are
             outputs of ``t1`` after apply down.
         """
+        LOGGER.info('Attempting to call apply down against a morphology.')
         return self.apply('down')
 
     def applyup(self):
@@ -145,6 +172,7 @@ class Morphologies(Resources):
             transcription from the request body and ``p1t1``, ``p2t1``, etc. are
             outputs of ``t1`` after apply up.
         """
+        LOGGER.info('Attempting to call apply up against a morphology.')
         return self.apply('up')
 
     def apply(self, direction):
@@ -162,26 +190,38 @@ class Morphologies(Resources):
         morphology, id_ = self._model_from_id(eager=True)
         if not morphology:
             self.request.response.status_int = 404
-            return {'error': 'There is no morphology with id %s' % id_}
+            msg = 'There is no morphology with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         morphology_binary_path = morphology.get_file_path('binary')
         if not os.path.isfile(morphology_binary_path):
             self.request.response.status_int = 400
-            return {'error': 'Morphology %d has not been compiled yet.' % (
-                morphology.id,)}
+            msg = 'Morphology {} has not been compiled yet.'.format(
+                morphology.id)
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             inputs = json.loads(self.request.body.decode(self.request.charset))
             inputs = MorphemeSequencesSchema.to_python(inputs)
             inputs = [h.normalize(i) for i in inputs['morpheme_sequences']]
-            return morphology.apply(direction, inputs)
+            ret = morphology.apply(direction, inputs)
+            LOGGER.info('Completed apply call against morphology'
+                        ' %d.', id_)
+            return ret
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(oldc.JSONDecodeErrorResponse)
             return oldc.JSONDecodeErrorResponse
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors =  error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
 
     def _post_create(self, morphology):
         morphology.make_directory_safely(morphology.directory)

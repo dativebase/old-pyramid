@@ -24,7 +24,7 @@ from sqlalchemy.types import Integer, Unicode, UnicodeText, Boolean, Float
 from old.models.meta import Base, now
 
 
-LOGGER = logging.getLogger(__file__)
+LOGGER = logging.getLogger(__name__)
 
 
 class MorphemeLanguageModelBackup(Base):

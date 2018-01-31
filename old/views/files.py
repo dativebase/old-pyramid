@@ -99,10 +99,13 @@ class Files(Resources):
                file data are present; the value of the ``url`` attribute is a
                valid URL where the file data are being served.
         """
+        LOGGER.info('Attempting to create a new file.')
         try:
             if self.request.content_type == 'application/json':
                 if len(self.request.body) > MAX_BASE64_SIZE:
                     self.request.response.status_int = 400
+                    LOGGER.warning('User tried to upload a >20M file using'
+                                   ' base64-encoded bytes in JSON')
                     return {'error': 'The request body is too large; use the'
                                      ' multipart/form-data Content-Type when'
                                      ' uploading files greater than 20MB.'}
@@ -111,6 +114,7 @@ class Files(Resources):
                         self.request.body.decode(self.request.charset))
                 except ValueError:
                     self.request.response.status_int = 400
+                    LOGGER.warning('Malformed JSON')
                     return JSONDecodeErrorResponse
                 if 'base64_encoded_file' in values:
                     resource = self._create_base64_file(values)
@@ -123,17 +127,22 @@ class Files(Resources):
                     resource = self._create_plain_file()
                 except InvalidFieldStorageObjectError:
                     self.request.response.status_int = 400
-                    return {'error': 'The attempted multipart/form-data file'
-                                     ' upload failed.'}
+                    msg = ('The attempted multipart/form-data file upload'
+                           ' failed.')
+                    LOGGER.warning(msg)
+                    return {'error': msg}
             resource.lossy_filename = save_reduced_copy(
                 resource, self.request.registry.settings)
             self.request.dbsession.add(resource)
             self.request.dbsession.flush()
             self._post_create(resource)
+            LOGGER.info('Created new file %s.', resource.id)
             return resource.get_dict()
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
 
     def update(self):
         """Update a file and return it. Note: like the ``create`` method, the
@@ -146,12 +155,15 @@ class Files(Resources):
         :returns: the updated file model.
         """
         file_, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to update file %s.', id_)
         if not file_:
             self.request.response.status_int = 404
-            return {'error': 'There is no %s with id %s' % (self.member_name,
-                                                            id_)}
+            msg = 'There is no {} with id {}'.format(self.member_name, id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._model_access_unauth(file_) is not False:
             self.request.response.status_int = 403
+            LOGGER.warning(UNAUTHORIZED_MSG)
             return UNAUTHORIZED_MSG
         try:
             if getattr(file_, 'parent_file', None):
@@ -164,18 +176,22 @@ class Files(Resources):
             if file_:
                 self.request.dbsession.add(file_)
                 self.request.dbsession.flush()
+                LOGGER.info('Updated file %s.', id_)
                 return file_.get_dict()
             self.request.response.status_int = 400
-            return {
-                'error': 'The update request failed because the submitted'
-                         ' data were not new.'
-            }
+            msg = ('The update request failed because the submitted data were'
+                   ' not new.')
+            LOGGER.warning(msg)
+            return {'error': msg}
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(JSONDecodeErrorResponse)
             return JSONDecodeErrorResponse
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
 
     # Because file creation is special, the following three abtract methods are
     # not useful and need to be declared vacuously.

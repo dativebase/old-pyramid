@@ -7,6 +7,7 @@ from .orthography import (
 from .utils import (
     FakeForm,
     ZipFile,
+    OLDSendEmailError,
     camel_case2lower_space,
     chunker,
     clean_and_secure_filename,
@@ -73,6 +74,7 @@ __all__ = (
     'OrthographyCompatibilityError',
     'OrthographyTranslator',
     'ZipFile',
+    'OLDSendEmailError',
     'camel_case2lower_space',
     'chunker',
     'clean_and_secure_filename',

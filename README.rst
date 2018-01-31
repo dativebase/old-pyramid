@@ -171,6 +171,10 @@ database named ``oldtests`` accessible to the user ``old`` with password
     mysql> CREATE USER 'old'@'localhost' IDENTIFIED BY 'demo';
     mysql> GRANT ALL PRIVILEGES ON oldtests.* TO 'old'@'localhost';
 
+    mysql> DROP DATABASE old;
+    mysql> CREATE DATABASE old DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin;
+    mysql> GRANT ALL PRIVILEGES ON old.* TO 'old'@'localhost';
+
 Make sure that your configuration matches your test database, i.e., modify the
 config file to have appropriate corresponding values, e.g., ``db.user = old``,
 or, better yet, set the corresponding environment variables e.g.,

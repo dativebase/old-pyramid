@@ -56,6 +56,7 @@ class Applicationsettings(Resources):
         :returns: a list of all application settings resources.
         Note: no ordering or pagination possible on this resource fetch. Why?
         """
+        LOGGER.info('Reading all %s', self.hmn_member_name)
         return self._eagerload_model(
             self.request.dbsession.query(self.model_cls)).order_by(
                 asc(self.model_cls.id)).all()

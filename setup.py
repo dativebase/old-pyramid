@@ -110,6 +110,6 @@ setup(name='old',
       [paste.app_factory]
       main = old:main
       [console_scripts]
-      initialize_old_db = old.scripts.initializedb:main
+      initialize_old = old.scripts.initialize:main
       """,
       )

@@ -74,6 +74,7 @@ class Info:
             is run, the 'version' key will be updated with the current version
             as specified in setup.py.
         """
+        LOGGER.info('Returning information about this OLD.')
         # Get OLD resources as a dict from resource names to lists of resource
         # attributes.
         resources = {}
@@ -112,4 +113,5 @@ class Info:
             'paths': ['%s %s' % (r[1], r[0]) for r in sorted(myroutes)],
             'resources': resources
         }
+        LOGGER.info('Returned information about this OLD.')
         return meta

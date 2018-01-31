@@ -43,12 +43,16 @@ class Morphologicalparsers(Resources):
         :GET param str script: if set to '1', the script will be returned with
             the morphological parser
         """
+        LOGGER.info('Attempting to read a single morphological parser')
         morphparser, id_ = self._model_from_id(eager=True)
         if not morphparser:
             self.request.response.status_int = 404
-            return {'error': self._rsrc_not_exist(id_)}
+            msg = self._rsrc_not_exist(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if self._model_access_unauth(morphparser) is not False:
             self.request.response.status_int = 403
+            LOGGER.warning(oldc.UNAUTHORIZED_MSG)
             return oldc.UNAUTHORIZED_MSG
         morphparser_dict = morphparser.get_dict()
         if self.request.GET.get('script') == '1':
@@ -61,6 +65,7 @@ class Morphologicalparsers(Resources):
                     morphparser_script_path, mode='r', encoding='utf8').read()
             else:
                 morphparser_dict['script'] = ''
+        LOGGER.info('Reading morphological parser %d', id_)
         return morphparser_dict
 
     def generate_and_compile(self):
@@ -78,6 +83,7 @@ class Morphologicalparsers(Resources):
             The script is compiled asynchronously in a worker thread.  See
             :mod:`onlinelinguisticdatabase.lib.foma_worker`.
         """
+        LOGGER.info('Attempting to generate and compile a morphological parser.')
         return self._generate_and_compile_morphparser()
 
     def generate(self):
@@ -92,6 +98,7 @@ class Morphologicalparsers(Resources):
             /morphologicalparsers/id`` must be polled to determine when the
             generation task has terminated.
         """
+        LOGGER.info('Attempting to generate a morphological parser.')
         return self._generate_and_compile_morphparser(compile_=False)
 
     def applydown(self):
@@ -108,6 +115,8 @@ class Morphologicalparsers(Resources):
             ``t1`` is a transcription from the request body and ``p1t1``,
             ``p2t1``, etc. are outputs of ``t1`` after apply down.
         """
+        LOGGER.info('Attempting to call apply down against a morphological'
+                    ' parser.')
         return self._apply('down')
 
     def applyup(self):
@@ -124,6 +133,8 @@ class Morphologicalparsers(Resources):
             ``t1`` is a transcription from the request body and ``p1t1``,
             ``p2t1``, etc. are outputs of ``t1`` after apply up.
         """
+        LOGGER.info('Attempting to call apply up against a morphological'
+                    ' parser.')
         return self._apply('up')
 
     def parse(self):
@@ -138,13 +149,19 @@ class Morphologicalparsers(Resources):
             ``t2`` are transcriptions of words from the request body and ``p1``
             and ``p2`` are the most probable morphological parsers of t1 and t2.
         """
-        morphparser, _ = self._model_from_id(eager=True)
+        morphparser, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to call parse against morphological parser %d',
+                    id_)
         if not morphparser:
             self.request.response.status_int = 404
-            return {'error': 'There is no morphological parser with id %s' % id}
+            msg = 'There is no morphological parser with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             inputs = json.loads(self.request.body.decode(self.request.charset))
             morphparser.cache = Cache(
@@ -161,20 +178,23 @@ class Morphologicalparsers(Resources):
             # TODO: allow for a param which causes the candidates to be
             # returned as well as/instead of only the most probable parse
             # candidate.
+            LOGGER.info('Called parse against morphological parser %d', id_)
             return {transcription: parse for transcription, (parse, candidates)
                     in parses.items()}
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(oldc.JSONDecodeErrorResponse)
             return oldc.JSONDecodeErrorResponse
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
         except Exception as error:
-            LOGGER.warning('parser.parse error')
-            LOGGER.warning(error.__class__.__name__)
-            LOGGER.warning(error)
             self.request.response.status_int = 400
-            return {'error': u'Parse request raised an error.'}
+            msg = 'Parse request raised an error.'
+            LOGGER.warning(msg, exc_info=True)
+            return {'error': msg}
 
     def servecompiled(self):
         """Serve the compiled foma script of the morphophonology FST of the
@@ -185,19 +205,27 @@ class Morphologicalparsers(Resources):
             script.
         """
         morphparser, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to serve the compiled foma script of the'
+                    ' morphophonology FST of morphological parser %d.', id_)
         if not morphparser:
             self.request.response.status_int = 404
-            return {'error':
-                    'There is no morphological parser with id %s' % id_}
+            msg = 'There is no morphological parser with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         binary_path = morphparser.get_file_path('binary')
         if not os.path.isfile(binary_path):
             self.request.response.status_int = 400
-            return {'error': 'The morphophonology foma script of'
-                             ' MorphologicalParser %d has not been compiled'
-                             ' yet.' % morphparser.id}
+            msg = ('The morphophonology foma script of MorphologicalParser {}'
+                   ' has not been compiled yet.'.format(morphparser.id))
+            LOGGER.warning(msg)
+            return {'error': msg}
+        LOGGER.info('Served the compiled foma script of the'
+                    ' morphophonology FST of morphological parser %d.', id_)
         return FileResponse(
             binary_path,
             request=self.request)
@@ -212,10 +240,13 @@ class Morphologicalparsers(Resources):
             $ ./parse.py chiens chats tombait
         """
         morphparser, id_ = self._model_from_id(eager=True)
+        LOGGER.info('Attempting to serve the morphological parser %d as a .zip'
+                    ' archive.', id_)
         if not morphparser:
             self.request.response.status_int = 404
-            return {'error':
-                    'There is no morphological parser with id %s' % id_}
+            msg = 'There is no morphological parser with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             morphparser.cache = Cache(
                 morphparser,
@@ -251,14 +282,17 @@ class Morphologicalparsers(Resources):
             zip_file.write_file(os.path.join(lib_path, 'parser.py'))
             zip_file.write_file(os.path.join(lib_path, 'parse.py'))
             zip_file.close()
+            LOGGER.info('Served the morphological parser %d as a .zip'
+                        ' archive.', id_)
             return FileResponse(
                 zip_path,
                 request=self.request)
         except Exception as error:
-            LOGGER.warning('%s %s', error.__class__.__name__, error)
             self.request.response.status_int = 400
-            return {'error': 'An error occured while attempting to export'
-                             ' morphological parser %s: %s' % (id_, error)}
+            msg = ('An error occured while attempting to export morphological'
+                   ' parser {}: {}'.format(id_, error))
+            LOGGER.warning(msg, exc_info=True)
+            return {'error': msg}
 
     def _apply(self, direction):
         """Call foma apply in the direction of ``direction`` on the input in
@@ -276,17 +310,21 @@ class Morphologicalparsers(Resources):
         morphparser, id_ = self._model_from_id(eager=True)
         if not morphparser:
             self.request.response.status_int = 404
-            return {'error':
-                    'There is no morphological parser with id %s' % id_}
+            msg = 'There is no morphological parser with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         binary_path = morphparser.get_file_path('binary')
         if not os.path.isfile(binary_path):
             self.request.response.status_int = 400
-            return {'error':
-                    'The morphophonology foma script of MorphologicalParser %d'
-                    ' has not been compiled yet.' % morphparser.id}
+            msg = ('The morphophonology foma script of MorphologicalParser {}'
+                   ' has not been compiled yet.'.format(morphparser.id))
+            LOGGER.warning(msg)
+            return {'error': msg}
         try:
             inputs = json.loads(self.request.body.decode(self.request.charset))
             schema, key = {
@@ -294,23 +332,32 @@ class Morphologicalparsers(Resources):
                 'down': (MorphemeSequencesSchema, 'morpheme_sequences')
             }.get(direction, (MorphemeSequencesSchema, 'morpheme_sequences'))
             inputs = schema.to_python(inputs)
-            return morphparser.apply(direction, inputs[key])
+            ret = morphparser.apply(direction, inputs[key])
+            LOGGER.info('Completed apply call against morphological parser'
+                        ' %d.', id_)
+            return ret
         except ValueError:
             self.request.response.status_int = 400
+            LOGGER.warning(oldc.JSONDecodeErrorResponse)
             return oldc.JSONDecodeErrorResponse
         except Invalid as error:
             self.request.response.status_int = 400
-            return {'errors': error.unpack_errors()}
+            errors = error.unpack_errors()
+            LOGGER.warning(errors)
+            return {'errors': errors}
 
     def _generate_and_compile_morphparser(self, compile_=True):
         morphparser, id_ = self._model_from_id(eager=True)
         if not morphparser:
             self.request.response.status_int = 404
-            return {'error':
-                    'There is no morphological parser with id %s' % id_}
+            msg = 'There is no morphological parser with id {}'.format(id_)
+            LOGGER.warning(msg)
+            return {'error': msg}
         if compile_ and not h.foma_installed():
             self.request.response.status_int = 400
-            return {'error': 'Foma and flookup are not installed.'}
+            msg = 'Foma and flookup are not installed.'
+            LOGGER.warning(msg)
+            return {'error': msg}
         FOMA_WORKER_Q.put({
             'id': h.generate_salt(),
             'func': 'generate_and_compile_parser',
@@ -323,6 +370,8 @@ class Morphologicalparsers(Resources):
                 'settings': self.request.registry.settings
             }
         })
+        LOGGER.info('Added generation (and possible compilation) of'
+                    ' morphological parser %d to the foma worker queue.', id_)
         return morphparser
 
     def _post_create(self, parser):
