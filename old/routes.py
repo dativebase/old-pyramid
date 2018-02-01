@@ -144,6 +144,7 @@ def fix_for_tests(request):
     Purpose is to simulate different login states for testing.
     """
     if request.registry.settings.get('testing', '0') == '1':
+        LOGGER.info('Rigging the authentication mechanism for testing')
         if 'test.authentication.role' in request.environ:
             role = request.environ['test.authentication.role']
             user = request.dbsession.query(User).filter(

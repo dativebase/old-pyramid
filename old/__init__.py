@@ -15,6 +15,7 @@ from pyramid.config import Configurator
 from pyramid.renderers import JSON
 from pyramid.request import Request
 from pyramid.settings import asbool
+from pyramid_beaker import session_factory_from_settings
 from sqlalchemy.orm import scoped_session
 
 from old.models import Model, get_session_factory, get_engine, Tag
@@ -145,6 +146,24 @@ class DBSessionFactoryRegistry(object):
 db_session_factory_registry = DBSessionFactoryRegistry()
 
 
+class BeakerSessionFactoryRegistry(object):
+
+    def __init__(self):
+        self.session_factories = {}
+
+    def get_session(self, settings):
+        old_name = settings['old_name']
+        try:
+            return self.session_factories[old_name]
+        except KeyError:
+            self.session_factories[old_name] = session_factory_from_settings(
+                settings)
+            return self.session_factories[old_name]
+
+
+beaker_session_factory = BeakerSessionFactoryRegistry()
+
+
 class MyRequest(Request):
     """Custom request class whose purpose is to override the ``dbsession``
     property so that it returns a db session for the database specified in the
@@ -158,21 +177,33 @@ class MyRequest(Request):
 
     def __init__(self, environ):
         super().__init__(environ)
-        self._session = None
+        self._dbsession = None
+        self._beakersession = None
+        self._old_name = None
+        self._sqlalchemy_url = None
         def session_getter(settings):
             return db_session_factory_registry.get_session(settings)()
         self.session_getter = session_getter
 
-    def get_old_name_from_request(self):
+    @property
+    def old_name(self):
         """The name of this OLD is extracted from the user-provided URL on
         every request. This is necessary because the OLD is stateless: all
         state is held in the db and a location on the filesystem, which are
         specified by the user-provided URL.
         """
-        return urlparse(self.url).path.lstrip('/').split('/')[0]
+        if self._old_name:
+            return self._old_name
+        self._old_name = urlparse(self.url).path.lstrip('/').split('/')[0]
+        return self._old_name
 
-    def get_sqlalchemy_url(self):
-        return build_sqlalchemy_url(self.registry.settings)
+    @property
+    def sqlalchemy_url(self):
+        if self._sqlalchemy_url:
+            return self._sqlalchemy_url
+        self.registry.settings['old_name'] = self.old_name
+        self._sqlalchemy_url = build_sqlalchemy_url(self.registry.settings)
+        return self._sqlalchemy_url
 
     @property
     def dbsession(self):
@@ -182,41 +213,80 @@ class MyRequest(Request):
         - /blaold/forms/1 should return form 1 in the Blackfoot OLD
         - /okaaold/forms/1 should return form 1 in the Okanagan OLD
         """
-        settings = {k: v for k, v in self.registry.settings.items()
-                    if k.startswith('sqlalchemy.')}
-        self.registry.settings['old_name'] = self.get_old_name_from_request()
-        settings['sqlalchemy.url'] = self.get_sqlalchemy_url()
-        self._session = db_session_factory_registry.get_session(settings)()
+        if self._dbsession:
+            return self._dbsession
+        self.registry.settings['sqlalchemy.url'] = self.sqlalchemy_url
+        self._dbsession = db_session_factory_registry.get_session(
+            self.registry.settings)()
         self.add_finished_callback(self.close_dbsession)
-        return self._session
+        return self._dbsession
 
     def close_dbsession(self, request):
         # pylint: disable=unused-argument
-        self._session.commit()
+        self._dbsession.commit()
+
+    @property
+    def session(self):
+        """The (beaker) session should return a different session depending
+        on the first/root element of the URL path.
+        """
+        if self._beakersession:
+            return self._beakersession
+        self.registry.settings['session.url'] = self.sqlalchemy_url
+        if os.path.basename(self.registry.settings[
+                'session.lock_dir'].rstrip('/')) != self.old_name:
+            self.registry.settings['session.lock_dir'] = os.path.join(
+                self.registry.settings['session.lock_dir'],
+                self.registry.settings['old_name'])
+        if not self.registry.settings['session.key'].endswith(
+                '_{}'.format(self.old_name)):
+            self.registry.settings['session.key'] = '{}_{}'.format(
+                self.registry.settings['session.key'],
+                self.registry.settings['old_name'])
+        self._beakersession = beaker_session_factory.get_session(
+            self.registry.settings)(self)
+        self.add_finished_callback(self.save_beakersession)
+        return self._beakersession
+
+    def save_beakersession(self, request):
+        # pylint: disable=unused-argument
+        self._beakersession.save()
 
 
 # The environment variables in the keys of this dict, if set, will override the
 # corresponding values in the Pyramid settings dict. See
 # ``override_settings_with_env_vars``.
 ENV_VAR_MAP = {
+    # Database
     'OLD_DB_RDBMS': 'db.rdbms',
     'OLD_DB_USER': 'db.user',
     'OLD_DB_PASSWORD': 'db.password',
     'OLD_DB_HOST': 'db.host',
     'OLD_DB_PORT': 'db.port',
+    'OLD_DB_DIRPATH': 'db.dirpath',  # For SQLite only
+    'SQLALCHEMY_POOL_RECYCLE': 'sqlalchemy.pool_recycle',
+    # Testing
     'OLD_NAME_TESTS': 'old_name_tests',
-    'OLD_DB_DIRPATH': 'db.dirpath',
     'OLD_TESTING': 'testing',
+    # General OLD config
     'OLD_CREATE_REDUCED_SIZE_FILE_COPIES': 'create_reduced_size_file_copies',
     'OLD_PREFERRED_LOSSY_AUDIO_FORMAT': 'preferred_lossy_audio_format',
-    'SQLALCHEMY_POOL_RECYCLE': 'sqlalchemy.pool_recycle',
     'OLD_PERMANENT_STORE': 'permanent_store',
     'OLD_ADD_LANGUAGE_DATA': 'add_language_data',
     'OLD_EMPTY_DATABASE': 'empty_database',
+    # Email
     'OLD_PASSWORD_RESET_SMTP_SERVER': 'password_reset_smtp_server',
     'OLD_TEST_EMAIL_TO': 'test_email_to',
     'OLD_GMAIL_FROM_ADDRESS': 'gmail_from_address',
-    'OLD_GMAIL_FROM_PASSWORD': 'gmail_from_password'
+    'OLD_GMAIL_FROM_PASSWORD': 'gmail_from_password',
+    # Beaker session stuff
+    'OLD_SESSION_TYPE': 'session.type',
+    'OLD_SESSION_URL': 'session.url',
+    'OLD_SESSION_DATA_DIR': 'session.data_dir',
+    'OLD_SESSION_LOCK_DIR': 'session.lock_dir',
+    'OLD_SESSION_KEY': 'session.key',
+    'OLD_SESSION_SECRET': 'session.secret',
+    'OLD_SESSION_COOKIE_EXPIRES': 'session.cookie_expires'
 }
 
 
@@ -264,7 +334,6 @@ def main(global_config, **settings):
     start_foma_worker()
     settings = override_settings_with_env_vars(settings)
     config = Configurator(settings=settings, request_factory=MyRequest)
-    config.include('pyramid_beaker')
     config.include('.routes')
     config.add_renderer('json', get_json_renderer())
     config.scan()
