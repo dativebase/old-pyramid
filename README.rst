@@ -78,6 +78,31 @@ will configure and serve two OLD instances as well as the Dative GUI. More
 details are available at
 https://github.com/dativebase/deploy-dative-old/tree/master/playbooks/dative-old.
 
+Docker notes
+-------------------------------------------------------------------------------
+
+Build the OLD docker image::
+
+    $ docker build -f Dockerfile-ubuntu -t dativebase/old .
+
+Run the old container and launch a bash sell inside it::
+
+    $ docker run -it dativebase/old bash
+    #
+
+Confirm that Python 3.6, Ffmpeg, foma, TGrep2, and MITLM are installed::
+
+    # python3.6 -V
+    Python 3.6.3
+    # ffmpeg -version
+    ffmpeg version 3.4.1-1~16.04.york0 Copyright (c) 2000-2017 the FFmpeg developers
+    # foma -v
+    foma 0.9.18alpha
+    # tgrep2 -h
+    TGrep2 version 1.15
+    # estimate-ngram -h
+    MIT Language Modeling Toolkit 0.4.2
+
 
 Installation
 ===============================================================================
@@ -138,24 +163,32 @@ specific environment variables. The latter approach is recommended and the
 following environment variables are recognized by the OLD. See the comments in
 the config file for what is expected in these variables.
 
-- ``OLD_DB_RDBMS``
-- ``OLD_DB_USER``
-- ``OLD_DB_PASSWORD``
-- ``OLD_DB_HOST``
-- ``OLD_DB_PORT``
-- ``OLD_DB_DIRPATH``
-- ``OLD_TESTING``
-- ``OLD_NAME_TESTS``
-- ``OLD_CREATE_REDUCED_SIZE_FILE_COPIES``
-- ``OLD_PREFERRED_LOSSY_AUDIO_FORMAT``
-- ``SQLALCHEMY_POOL_RECYCLE``
-- ``OLD_PERMANENT_STORE``
-- ``OLD_ADD_LANGUAGE_DATA``
-- ``OLD_EMPTY_DATABASE``
-- ``OLD_PASSWORD_RESET_SMTP_SERVER``
-- ``OLD_TEST_EMAIL_TO``
-- ``OLD_GMAIL_FROM_ADDRESS``
-- ``OLD_GMAIL_FROM_PASSWORD``
+-  ``OLD_DB_RDBMS``
+-  ``OLD_DB_USER``
+-  ``OLD_DB_PASSWORD``
+-  ``OLD_DB_HOST``
+-  ``OLD_DB_PORT``
+-  ``OLD_DB_DIRPATH``
+-  ``SQLALCHEMY_POOL_RECYCLE``
+-  ``OLD_NAME_TESTS``
+-  ``OLD_TESTING``
+-  ``OLD_CREATE_REDUCED_SIZE_FILE_COPIES``
+-  ``OLD_PREFERRED_LOSSY_AUDIO_FORMAT``
+-  ``OLD_PERMANENT_STORE``
+-  ``OLD_ADD_LANGUAGE_DATA``
+-  ``OLD_EMPTY_DATABASE``
+-  ``OLD_PASSWORD_RESET_SMTP_SERVER``
+-  ``OLD_TEST_EMAIL_TO``
+-  ``OLD_GMAIL_FROM_ADDRESS``
+-  ``OLD_GMAIL_FROM_PASSWORD``
+-  ``OLD_SESSION_TYPE``
+-  ``OLD_SESSION_URL``
+-  ``OLD_SESSION_DATA_DIR``
+-  ``OLD_SESSION_LOCK_DIR``
+-  ``OLD_SESSION_KEY``
+-  ``OLD_SESSION_SECRET``
+-  ``OLD_SESSION_COOKIE_EXPIRES``
+
 
 
 Technical
