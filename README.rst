@@ -83,7 +83,7 @@ Docker notes
 
 Build the OLD docker image::
 
-    $ docker build -f Dockerfile-ubuntu -t dativebase/old .
+    $ docker build -t dativebase/old .
 
 Run the old container and launch a bash sell inside it::
 
