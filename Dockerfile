@@ -116,18 +116,11 @@ RUN set -ex \
 RUN python3.6 -m venv /venv
 RUN /venv/bin/pip install --upgrade pip
 RUN /venv/bin/pip install wheel
-ADD requirements.txt /usr/src/old/requirements.txt
-ADD requirements /usr/src/old/requirements
+
+COPY . /usr/src/old
 RUN /venv/bin/pip install -r /usr/src/old/requirements/test.txt
-
-ADD old /usr/src/old/old
-ADD config.ini /usr/src/old/config.ini
-ADD serve.sh /usr/src/old/serve.sh
-ADD setup.py /usr/src/old/setup.py
-ADD test.sh /usr/src/old/test.sh
-ADD README.rst /usr/src/old/README.rst
-ADD CHANGES.txt /usr/src/old/CHANGES.txt
-RUN /venv/bin/pip install -e /usr/src/old
-
 WORKDIR /usr/src/old/
-CMD ["/venv/bin/pserve", "config.ini", "http_port=8000", "http_host=0.0.0.0"]
+RUN /venv/bin/python setup.py bdist_egg
+RUN /venv/bin/pip install -e .
+
+CMD ["/venv/bin/pserve", "--reload", "config.ini", "http_port=8000", "http_host=0.0.0.0"]
