@@ -2,6 +2,7 @@ FROM ubuntu:16.04
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV PYTHONUNBUFFERED 1
+ENV PYTHONIOENCODING utf8
 
 RUN set -ex \
     && apt-get update \
@@ -112,6 +113,9 @@ RUN set -ex \
     && make install \
     && rm /usr/local/bin/estimate-ngram \
     && ln -s /mitlm/estimate-ngram /usr/local/bin/estimate-ngram
+
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
 
 RUN python3.6 -m venv /venv
 RUN /venv/bin/pip install --upgrade pip
