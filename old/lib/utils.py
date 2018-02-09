@@ -536,7 +536,7 @@ def send_password_reset_email_to(user, new_password, settings, app_url,
         LOGGER.warning('Failed to instantiate an SMTP instance. Is thera an'
                        ' SMTP server installed on this machine?', exc_info=True)
         raise
-    except smtplib.SMTPException:
+    except OSError:
         LOGGER.warning('Failed to instantiate an SMTP instance', exc_info=True)
         raise
     except KeyError:
@@ -554,7 +554,7 @@ def send_password_reset_email_to(user, new_password, settings, app_url,
     ])
     try:
         failures = server.sendmail(from_address, to_addresses, message)
-    except smtplib.SMTPException as exc:
+    except OSError as exc:
         LOGGER.warning('Failed to send email: %s', exc)
         raise
     finally:
