@@ -36,8 +36,9 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 import webtest
 
 from old import (
-    main,
+    build_sqlalchemy_url,
     db_session_factory_registry,
+    main,
     override_settings_with_env_vars
 )
 import old.lib.helpers as h
@@ -76,6 +77,14 @@ CONFIG = {
 APP = webtest.TestApp(main(CONFIG, **SETTINGS))
 Session = db_session_factory_registry.get_session(SETTINGS)
 
+Session2 = None
+SETTINGS_2 = SETTINGS.copy()
+old_name_2_tests = SETTINGS_2.get('old_name_2_tests')
+if old_name_2_tests:
+    SETTINGS_2['old_name'] = old_name_2_tests
+    SETTINGS_2['sqlalchemy.url'] = build_sqlalchemy_url(SETTINGS_2)
+    Session2 = db_session_factory_registry.get_session(SETTINGS_2)
+
 
 class TestView(TestCase):
     """Base test view for testing OLD Pyramid views.
@@ -91,10 +100,13 @@ class TestView(TestCase):
     inflect_p = inflect.engine()
     inflect_p.classical()
     old_name = SETTINGS['old_name']
+    old_name_2 = old_name_2_tests
 
     @classmethod
     def tearDownClass(cls):
         Session.close_all()
+        if Session2:
+            Session2.close_all()
 
     def setUp(self):
         self.default_setup()
@@ -115,17 +127,41 @@ class TestView(TestCase):
         for dir_name in dirs_to_destroy:
             h.destroy_all_directories(self.inflect_p.plural(dir_name),
                                       self.settings)
+        if self.Session2:
+            db = DBUtils(self.dbsession, self.settings2)
+            clear_all_tables = kwargs.get('clear_all_tables', False)
+            dirs_to_clear = kwargs.get('dirs_to_clear', [])
+            dirs_to_destroy = kwargs.get('dirs_to_destroy', [])
+            if clear_all_tables:
+                db.clear_all_tables(['language'])
+            else:
+                self.clear_all_models(self.dbsession2)
+            for attr_name in dirs_to_clear:
+                dir_name = attr_name.replace('_path', '')
+                dir_path = h.get_old_directory_path(
+                    dir_name, settings=self.settings2)
+                h.clear_directory_of_files(dir_path)
+            for dir_name in dirs_to_destroy:
+                h.destroy_all_directories(self.inflect_p.plural(dir_name),
+                                          self.settings2)
         self.tear_down_dbsession()
 
     def tear_down_dbsession(self):
         self.dbsession.commit()
         Session.remove()
+        if Session2:
+            self.dbsession2.commit()
+            Session2.remove()
 
     def default_setup(self):
         self.settings = SETTINGS
+        self.settings2 = SETTINGS_2
         self.config = CONFIG
         self.Session = Session
+        self.Session2 = Session2
         self.dbsession = Session()
+        if Session2:
+            self.dbsession2 = Session2()
         self.app = APP
         setup_logging('config.ini#loggers')
         self._setattrs()
@@ -146,6 +182,20 @@ class TestView(TestCase):
         Base.metadata.create_all(bind=self.dbsession.bind, checkfirst=True)
         self.dbsession.add_all(languages + [administrator, contributor, viewer])
         self.dbsession.commit()
+        if self.Session2:
+            h.create_OLD_directories(self.settings2)
+            languages = omb.get_language_objects(self.settings2['here'],
+                                                 truncated=True)
+            administrator = omb.generate_default_administrator(
+                settings=self.settings2)
+            contributor = omb.generate_default_contributor(
+                settings=self.settings2)
+            viewer = omb.generate_default_viewer(settings=self.settings2)
+            Base.metadata.drop_all(bind=self.dbsession2.bind, checkfirst=True)
+            self.dbsession2.commit()
+            Base.metadata.create_all(bind=self.dbsession2.bind, checkfirst=True)
+            self.dbsession2.add_all(languages + [administrator, contributor, viewer])
+            self.dbsession2.commit()
 
     @staticmethod
     def clear_all_models(dbsession, retain=('Language',)):

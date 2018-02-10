@@ -1039,7 +1039,6 @@ class TestFilesView(TestView):
         medium_wav_file_path = os.path.join(
             self.test_files_path, medium_wav_filename)
         if os.path.exists(medium_wav_file_path):
-            print('old_test_medium EXISTS')
             old_reduced_dir_list = os.listdir(self.reduced_files_path)
             medium_wav_file_size = os.path.getsize(medium_wav_file_path)
             params = self.file_create_params_base64.copy()

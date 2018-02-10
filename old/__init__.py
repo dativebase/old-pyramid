@@ -267,6 +267,7 @@ ENV_VAR_MAP = {
     'SQLALCHEMY_POOL_RECYCLE': 'sqlalchemy.pool_recycle',
     # Testing
     'OLD_NAME_TESTS': 'old_name_tests',
+    'OLD_NAME_2_TESTS': 'old_name_2_tests',
     'OLD_TESTING': 'testing',
     # General OLD config
     'OLD_CREATE_REDUCED_SIZE_FILE_COPIES': 'create_reduced_size_file_copies',

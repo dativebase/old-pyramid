@@ -143,7 +143,8 @@ def fix_for_tests(request):
     """Modifies the request if certain environment variables are present.
     Purpose is to simulate different login states for testing.
     """
-    if request.registry.settings.get('testing', '0') == '1':
+    if (request.registry.settings.get('testing', '0') == '1' and
+            request.environ.get('test.rig.auth') is not False):
         LOGGER.info('Rigging the authentication mechanism for testing')
         if 'test.authentication.role' in request.environ:
             role = request.environ['test.authentication.role']
