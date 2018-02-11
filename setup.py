@@ -29,6 +29,7 @@ with open(infopth) as f:
 with open(infopth, 'w') as f:
     f.write(''.join(lines))
 
+
 pkgfile = os.path.join(wd, 'old', '__init__.py')
 lines = []
 
@@ -50,30 +51,30 @@ with open(os.path.join(here, 'README.rst')) as f:
 with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
+
 requires = [
     'docutils',
     'formencode',
     'inflect',
     'markdown',
     'passlib',
+    'Pillow',
     'pyramid',
     'pyramid_beaker',
     'pyramid_debugtoolbar',
     'pyramid_jinja2',
-    'pyramid_tm',
     'python-magic',
     'requests',
     'SQLAlchemy',
-    'transaction',
-    'zope.sqlalchemy',
     'waitress',
-    ]
+]
 
 tests_require = [
     'WebTest >= 1.3.1',  # py3 compat
+    'pylint',
     'pytest',  # includes virtualenv
     'pytest-cov',
-    ]
+]
 
 setup(name='old',
       version=VERSION,
@@ -111,5 +112,4 @@ setup(name='old',
       main = old:main
       [console_scripts]
       initialize_old = old.scripts.initialize:main
-      """,
-      )
+      """)
