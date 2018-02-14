@@ -52,14 +52,21 @@ class ReadonlyResources:
 
     +-----------------+-------------+--------------------------+--------+
     | Purpose         | HTTP Method | Path                     | Method |
-    +-----------------+-------------+--------------------------+--------+
+    +=================+=============+==========================+========+
     | Create new      | POST        | /<cllctn_name>           | create |
+    +-----------------+-------------+--------------------------+--------+
     | Create data     | GET         | /<cllctn_name>/new       | new    |
+    +-----------------+-------------+--------------------------+--------+
     | Read all        | GET         | /<cllctn_name>           | index  |
+    +-----------------+-------------+--------------------------+--------+
     | Read specific   | GET         | /<cllctn_name>/<id>      | show   |
+    +-----------------+-------------+--------------------------+--------+
     | Update specific | PUT         | /<cllctn_name>/<id>      | update |
+    +-----------------+-------------+--------------------------+--------+
     | Update data     | GET         | /<cllctn_name>/<id>/edit | edit   |
+    +-----------------+-------------+--------------------------+--------+
     | Delete specific | DELETE      | /<cllctn_name>/<id>      | delete |
+    +-----------------+-------------+--------------------------+--------+
     | Search          | SEARCH      | /<cllctn_name>           | search |
     +-----------------+-------------+--------------------------+--------+
 
@@ -137,8 +144,10 @@ class ReadonlyResources:
 
     def index(self):
         """Get all resources.
-        :URL: ``GET /<resource_collection_name>`` with optional query string
-            parameters for ordering and pagination.
+
+        - URL: ``GET /<resource_collection_name>`` with optional query string
+          parameters for ordering and pagination.
+
         :returns: a JSON-serialized array of resources objects.
         """
         LOGGER.info('Attempting to read all %s', self.hmn_collection_name)
@@ -203,14 +212,15 @@ class ReadonlyResources:
 
     def search(self):
         """Return the list of resources matching the input JSON query.
-        :URL: ``SEARCH /<resource_collection_name>`` (or ``POST
-            /<resource_collection_name>/search``)
-        :request body: A JSON object of the form::
 
-                {"query": {"filter": [ ... ], "order_by": [ ... ]},
-                 "paginator": { ... }}
+        - URL: ``SEARCH /<resource_collection_name>`` (or ``POST
+          /<resource_collection_name>/search``)
+        - request body: A JSON object of the form::
 
-            where the ``order_by`` and ``paginator`` attributes are optional.
+              {"query": {"filter": [ ... ], "order_by": [ ... ]},
+               "paginator": { ... }}
+
+          where the ``order_by`` and ``paginator`` attributes are optional.
         """
         LOGGER.info('Attempting to search over %s', self.hmn_collection_name)
         try:
@@ -263,9 +273,11 @@ class ReadonlyResources:
 
     def new_search(self):
         """Return the data necessary to search over this type of resource.
-        :URL: ``GET /<resource_collection_name>/new_search``
-        :returns: ``{"search_parameters": {
-            "attributes": { ... }, "relations": { ... }}``
+
+        - URL: ``GET /<resource_collection_name>/new_search``
+
+        :returns: a JSON object with a ``search_parameters`` attribute which
+         resolves to an object with attributes ``attributes`` and ``relations``.
         """
         LOGGER.info('Returning search parameters for %s', self.hmn_member_name)
         return {'search_parameters':
@@ -460,13 +472,15 @@ class Resources(abc.ABC, ReadonlyResources):
 
     def new(self):
         """Return the data necessary to create a new resource.
-        :URL: ``GET /<resource_collection_name>/new``.
+
+        - URL: ``GET /<resource_collection_name>/new``.
+
         :returns: a dict containing the related resources necessary to create a
-            new resource of this type.
-        .. note::
-           See :func:`_get_new_edit_data` to understand how the query string
-           parameters can affect the contents of the lists in the returned
-           dictionary.
+         new resource of this type.
+
+        .. note:: See :func:`_get_new_edit_data` to understand how the query
+           string parameters can affect the contents of the lists in the
+           returned dictionary.
         """
         LOGGER.info('Returning the data needed to create a new %s.',
                     self.hmn_member_name)
@@ -474,9 +488,11 @@ class Resources(abc.ABC, ReadonlyResources):
 
     def update(self):
         """Update a resource and return it.
-        :URL: ``PUT /<resource_collection_name>/<id>``
-        :Request body: JSON object representing the resource with updated
-            attribute values.
+
+        - URL: ``PUT /<resource_collection_name>/<id>``
+        - Request body: JSON object representing the resource with updated
+          attribute values.
+
         :param str id_: the ``id`` value of the resource to be updated.
         :returns: the updated resource model.
         """

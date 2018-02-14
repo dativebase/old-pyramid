@@ -48,12 +48,19 @@ Deploying the OLD means:
 5. serving it.
 
 
+Development Deployment using Docker Compose
+-------------------------------------------------------------------------------
+
+The recommended way of creating a full DativeBase (i.e., Dative and OLD)
+development deployment is by following the `DativeBase Docker Compose
+instructions`_.
+
+
 Deploying locally using Vagrant and Ansible
 -------------------------------------------------------------------------------
 
-The easiest way to deploy the OLD and Dative locally for development purposes
-is to do so on a virtual machine using the `Dative/OLD Vagrant/Ansible deploy
-scripts`_::
+The OLD and Dative can also be installed locally for development purposes on a
+virtual machine using the `Dative/OLD Vagrant/Ansible deploy scripts`_::
 
     $ git clone git@github.com:dativebase/deploy-dative-old.git
     $ cd deploy-dative-old/playbooks/dative-old
@@ -78,7 +85,8 @@ will configure and serve two OLD instances as well as the Dative GUI. More
 details are available at
 https://github.com/dativebase/deploy-dative-old/tree/master/playbooks/dative-old.
 
-Docker notes
+
+Building and running the OLD in a Docker container
 -------------------------------------------------------------------------------
 
 Build the OLD docker image::
@@ -259,3 +267,4 @@ linting tests::
 .. _`Pylons OLD source`: https://github.com/dativebase/old
 .. _`Dative/OLD Vagrant/Ansible deploy scripts`: https://github.com/dativebase/deploy-dative-old
 .. _`pserve`: https://docs.pylonsproject.org/projects/pyramid/en/latest/pscripts/pserve.html
+.. _`DativeBase Docker Compose instructions`: https://github.com/dativebase/dativebase/blob/master/docker-compose/README.rst

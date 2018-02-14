@@ -85,37 +85,39 @@ class Corpora(Resources):
 
     def search_corpora(self):
         """Return the list of corpora that match the input JSON query.
-        :URL: ``SEARCH/POST /corpora/searchcorpora``
-        :request body: A JSON object of the form::
+
+        - URL: ``SEARCH/POST /corpora/searchcorpora``
+        - request body: A JSON object of the form::
 
                 {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``order_by`` and ``paginator`` attributes are optional.
-        .. note::
+          where the ``order_by`` and ``paginator`` attributes are optional.
 
-            This action *does* result in a search across corpora resources.
-            Contrast this with the `search` method below which allows one to
-            search across the forms in a specified corpus.
+        .. note:: This action *does* result in a search across corpora
+           resources.  Contrast this with the `search` method below which
+           allows one to search across the forms in a specified corpus.
         """
         return super().search()
 
     def search(self):
         """Return the forms from corpus ``id`` that match the input JSON query.
-        :param str id: the id value of the corpus to be searched.
-        :URL: ``SEARCH /corpora/id` (or ``POST /corpora/id/search``)
-        :request body: A JSON object of the form::
+
+        - URL: ``SEARCH /corpora/id` (or ``POST /corpora/id/search``)
+        - request body: A JSON object of the form::
 
                 {"query": {"filter": [ ... ], "order_by": [ ... ]},
                  "paginator": { ... }}
 
-            where the ``order_by`` and ``paginator`` attributes are optional.
-        .. note::
+          where the ``order_by`` and ``paginator`` attributes are optional.
 
-            The corpora search action is different from typical search actions
-            in that it does not return an array of corpora but of forms that
-            are in the corpus whose ``id`` value matches ``id``.  This action
-            resembles the search action of the ``Rememberedforms`` view.
+        :param id: the id value of the corpus to be searched.
+        :type id: str
+
+        .. note:: The corpora search action is different from typical search
+           actions in that it does not return an array of corpora but of forms
+           that are in the corpus whose ``id`` value matches ``id``.  This
+           action resembles the search action of the ``Rememberedforms`` view.
         """
         corpus, id_ = self._model_from_id(eager=True)
         LOGGER.info('Attempting to search over the forms in corpus %s', id_)
@@ -278,10 +280,13 @@ class Corpora(Resources):
 
     def tgrep2(self):
         """Search the corpus-as-treebank using Tgrep2.
-        :URL: ``SEARCH/POST /corpora/id/tgrep2``.
-        :Request body: JSON object with obligatory 'tgrep2pattern' attribute and
-            optional 'paginator' and 'order_by' attributes.
-        :param str id: the ``id`` value of the corpus.
+
+        - URL: ``SEARCH/POST /corpora/id/tgrep2``.
+        - Request body: JSON object with obligatory 'tgrep2pattern' attribute and
+          optional 'paginator' and 'order_by' attributes.
+
+        :param id: the ``id`` value of the corpus.
+        :type id: str
         :returns: an array of forms as JSON objects
         """
         LOGGER.info('Attempting to search a corpus using Tgrep2')

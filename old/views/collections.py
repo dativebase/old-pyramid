@@ -131,10 +131,13 @@ class Collections(Resources):
 
     def update(self):
         """Update a collection and return it.
-        :URL: ``PUT /collections/id``
-        :Request body: JSON object representing the collection with updated
-            attribute values.
-        :param str id: the ``id`` value of the collection to be updated.
+
+        - URL: ``PUT /collections/id``
+        - Request body: JSON object representing the collection with updated
+          attribute values.
+
+        :param id: the ``id`` value of the collection to be updated.
+        :type id: str
         :returns: the updated collection model.
         """
         resource_model, id_ = self._model_from_id(eager=True)

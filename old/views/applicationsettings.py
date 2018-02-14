@@ -36,11 +36,11 @@ class Applicationsettings(Resources):
     REST Controller styled on the Atom Publishing Protocol.
     The most recently created application settings resource is considered to be
     the *active* one.
-    .. note::
-       The ``h.jsonify`` decorator converts the return value of the methods to
-       JSON.
-    .. note::
-       Only administrators are authorized to create, update or delete
+
+    .. note:: The ``h.jsonify`` decorator converts the return value of the
+       methods to JSON.
+
+    .. note:: Only administrators are authorized to create, update or delete
        application settings resources.
     """
 
@@ -51,10 +51,13 @@ class Applicationsettings(Resources):
         super().__init__(request)
 
     def index(self):
-        """Get all application settings resources.
-        :URL: ``GET /applicationsettings``
+        """Get all application settings resources. URL: ``GET
+        /applicationsettings``.
+
         :returns: a list of all application settings resources.
-        Note: no ordering or pagination possible on this resource fetch. Why?
+
+        .. note:: no ordering or pagination possible on this resource fetch.
+           Why?
         """
         LOGGER.info('Reading all %s', self.hmn_member_name)
         return self._eagerload_model(

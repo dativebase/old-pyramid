@@ -304,12 +304,14 @@ class Forms(Resources):
     def remember(self):
         """Cause the logged in user to remember the forms referenced in the
         request body.
-        :URL: ``POST /forms/remember``
-        :request body: A JSON object of the form ``{"forms": [ ... ]}`` where
-            the value of the ``forms`` attribute is the array of form ``id``
-            values representing the forms that are to be remembered.
+
+        - URL: ``POST /forms/remember``
+        - request body: A JSON object of the form ``{"forms": [ ... ]}`` where
+          the value of the ``forms`` attribute is the array of form ``id``
+          values representing the forms that are to be remembered.
+
         :returns: A list of form ``id`` values corresponding to the forms that
-            were remembered.
+                  were remembered.
         """
         LOGGER.info('Attempting to remember forms for a user.')
         schema = FormIdsSchema
@@ -990,13 +992,17 @@ def join(bgc, morpheme_delimiters, bgc_delimiter):
 
     Join the break-gloss-category 3-tuple ``bgc`` using the delimiter
     string.  If ``bgc`` contains only morpheme/word delimiters, then the
-    first such delimiter is returned::
+    first such delimiter is returned.
 
-    :param list bgc: the morpheme as phonemic form, gloss and category.
+    :param bgc: the morpheme as phonemic form, gloss and category.
+    :type bgc: list
     :param list morpheme_delimiters: morpheme delimiters as strings.
-    :param str bgc_delimiter: delimiter used to join the elements of the
-        morpheme.
+    :type morpheme_delimiters: list
+    :param bgc_delimiter: delimiter used to join the elements of the morpheme.
+    :type bgc_delimiter: str
     :returns: a string representation of the morpheme.
+
+    Examples::
 
         >>> join(['le', 'the', 'Det'], ['-', '=', ' '], '|')
         'le|the|Det'

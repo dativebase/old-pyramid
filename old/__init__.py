@@ -129,11 +129,18 @@ def expandvars_dict(settings):
 
 
 class DBSessionFactoryRegistry(object):
+    """Stores SQLAlchemy database session factories, keyed by SQLAlchemy URL."""
 
     def __init__(self):
         self.session_factories = {}
 
     def get_session(self, settings):
+        """Return a SQLAlchemy database session factory.
+
+        :param settings: The OLD configuration settings
+        :type settings: dict.
+        :returns: A SQLAlchemy session factory (callable)
+        """
         sqlalchemy_url = settings['sqlalchemy.url']
         try:
             return self.session_factories[sqlalchemy_url]

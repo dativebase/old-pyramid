@@ -67,37 +67,37 @@ class Files(Resources):
 
     def create(self):
         """Create a new file resource and return it.
-        :URL: ``POST /files``
-        :request body: JSON object *or* conventional POST parameters containing
-            the attribute values of the new file.
-        :content type: ``application/json`` *or* ``multipart/form-data``.
+
+        - URL: ``POST /files``
+        - request body: JSON object *or* conventional POST parameters containing
+          the attribute values of the new file.
+        - content type: ``application/json`` *or* ``multipart/form-data``.
+
         :returns: the newly created file.
 
-        .. note::
+        .. note:: The ``Files`` view completely overrides the public ``create``
+           method of ``Resources`` because files are special. There are three
+           types of file and four types of file creation request.
 
-            The ``Files`` view completely overrides the public ``create``
-            method of ``Resources`` because files are special. There are three
-            types of file and four types of file creation request.
+           1. **Local file with** ``multipart/form-data`` **content type.**
+              File data are in the request body and the file metadata are
+              structured as conventional POST parameters.
 
-            1. **Local file with** ``multipart/form-data`` **content type.**
-               File data are in the request body and the file metadata are
-               structured as conventional POST parameters.
+           2. **Local file with** ``application/json`` **content type.**
+              File data are Base64-encoded and are contained in the same JSON
+              object as the metadata, in the request body.
 
-            2. **Local file with** ``application/json`` **content type.**
-               File data are Base64-encoded and are contained in the same JSON
-               object as the metadata, in the request body.
+           3. **Subinterval-referencing file with** ``application/json``
+              **content type.** All parameters provided in a JSON object. No
+              file data are present; the ``id`` value of an existing
+              *audio/video* parent file must be provided in the
+              ``parent_file`` attribute; values for ``start`` and ``end``
+              attributes are also required.
 
-            3. **Subinterval-referencing file with** ``application/json``
-               **content type.** All parameters provided in a JSON object. No
-               file data are present; the ``id`` value of an existing
-               *audio/video* parent file must be provided in the
-               ``parent_file`` attribute; values for ``start`` and ``end``
-               attributes are also required.
-
-            4. **Externally hosted file with** ``application/json``
-               **content-type.** All parameters provided in a JSON object. No
-               file data are present; the value of the ``url`` attribute is a
-               valid URL where the file data are being served.
+           4. **Externally hosted file with** ``application/json``
+              **content-type.** All parameters provided in a JSON object. No
+              file data are present; the value of the ``url`` attribute is a
+              valid URL where the file data are being served.
         """
         LOGGER.info('Attempting to create a new file.')
         try:
@@ -148,10 +148,13 @@ class Files(Resources):
         """Update a file and return it. Note: like the ``create`` method, the
         ``update`` method for file models is special so we completely override
         the super-class's implementation.
-        :URL: ``PUT /files/id``
-        :Request body: JSON object representing the file with updated attribute
-            values.
-        :param str id_: the ``id`` value of the file to be updated.
+
+        - URL: ``PUT /files/id``
+        - Request body: JSON object representing the file with updated attribute
+          values.
+
+        :param id_: the ``id`` value of the file to be updated.
+        :type id_: str
         :returns: the updated file model.
         """
         file_, id_ = self._model_from_id(eager=True)

@@ -8,10 +8,10 @@ LOGGER = logging.getLogger(__name__)
 
 class Corpusbackups(ReadonlyResources):
     """Generate responses to requests on corpus backup resources.
-    .. note::
-        Corpus backups are created when updating and deleting corpora;
-        they cannot be created directly and they should never be deleted.  This
-        controller facilitates searching and getting of corpus backups only.
+
+    .. note:: Corpus backups are created when updating and deleting corpora;
+       they cannot be created directly and they should never be deleted. This
+       controller facilitates searching and getting of corpus backups only.
     """
 
     def __init__(self, request):

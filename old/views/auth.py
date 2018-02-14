@@ -90,10 +90,12 @@ def logout(request):
 
 def email_reset_password(request):
     """Reset the user's password and email them a new one.
-    :URL: ``POST /login/email_reset_password``
-    :request body: a JSON object with a ``"username"`` attribute.
+
+    - URL: ``POST /login/email_reset_password``
+    - request body: a JSON object with a ``"username"`` attribute.
+
     :returns: a dictionary with ``'valid_username'`` and ``'password_reset'``
-        keys whose values are booleans.
+              keys whose values are booleans.
     """
     LOGGER.info('Request for a password reset.')
     schema = PasswordResetSchema()

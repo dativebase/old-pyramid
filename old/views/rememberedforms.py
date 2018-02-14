@@ -111,16 +111,18 @@ class Rememberedforms(Resources):
 
     def update(self):
         """Update a user's remembered forms and return them.
-        :URL: ``PUT /rememberedforms/id``
-        :Request body: JSON object of the form ``{"forms": [...]}`` where the
-            array contains the form ``id`` values that will constitute the
-            user's ``remembered_forms`` collection after update.
+
+        - URL: ``PUT /rememberedforms/id``
+        - Request body: JSON object of the form ``{"forms": [...]}`` where the
+          array contains the form ``id`` values that will constitute the
+          user's ``remembered_forms`` collection after update.
+
         :param str id: the ``id`` value of the user model whose
-            ``remembered_forms`` attribute is to be updated.
+         ``remembered_forms`` attribute is to be updated.
         :returns: the list of remembered forms of the user.
-        .. note::
-            Administrators can update any user's remembered forms;
-            non-administrators can only update their own.
+
+        .. note:: Administrators can update any user's remembered forms;
+           non-administrators can only update their own.
         """
         id_ = self.request.matchdict['id']
         LOGGER.info('Attempting to update the forms remembered by user %d.',
