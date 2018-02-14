@@ -122,9 +122,9 @@ RUN /venv/bin/pip install --upgrade pip
 RUN /venv/bin/pip install wheel
 
 COPY . /usr/src/old
+ENV PYTHONPATH=/usr/src/old
 RUN /venv/bin/pip install -r /usr/src/old/requirements/test.txt
-WORKDIR /usr/src/old/
-RUN /venv/bin/python setup.py bdist_egg
-RUN /venv/bin/pip install -e .
+RUN cd /venv/lib/python3.6/site-packages && /venv/bin/python /usr/src/old/setup.py develop
 
+WORKDIR /usr/src/old/
 CMD ["/venv/bin/pserve", "--reload", "config.ini", "http_port=8000", "http_host=0.0.0.0"]
