@@ -56,7 +56,7 @@ LOGGER = logging.getLogger(__name__)
 # File system functions
 ################################################################################
 
-def get_old_directory_path(directory_name, settings):
+def get_old_directory_path(directory_name: str, settings: dict):
     """Return the absolute path to an OLD directory in /store."""
     try:
         return os.path.join(
