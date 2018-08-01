@@ -90,6 +90,11 @@ class OLDHeadersMiddleware(object):
             new_headers['Access-Control-Allow-Headers'] = ', '.join((
                 'Content-Type',
                 'content-type',
+                'Accept',
+                'Cache-Control',
+                'Content-Type',
+                'Origin',
+                'User-Agent',
                 'If-Modified-Since'
             ))
             # This causes the preflight result to be cached for specified
