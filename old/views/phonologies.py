@@ -16,6 +16,8 @@ from old.views.resources import Resources
 
 LOGGER = logging.getLogger(__name__)
 
+DECOMBINE = False
+
 
 class Phonologies(Resources):
 
@@ -42,6 +44,10 @@ class Phonologies(Resources):
             msg = 'Foma and flookup are not installed.'
             LOGGER.warning(msg)
             return {'error': msg}
+
+        LOGGER.info('self.request.registry.settings')
+        LOGGER.info(self.request.registry.settings)
+
         FOMA_WORKER_Q.put({
             'id': h.generate_salt(),
             'func': 'compile_phonology',
@@ -122,6 +128,11 @@ class Phonologies(Resources):
             inputs = json.loads(self.request.body.decode(self.request.charset))
             inputs = MorphophonemicTranscriptionsSchema.to_python(inputs)
             inputs = [h.normalize(i) for i in inputs['transcriptions']]
+
+            LOGGER.info('Phonology apply down input 1: %s', inputs[0])
+            LOGGER.info(len(inputs[0]))
+            LOGGER.info(h.get_names_and_code_points(inputs[0]))
+
             ret = phonology.applydown(inputs)
             LOGGER.info('Called apply down on the compiled phonology %d', id_)
             return ret
@@ -221,12 +232,12 @@ class Phonologies(Resources):
     def _post_create(self, resource_model):
         # ``decombine`` means separate unicode combining characters from their
         # bases
-        resource_model.save_script(decombine=True)
+        resource_model.save_script(decombine=DECOMBINE)
 
     def _post_update(self, phonology, prev_phonology_dict):
         # Note: the Pylons version was not passing ``True`` in the decombine
         # param here. Why the inconsistency?
-        phonology.save_script(decombine=True)
+        phonology.save_script(decombine=DECOMBINE)
 
     def _post_delete(self, phonology):
         phonology.remove_directory()

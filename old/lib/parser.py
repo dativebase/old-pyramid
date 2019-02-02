@@ -657,59 +657,59 @@ class FomaFST(Command):
             absolute path to the compiled foma FST.
 
         """
-        LOGGER.debug('in compile')
+        LOGGER.info('FOX in compile')
         verification_string = verification_string or self.verification_string
-        LOGGER.debug('in compile got verification string: %s', verification_string)
+        LOGGER.info('in compile got verification string: %s', verification_string)
         compiler_path = self.get_file_path('compiler')
-        LOGGER.debug('in compile got compiler_path: %s', compiler_path)
+        LOGGER.info('in compile got compiler_path: %s', compiler_path)
         binary_path = self.get_file_path('binary')
-        LOGGER.debug('in compile got binary path')
+        LOGGER.info('in compile got binary path')
         binary_mod_time = self.get_modification_time(binary_path)
-        LOGGER.debug('in compile got binary mod time')
+        LOGGER.info('in compile got binary mod time')
         self.compile_succeeded = False
         try:
-            LOGGER.debug('in compile trying to compile')
+            LOGGER.info('in compile trying to compile')
             returncode, output = self.run([compiler_path], timeout)
-            LOGGER.debug('in compile got a compile rc')
+            LOGGER.info('in compile got a compile rc')
             if verification_string in output:
-                LOGGER.debug('in compile verification string in output')
+                LOGGER.info('in compile verification string in output')
                 if returncode == 0:
-                    LOGGER.debug('in compile return code is 0')
+                    LOGGER.info('in compile return code is 0')
                     if (    os.path.isfile(binary_path) and
                             binary_mod_time != self.get_modification_time(
                                 binary_path)):
-                        LOGGER.debug('in compile successful compilation')
+                        LOGGER.info('in compile successful compilation')
                         self.compile_succeeded = True
                         self.compile_message = (
                             'Compilation process terminated successfully and'
                             ' new binary file was written.')
                     else:
-                        LOGGER.debug('in compile no new binary file ?!...')
+                        LOGGER.info('in compile no new binary file ?!...')
                         self.compile_message = (
                             'Compilation process terminated successfully yet no'
                             ' new binary file was written.')
                 else:
-                    LOGGER.debug('in compile compilation failed')
+                    LOGGER.info('in compile compilation failed')
                     self.compile_message = 'Compilation process failed.'
             else:
-                LOGGER.debug('in compile verification string NOT in output')
+                LOGGER.info('in compile verification string NOT in output')
                 self.compile_message = (
                     'Foma script is not a well-formed %s %s.' %
                     (self.object_type, output))[:255]
         except Exception as e:
-            LOGGER.debug('in compile got exception %s %s',
+            LOGGER.info('in compile got exception %s %s',
                          e, e.__class__.__name__)
             self.compile_message = 'Compilation attempt raised an error.'
         if self.compile_succeeded:
-            LOGGER.debug('in compile compile succeeded')
+            LOGGER.info('in compile compile succeeded')
             os.chmod(binary_path, 0o744)
         else:
-            LOGGER.debug('in compile compile failed')
+            LOGGER.info('in compile compile failed')
             try:
                 os.remove(binary_path)
             except Exception:
                 pass
-        LOGGER.debug('in compile done, changing uuid compile_attempt attr')
+        LOGGER.info('in compile done, changing uuid compile_attempt attr')
         self.compile_attempt = str(uuid4())
 
     @staticmethod

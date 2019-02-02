@@ -339,8 +339,14 @@ def override_settings_with_env_vars(settings):
 def main(global_config, **settings):
     """This function returns a Pyramid WSGI application."""
     # pylint: disable=unused-argument
+
+    print('global_config')
+    import pprint
+    pprint.pprint(global_config)
+
     start_foma_worker()
     settings = override_settings_with_env_vars(settings)
+    settings.update(global_config)
     config = Configurator(settings=settings, request_factory=MyRequest)
     config.include('.routes')
     config.add_renderer('json', get_json_renderer())
