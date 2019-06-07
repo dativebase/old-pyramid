@@ -48,7 +48,6 @@ class Morphemelanguagemodels(Resources):
             'morpheme_language_model_id': langmod.id,
             'user_id': self.logged_in_user.id,
             'timeout': oldc.MORPHEME_LANGUAGE_MODEL_GENERATE_TIMEOUT,
-            'config_path': self.request.registry.settings['__file__'],
             'settings': self.request.registry.settings
         }
         FOMA_WORKER_Q.put({
@@ -120,7 +119,6 @@ class Morphemelanguagemodels(Resources):
             'morpheme_language_model_id': langmod.id,
             'user_id': self.logged_in_user.id,
             'timeout': oldc.MORPHEME_LANGUAGE_MODEL_GENERATE_TIMEOUT,
-            'config_path': self.request.registry.settings['__file__'],
             'settings': self.request.registry.settings
         }
         FOMA_WORKER_Q.put({
