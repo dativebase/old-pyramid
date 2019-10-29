@@ -9,7 +9,7 @@ markdown==2.6.7
 # https://launchpad.net/oursql/py3k/py3k-0.9.4/+download/oursql-0.9.4.zip
 git+https://github.com/sqlobject/oursql.git@py3k
 passlib==1.6.5
-Pillow==3.4.2
+Pillow==6.2.0
 pyramid==1.7.3
 pyramid_beaker==0.8
 pyramid_debugtoolbar==3.0.4
