@@ -21,8 +21,8 @@ RUN set -ex \
     && add-apt-repository "deb http://archive.ubuntu.com/ubuntu/ xenial multiverse" \
     && add-apt-repository "deb http://archive.ubuntu.com/ubuntu/ xenial-security universe" \
     && add-apt-repository "deb http://archive.ubuntu.com/ubuntu/ xenial-updates multiverse" \
-    && add-apt-repository "ppa:jonathonf/ffmpeg-3" \
-    && add-apt-repository "ppa:jonathonf/python-3.6" \
+    && add-apt-repository "ppa:jonathonf/ffmpeg-4" \
+    && add-apt-repository "ppa:deadsnakes/ppa" \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
@@ -82,26 +82,12 @@ RUN set -ex \
     && cd .. \
     && rm -r foma-0.9.18*
 
-# Install DRUtils (for Tgrep2)
-RUN set -ex \
-    && curl -L http://tedlab.mit.edu/~dr/DRUtils/drutils.tgz --output drutils.tgz \
-    && tar -xvzf drutils.tgz \
-    && cd DRUtils \
-    && sed -i '/CC = gcc -Wall -O4 -march=i486/c\CC = gcc -Wall -O4' Makefile \
-    && make \
-    && cd .. \
-    && rm drutils.tgz
-
 # Install Tgrep2 (PS tree search)
 RUN set -ex \
-    && curl -L http://tedlab.mit.edu/~dr/Tgrep2/tgrep2.tgz --output tgrep2.tgz \
-    && tar -xvzf tgrep2.tgz \
-    && cd TGrep2 \
-    && sed -i '/UTIL_DIR= ${HOME}\/DRUtils/c\UTIL_DIR= /DRUtils' Makefile \
-    && make \
-    && ln -s /TGrep2/tgrep2 /usr/local/sbin/tgrep2 \
-    && cd .. \
-    && rm tgrep2.tgz
+    && git clone https://github.com/dativebase/tgrep2.git \
+    && cd tgrep2 \
+    && make install \
+    && cd ..
 
 # Install MITLM (LMs)
 RUN set -ex \
