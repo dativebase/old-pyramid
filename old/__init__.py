@@ -163,6 +163,10 @@ class BeakerSessionFactoryRegistry(object):
         try:
             return self.session_factories[old_name]
         except KeyError:
+            # The following changes may be needed. See this issue in the
+            # original OLD: https://github.com/dativebase/old/issues/94
+            # settings['session.samesite'] = 'None'
+            # settings['session.secure'] = True
             self.session_factories[old_name] = session_factory_from_settings(
                 settings)
             return self.session_factories[old_name]
