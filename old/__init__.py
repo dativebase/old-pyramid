@@ -302,11 +302,14 @@ ENV_VAR_MAP = {
 }
 
 
+DB_SCHEME = 'mysql+pymysql'
+
+
 def build_sqlalchemy_url(settings):
     old_name = settings['old_name']
     if settings['db.rdbms'] == 'mysql':
         return urlunparse(ParseResult(
-            scheme='mysql+oursql',
+            scheme=DB_SCHEME,
             netloc='{user}:{password}@{host}:{port}'.format(
                 user=settings['db.user'],
                 password=settings['db.password'],
