@@ -105,7 +105,6 @@ class Morphologies(Resources):
                 'compile': compile_,
                 'user_id': self.logged_in_user.id,
                 'timeout': oldc.MORPHOLOGY_COMPILE_TIMEOUT,
-                'config_path': self.request.registry.settings['__file__'],
                 'settings': self.request.registry.settings
             }
         })
