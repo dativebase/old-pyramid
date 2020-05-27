@@ -698,7 +698,7 @@ class Resources(abc.ABC, ReadonlyResources):
         :param dict data: the data for the resource to be created.
         :returns: an SQLAlchemy model object representing the resource.
         """
-        return self.model_cls(**self._get_create_data(data))
+        return self.model_cls(**self._get_create_data(data))  # pylint: disable=not-callable
 
     def _post_create(self, resource_model):
         """Perform some action after creating a new resource model in the
