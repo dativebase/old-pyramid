@@ -6,7 +6,7 @@ import logging
 from formencode.validators import Invalid
 import inflect
 from sqlalchemy.sql import asc
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, InternalError
 
 from old.lib.constants import (
     ALLOWED_FILE_TYPES,
@@ -254,7 +254,7 @@ class ReadonlyResources:
         query = self._filter_query(query)
         try:
             ret = add_pagination(query, python_search_params.get('paginator'))
-        except OperationalError:
+        except (OperationalError, InternalError):
             self.request.response.status_int = 400
             msg = ('The specified search parameters generated an invalid'
                    ' database query')
