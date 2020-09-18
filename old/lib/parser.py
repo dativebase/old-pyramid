@@ -42,13 +42,14 @@ import errno
 from itertools import product
 import logging
 import os
+import platform
 import pickle
 import re
 from shutil import (
     copyfile,
     rmtree
 )
-from signal import SIGKILL
+import signal
 from subprocess import Popen, PIPE
 import threading
 import unicodedata
@@ -370,14 +371,21 @@ class Command:
 
     def kill_process(self, process):
         """Kill ``process`` and all its child processes."""
-        pid = process.pid
-        pids = [pid]
-        pids.extend(self.get_process_children(pid))
-        for pid in pids:
-            try:
-                os.kill(pid, SIGKILL)
-            except OSError:
-                pass
+        
+        # Obtain PID of Operation System.
+        osPID = os.getpid()
+        
+        if platform.system() is not 'Windows':
+            pid = process.pid
+            pids = [pid]
+            pids.extend(self.get_process_children(pid))
+            for pid in pids:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except OSError:
+                    pass
+        else:
+            os.kill(osPID, signal.SIGTERM)
 
     def get_process_children(self, pid):
         """Return list of pids of child processes of ``pid``.
