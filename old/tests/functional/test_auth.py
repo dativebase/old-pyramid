@@ -14,6 +14,7 @@
 
 import json
 import logging
+import os
 
 from old.lib.dbutils import DBUtils
 import old.models as old_models
@@ -100,6 +101,13 @@ class TestLogin(TestView):
         http://webcache.googleusercontent.com/search?q=cache:http://blog.subtlecoolness.com/2009/06/enabling-postfix-sendmail-on-mac-os-x.html
         http://www.agileapproach.com/blog-entry/how-enable-local-smtp-server-postfix-os-x-leopard.
         """
+        if os.getenv('SMTP_SERVER_ABSENT', '0') == '1':
+            msg = 'Not running this test because there is no SMTP server available'
+            LOGGER.info(msg)
+            print(msg)
+            assert True
+            return
+        assert False
 
         LOGGER.info('MUSTANG')
         print('MUSTANG')

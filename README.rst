@@ -1,5 +1,6 @@
-.. image:: https://travis-ci.org/dativebase/old-pyramid.svg?branch=master
-    :target: https://travis-ci.org/dativebase/old-pyramid
+.. image:: https://circleci.com/gh/dativebase/old-pyramid.svg?style=shield
+    :target: https://circleci.com/gh/dativebase/old-pyramid
+
 
 ================================================================================
   The Online Linguistic Database (OLD)

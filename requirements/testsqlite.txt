@@ -1,6 +1,7 @@
--r basemysql.txt
+-r base.txt
 
 pylint==1.8.1
-pytest>=3.6
+pytest==3.0.3
 pytest-cov
 WebTest >= 1.3.1
+

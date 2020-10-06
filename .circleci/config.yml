@@ -1,0 +1,56 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: "jrwdunham/old-pyramid:dev_update-dependencies-re-dativetop"
+        environment:
+          OLD_DB_RDBMS: "mysql"
+          OLD_DB_USER: "old"
+          OLD_DB_PASSWORD: "demo"
+          OLD_DB_HOST: "127.0.0.1"
+          OLD_DB_PORT: "3306"
+          OLD_NAME_TESTS: "oldtests"
+          OLD_PERMANENT_STORE: "/var/old/store"
+          OLD_SESSION_LOCK_DIR: "/var/old/data/sessions/lock"
+          OLD_PORT: "8000"
+          OLD_PASSWORD_RESET_SMTP_SERVER: "10.0.0.1"
+      - image: "percona:5.6"
+        environment:
+          MYSQL_ROOT_PASSWORD: "12345"
+    steps:
+      - checkout
+      - run:
+          name: "install dockerize"
+          command: "curl -L https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz --output dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz"
+          environment:
+            DOCKERIZE_VERSION: v0.3.0
+      - run:
+          name: "Wait for DB"
+          command: "dockerize -wait tcp://localhost:3306 -timeout 1m"
+      - run:
+          name: "Create Mysql test databases"
+          command: "mysql -h 127.0.0.1 -u root -p12345 -e \"DROP DATABASE IF EXISTS oldtests; CREATE DATABASE oldtests DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin; GRANT ALL ON oldtests.* TO 'old'@'%' IDENTIFIED BY 'demo'; DROP DATABASE IF EXISTS oldtests2; CREATE DATABASE oldtests2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin; GRANT ALL ON oldtests2.* TO 'old'@'%' IDENTIFIED BY 'demo';\""
+      - run:
+          name: "Setup custom environment variables"
+          command: echo 'export SMTP_SERVER_ABSENT="1"' >> $BASH_ENV
+      - run:
+          name: "What was my custom environment variable?"
+          command: echo ${MY_ENV_VAR}
+      - run:
+          name: "Run the OLD tests"
+          environment:
+            OLD_NAME_TESTS: "oldtests"
+            OLD_NAME_2_TESTS: "oldtests2"
+            OLD_PERMANENT_STORE: "/var/old/store"
+            OLD_TESTING: 1
+            SMTP_SERVER_ABSENT: "1"
+          command: "/venv/bin/pytest /usr/src/old/old/tests/ -v"
+          # command: "SMTP_SERVER_ABSENT=1 bash -c 'venv/bin/pytest /usr/src/old/old/tests/ -v'"
+          # command: "SMTP_SERVER_ABSENT=1 bash -c '/venv/bin/pytest /usr/src/old/old/tests/functional/test_auth.py::TestLogin::test_email_reset_password -v'"
+
+workflows:
+  version: 2
+  "test_old":
+    jobs:
+      - test
