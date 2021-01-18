@@ -26,6 +26,7 @@ import datetime
 import errno
 import gzip
 import logging
+import mimetypes
 import os
 from random import choice, shuffle
 import re
@@ -408,6 +409,17 @@ def get_RDBMS_name(settings):
 ################################################################################
 # File-specific data & functionality
 ################################################################################
+
+
+def guess_type(filename):
+    guess = mimetypes.guess_type(filename)[0]
+    if guess:
+        return guess.replace('audio/wav', 'audio/x-wav')
+    # Hack for Windows environments where .ogg files may not be recognized
+    _, ext = os.path.splitext(filename)
+    if ext == '.ogg':
+        return 'audio/ogg'
+    return guess
 
 
 def is_audio_video_file(file_):

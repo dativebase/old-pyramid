@@ -21,6 +21,9 @@ docs/_static
 docs/_templates
 docs/_themes
 
+venv/
+venv37/
+venv37update/
 env/
 .tox/
 

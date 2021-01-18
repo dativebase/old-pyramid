@@ -15,7 +15,6 @@
 from base64 import b64decode
 import json
 import logging
-from mimetypes import guess_type
 try:
     from magic import Magic
 except ImportError:
@@ -44,6 +43,7 @@ from sqlalchemy.sql import and_
 import old.lib.bibtex as bibtex
 import old.lib.constants as oldc
 import old.lib.helpers as h
+import old.lib.utils as u
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 import old.models as old_models
 
@@ -392,8 +392,9 @@ class FormIdsSchemaNullable(Schema):
 
 
 def get_MIME_type_from_contents(contents):
-    return Magic(mime=True).from_buffer(contents).replace('application/ogg',
-                                                          'audio/ogg')
+    return Magic(mime=True).from_buffer(contents).replace(
+        'application/ogg', 'audio/ogg').replace(
+            'audio/wav', 'audio/x-wav')
 
 
 class ValidBase64EncodedFile(String):
@@ -423,7 +424,7 @@ class ValidFileName(UnicodeString):
     }
 
     def _convert_to_python(self, value, state):
-        MIME_type_from_ext = guess_type(value)[0]
+        MIME_type_from_ext = u.guess_type(value)
         if MIME_type_from_ext in oldc.ALLOWED_FILE_TYPES:
             return h.clean_and_secure_filename(value)
         else:
@@ -458,7 +459,7 @@ class AddMIMETypeToValues(FancyValidator):
                            ' type (%(x)s vs. %(y)s, respectively).'
     }
     def _convert_to_python(self, values, state):
-        MIME_type_from_filename = guess_type(values['filename'])[0]
+        MIME_type_from_filename = u.guess_type(values['filename'])
         if 'base64_encoded_file' in values:
             contents = values['base64_encoded_file'][:1024]
         else:

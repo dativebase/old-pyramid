@@ -19,7 +19,6 @@ import logging
 import os
 import pprint
 
-from mimetypes import guess_type
 try:
     import Image
 except ImportError:
@@ -32,6 +31,7 @@ import old.lib.constants as oldc
 from old.lib.dbutils import DBUtils
 import old.lib.helpers as h
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
+import old.lib.utils as u
 import old.models.modelbuilders as omb
 import old.models as old_models
 from old.models import File
@@ -44,6 +44,9 @@ LOGGER = logging.getLogger(__name__)
 # given (resource) route name plus path variables as **kwargs
 url = File._url(old_name=TestView.old_name)
 forms_url = old_models.Form._url(old_name=TestView.old_name)
+
+
+audio_wav_mimetype = 'audio/x-wav'
 
 
 class TestFilesView(TestView):
@@ -324,7 +327,7 @@ class TestFilesView(TestView):
         resp = response.json_body
         file_count = dbsession.query(old_models.File).count()
         assert resp['filename'] == 'old_test.wav'
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Admin'
         assert file_count == 1
@@ -447,7 +450,7 @@ class TestFilesView(TestView):
         assert '\u201Cold_te\u0301st\u201D.wav' in os.listdir(self.files_path)
         assert resp['filename'] == '\u201Cold_te\u0301st\u201D.wav'
         assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Admin'
         assert file_count == 4
@@ -477,7 +480,7 @@ class TestFilesView(TestView):
         file_count = dbsession.query(old_models.File).count()
         new_files_dir_list = os.listdir(self.files_path)
         assert file_count == 4
-        assert resp['errors'] == "The file extension does not match the file's true type (audio/x-wav vs. text/html, respectively)."
+        assert resp['errors'] == "The file extension does not match the file's true type ({} vs. text/html, respectively).".format(audio_wav_mimetype)
         assert files_dir_list == new_files_dir_list
 
         ###################################################################
@@ -500,7 +503,7 @@ class TestFilesView(TestView):
         assert resp['filename'] in os.listdir(self.files_path)
         assert resp['filename'][:8] == 'old_test'
         assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Admin'
         assert file_count == 5
@@ -525,7 +528,7 @@ class TestFilesView(TestView):
         assert 'wavfile.wav' in os.listdir(self.files_path)
         assert resp['filename'] == 'wavfile.wav'
         assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Admin'
         assert sorted([t['id'] for t in resp['tags']]) == sorted([tag1_id, tag2_id])
@@ -551,7 +554,7 @@ class TestFilesView(TestView):
         assert '..wavfile.wav' in binary_files_list
         assert resp['filename'] == '..wavfile.wav'
         assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Admin'
         assert file_count == 7
@@ -569,7 +572,7 @@ class TestFilesView(TestView):
         new_file_count = dbsession.query(old_models.File).count()
         new_files_dir_list = os.listdir(self.files_path)
         assert file_count == new_file_count
-        assert resp['errors'] == "The file extension does not match the file's true type (audio/x-wav vs. text/html, respectively)."
+        assert resp['errors'] == "The file extension does not match the file's true type ({} vs. text/html, respectively).".format(audio_wav_mimetype)
         assert files_dir_list == new_files_dir_list
 
         # Try the same as above but instead of providing a deceitful filename in
@@ -583,7 +586,7 @@ class TestFilesView(TestView):
         new_file_count = dbsession.query(old_models.File).count()
         new_files_dir_list = os.listdir(self.files_path)
         assert file_count == new_file_count
-        assert resp['errors'] == "The file extension does not match the file's true type (audio/x-wav vs. text/html, respectively)."
+        assert resp['errors'] == "The file extension does not match the file's true type ({} vs. text/html, respectively).".format(audio_wav_mimetype)
         assert files_dir_list == new_files_dir_list
 
         ########################################################################
@@ -613,7 +616,7 @@ class TestFilesView(TestView):
         assert resp['filename'] is None
         assert resp['parent_file']['filename'] == '\u201Cold_te\u0301st\u201D.wav'
         assert resp['name'] == 'subinterval_x'
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] is None
         assert resp['parent_file']['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Admin'
@@ -845,7 +848,7 @@ class TestFilesView(TestView):
         resp = response.json_body
         file_count = dbsession.query(old_models.File).count()
         assert resp['filename'] == 'old_test.wav'
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Admin'
         assert file_count == 1
@@ -1061,7 +1064,7 @@ class TestFilesView(TestView):
                 self.config.get('preferred_lossy_audio_format', 'ogg'))
             assert file_count + 1 == new_file_count
             assert resp['filename'] == medium_wav_filename
-            assert resp['MIME_type'] == 'audio/x-wav'
+            assert resp['MIME_type'] == audio_wav_mimetype
             assert resp['size'] == medium_wav_file_size
             assert resp['enterer']['first_name'] == 'Admin'
             assert response.content_type == 'application/json'
@@ -1093,7 +1096,7 @@ class TestFilesView(TestView):
                 self.config.get('preferred_lossy_audio_format', 'ogg'))
             assert file_count + 1 == new_file_count
             assert resp['filename'] == long_wav_filename
-            assert resp['MIME_type'] == 'audio/x-wav'
+            assert resp['MIME_type'] == audio_wav_mimetype
             assert resp['size'] == long_wav_file_size
             assert resp['enterer']['first_name'] == 'Admin'
             assert response.content_type == 'application/json'
@@ -1309,7 +1312,7 @@ class TestFilesView(TestView):
         assert resp['filename'] == 'multipart.wav'
         assert resp['filename'] in os.listdir(self.files_path)
         assert resp['name'] == resp['filename']     # name value set in files controller, user can't change this
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['enterer']['first_name'] == 'Admin'
         assert response.content_type == 'application/json'
 
@@ -1330,7 +1333,7 @@ class TestFilesView(TestView):
         assert resp['description'] == 'plain updated'
         assert resp['speaker']['id'] == speaker_id
         assert resp['filename'] == resp['name'] == 'multipart.wav'
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['enterer']['first_name'] == 'Admin'
         assert response.content_type == 'application/json'
 
@@ -1360,7 +1363,7 @@ class TestFilesView(TestView):
         assert resp['filename'] is None
         assert resp['name'] == 'anyname'
         assert resp['parent_file']['filename'] == 'multipart.wav'
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] is None
         assert resp['parent_file']['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Contributor'
@@ -1392,7 +1395,7 @@ class TestFilesView(TestView):
         assert resp['tags'] == []
         assert resp['description'] == 'abc to def'
         assert resp['speaker'] is None
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert response.content_type == 'application/json'
 
         # Attempt a vacuous update and expect an error message.
@@ -1993,7 +1996,7 @@ class TestFilesView(TestView):
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert wav_file_base64.encode('utf8') == response_base64
-        assert guess_type(wav_filename)[0] == response.headers['Content-Type']
+        assert u.guess_type(wav_filename) == response.headers['Content-Type']
         assert wav_file_size == int(response.headers['Content-Length'])
 
         # Attempt to retrieve the file without authentication and expect to
@@ -2070,7 +2073,7 @@ class TestFilesView(TestView):
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert wav_file_base64.encode('utf8') == response_base64
-        assert guess_type(wav_filename)[0] == response.headers['Content-Type']
+        assert u.guess_type(wav_filename) == response.headers['Content-Type']
 
         # Retrieve the reduced file data of the wav file created above.
         if (    self.create_reduced_size_file_copies and
@@ -2081,7 +2084,8 @@ class TestFilesView(TestView):
                 extra_environ=extra_environ_admin)
             response_base64 = b64encode(response.body)
             assert len(wav_file_base64) > len(response_base64)
-            assert response.content_type == guess_type('x.%s' % self.preferred_lossy_audio_format)[0]
+            assert response.content_type == u.guess_type(
+                'x.%s' % self.preferred_lossy_audio_format)
 
         else:
             response = self.app.get(
@@ -2102,7 +2106,8 @@ class TestFilesView(TestView):
             sr_response_base64 = b64encode(response.body)
             assert len(wav_file_base64) > len(sr_response_base64)
             assert sr_response_base64 == response_base64
-            assert response.content_type == guess_type('x.%s' % self.preferred_lossy_audio_format)[0]
+            assert response.content_type == u.guess_type(
+                'x.%s' % self.preferred_lossy_audio_format)
         else:
             response = self.app.get(
                 '/{}/files/{}/serve_reduced'.format(self.old_name, sr_file_id),
@@ -2135,7 +2140,7 @@ class TestFilesView(TestView):
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert jpg_file_base64.encode('utf8') == response_base64
-        assert guess_type(jpg_filename)[0] == response.headers['Content-Type']
+        assert u.guess_type(jpg_filename) == response.headers['Content-Type']
         assert jpg_file_size == int(response.headers['Content-Length'])
 
         # Get the reduced image file's contents
@@ -2146,7 +2151,7 @@ class TestFilesView(TestView):
                 extra_environ=extra_environ_admin)
             response_base64 = b64encode(response.body)
             assert len(jpg_file_base64) > len(response_base64)
-            assert guess_type(jpg_filename)[0] == response.headers['Content-Type']
+            assert u.guess_type(jpg_filename) == response.headers['Content-Type']
         else:
             response = self.app.get(
                 '/{}/files/{}/serve_reduced'.format(self.old_name, jpg_file_id),
@@ -2181,7 +2186,7 @@ class TestFilesView(TestView):
             headers=self.json_headers, extra_environ=extra_environ_admin)
         response_base64 = b64encode(response.body)
         assert ogg_file_base64.encode('utf8') == response_base64
-        assert guess_type(ogg_filename)[0] == response.headers['Content-Type']
+        assert u.guess_type(ogg_filename) == response.headers['Content-Type']
         assert ogg_file_size == int(response.headers['Content-Length'])
 
         # Attempt to get the reduced image file's contents and expect to fail
@@ -2357,7 +2362,7 @@ class TestFilesView(TestView):
         file_count = new_file_count
         new_file_count = dbsession.query(old_models.File).count()
         assert resp['filename'] == filename
-        assert resp['MIME_type'] == 'audio/x-wav'
+        assert resp['MIME_type'] == audio_wav_mimetype
         assert resp['size'] == wav_file_size
         assert resp['enterer']['first_name'] == 'Admin'
         assert new_file_count == file_count + 1

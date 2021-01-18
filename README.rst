@@ -255,6 +255,16 @@ linting tests::
 
     $ tox
 
+To run the tests against an SQLite database (using fish shell syntax)::
+
+    $ set -x OLD_NAME_TESTS oldtests; \
+          set -x OLD_PERMANENT_STORE test-store; \
+          set -x OLD_TESTING 1; \
+          set -x OLD_DB_RDBMS sqlite; \
+          set -x OLD_SESSION_TYPE file; \
+          set -x SMTP_SERVER_ABSENT 1; \
+          pytest old/tests -v -x
+
 
 .. _`OLD Web Site`: http://www.onlinelinguisticdatabase.org/
 .. _`Official OLD Documentation`: http://online-linguistic-database.readthedocs.org/en/latest/

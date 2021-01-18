@@ -52,6 +52,7 @@ ALLOWED_FILE_TYPES = (
     'image/png',
     'audio/mpeg',
     'audio/ogg',
+    'audio/wav',
     'audio/x-wav',
     'video/mpeg',
     'video/mp4',

@@ -39,17 +39,28 @@ class TestPhonologiesView(TestView):
     def setUp(self):
         super().setUp()
         with codecs.open(self.test_phonology_script_path, 'r', 'utf8') as filei:
-            self.test_phonology_script = h.normalize(filei.read())
-        with codecs.open(self.test_malformed_phonology_script_path, 'r', 'utf8') as filei:
-            self.test_malformed_phonology_script = h.normalize(filei.read())
-        with codecs.open(self.test_phonology_no_phonology_script_path, 'r', 'utf8') as filei:
-            self.test_phonology_no_phonology_script = h.normalize(filei.read())
-        with codecs.open(self.test_medium_phonology_script_path, 'r', 'utf8') as filei:
-            self.test_medium_phonology_script = h.normalize(filei.read())
-        with codecs.open(self.test_large_phonology_script_path, 'r', 'utf8') as filei:
-            self.test_large_phonology_script = h.normalize(filei.read())
-        with codecs.open(self.test_phonology_testless_script_path, 'r', 'utf8') as filei:
-            self.test_phonology_testless_script = h.normalize(filei.read())
+            self.test_phonology_script = h.normalize(filei.read()).replace(
+                '\r', '')
+        with codecs.open(self.test_malformed_phonology_script_path,
+                         'r', 'utf8') as filei:
+            self.test_malformed_phonology_script = h.normalize(
+                filei.read()).replace('\r', '')
+        with codecs.open(self.test_phonology_no_phonology_script_path,
+                         'r', 'utf8') as filei:
+            self.test_phonology_no_phonology_script = h.normalize(
+                filei.read()).replace('\r', '')
+        with codecs.open(self.test_medium_phonology_script_path,
+                         'r', 'utf8') as filei:
+            self.test_medium_phonology_script = h.normalize(
+                filei.read()).replace('\r', '')
+        with codecs.open(self.test_large_phonology_script_path,
+                         'r', 'utf8') as filei:
+            self.test_large_phonology_script = h.normalize(
+                filei.read()).replace('\r', '')
+        with codecs.open(self.test_phonology_testless_script_path,
+                         'r', 'utf8') as filei:
+            self.test_phonology_testless_script = h.normalize(
+                filei.read()).replace('\r', '')
 
     # Clear all models in the database except Language; recreate the phonologies.
     def tearDown(self):
