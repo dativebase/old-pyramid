@@ -63,7 +63,7 @@ requires = [
     'pyramid_beaker',
     'pyramid_debugtoolbar',
     'pyramid_jinja2',
-    'python-magic',
+    # 'python-magic',
     'requests',
     'SQLAlchemy',
     'waitress',

@@ -17,7 +17,9 @@ import codecs
 import json
 import logging
 import os
+import pytest
 from subprocess import call, check_output, Popen, PIPE
+import sys
 from time import sleep
 
 from sqlalchemy.sql import and_
@@ -47,10 +49,11 @@ LOGGER = logging.getLogger(__name__)
 url = Corpus._url(old_name=TestView.old_name)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 class TestCorporaLargeView(TestView):
     """Test the ``CorporaController`` making use of large "lorem ipsum"
     datasets.
-    Note: this test class is different from normal ones because it requries that
+    Note: this test class is different from normal ones because it requires that
     ``test_aaa_initialize`` be run first and ``test_zzz_cleanup`` be run last.
     """
 

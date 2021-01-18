@@ -22,7 +22,6 @@
 import datetime
 import json
 import logging
-from mimetypes import guess_type
 from random import sample
 import os
 import shutil
@@ -44,6 +43,7 @@ from old.lib.schemata import (
     FileUpdateSchema,
 )
 from old.lib.resize import save_reduced_copy
+import old.lib.utils as u
 from old.models import File
 from old.views.resources import (
     Resources,
@@ -527,7 +527,7 @@ class Files(Resources):
                     'error': 'There is no size-reduced copy of file %s' %
                              id_}
             file_path = os.path.join(files_dir, 'reduced_files', filename)
-            content_type = guess_type(filename)[0]
+            content_type = u.guess_type(filename)
         else:
             file_path = os.path.join(files_dir, file_.filename)
             content_type = file_.MIME_type

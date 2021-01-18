@@ -1,6 +1,39 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@2.4.0
+
 jobs:
+
+  test_windows:
+    executor:
+      name: win/default
+      size: "medium"
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - old-{{ checksum "requirements/testwindows.txt" }}
+      - run:
+          name: "Install Dependencies"
+          command: |
+            pip.exe uninstall -y python-magic
+            pip.exe install -r requirements\testwindows.txt
+            pip.exe install -e .
+      - save_cache:
+          key: old-{{ checksum "requirements/testwindows.txt" }}
+          paths:
+            - C:\tools\miniconda3\lib\site-packages
+      - run:
+          name: "Run Tests"
+          environment:
+            OLD_NAME_TESTS: "oldtests"
+            OLD_PERMANENT_STORE: "test-store"
+            OLD_TESTING: "1"
+            OLD_DB_RDBMS: "sqlite"
+            OLD_SESSION_TYPE: "file"
+            SMTP_SERVER_ABSENT: "1"
+          command: python -m pytest old\tests -v -x
   test:
     docker:
       - image: "jrwdunham/old-pyramid:dev_update-dependencies-re-dativetop"
@@ -35,9 +68,6 @@ jobs:
           name: "Setup custom environment variables"
           command: echo 'export SMTP_SERVER_ABSENT="1"' >> $BASH_ENV
       - run:
-          name: "What was my custom environment variable?"
-          command: echo ${MY_ENV_VAR}
-      - run:
           name: "Run the OLD tests"
           environment:
             OLD_NAME_TESTS: "oldtests"
@@ -46,11 +76,12 @@ jobs:
             OLD_TESTING: 1
             SMTP_SERVER_ABSENT: "1"
           command: "/venv/bin/pytest /usr/src/old/old/tests/ -v"
-          # command: "SMTP_SERVER_ABSENT=1 bash -c 'venv/bin/pytest /usr/src/old/old/tests/ -v'"
-          # command: "SMTP_SERVER_ABSENT=1 bash -c '/venv/bin/pytest /usr/src/old/old/tests/functional/test_auth.py::TestLogin::test_email_reset_password -v'"
 
 workflows:
   version: 2
-  "test_old":
+  test_windows:
+    jobs:
+      - test_windows
+  test:
     jobs:
       - test

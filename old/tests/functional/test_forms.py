@@ -17,7 +17,6 @@ import datetime
 import json
 import logging
 import os
-import pprint
 from time import sleep
 from uuid import uuid4
 
@@ -697,7 +696,6 @@ class TestFormsView(TestView):
                                     extra_environ, status=400)
         resp = response.json_body
         form_count = dbsession.query(old_models.Form).count()
-        pprint.pprint(resp)
         assert ('The broad phonetic transcription you have entered is not'
                 ' valid' in resp['errors']['phonetic_transcription'])
         assert 'narrow_phonetic_transcription' not in resp
@@ -799,11 +797,6 @@ class TestFormsView(TestView):
         resp = response.json_body
         form_count = dbsession.query(old_models.Form).count()
         application_settings = db.current_app_set
-
-        x = application_settings.get_transcription_inventory(
-            'narrow_phonetic', db).input_list
-        print('KANGAROO')
-        print(x)
 
         assert ('f`ore_n' in
                 application_settings.get_transcription_inventory(
@@ -1189,7 +1182,6 @@ class TestFormsView(TestView):
             'users': db.get_mini_dicts_getter('User')(),
             'sources': db.get_mini_dicts_getter('Source')()
         }
-        pprint.pprint(data)
 
         # JSON.stringify and then re-Python-ify the data. This is what the
         # data should look like in the response to a simulated GET request.
@@ -2927,9 +2919,6 @@ class TestFormsView(TestView):
         assert [f['datetime_modified'] for f in resp2] != [
                 f['datetime_modified'] for f in resp]
 
-        print('gangsta')
-        print(resp2[0]['morpheme_break_ids'])
-
         assert resp2[0]['morpheme_break_ids'][0][0][0][1] == '1'
         assert resp2[0]['morpheme_break_ids'][0][0][0][2] == 'Num'
         assert resp2[0]['morpheme_break_ids'][0][1][0][1] == '2'
@@ -3266,8 +3255,6 @@ class TestFormsView(TestView):
         assert morpheme_break_ids[1][0][0][2] == 'N'
         assert morpheme_break_ids[2][0][0][1] == 'has'
         assert morpheme_break_ids[2][0][0][2] == 'T'
-        print('morpheme_break_ids[3][0][0][1]')
-        pprint.pprint(morpheme_break_ids)
         assert morpheme_break_ids[3][0][0][1] == 'run.PP'
         assert morpheme_break_ids[3][0][0][2] == 'V'
 

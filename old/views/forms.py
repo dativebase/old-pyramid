@@ -1022,9 +1022,13 @@ def join(bgc, morpheme_delimiters, bgc_delimiter):
 
 def _split(pattern, string):
     """Split string ``string`` into a list of strings using regex ``pattern``.
-    As of Python 3.5, ``re.split`` will raise ``ValueError`` if ``pattern`` is
-    an empty string, hence this function.
+    * In Python 3.5, ``re.split`` will raise ``ValueError`` if ``pattern`` is
+      an empty string.
+    * In Python 3.7, ``re.split`` will return some crazy shit if pattern is an
+      empty string (sigh.)
     """
+    if pattern in ('', '()'):
+        return [string]
     try:
         return re.split(pattern, string)
     except ValueError:
@@ -1046,20 +1050,20 @@ def morphemic_analysis_is_consistent(**kwargs):
     morpheme gloss counterpart.
     """
     try:
-        return (kwargs['morpheme_break'] != '' and
-                kwargs['morpheme_gloss'] != '' and
-                len(kwargs['mb_words']) == len(kwargs['mg_words']) and
-                [len(_split(kwargs['morpheme_splitter'], mbw)) for mbw in
-                 kwargs['mb_words']] ==
-                [len(_split(kwargs['morpheme_splitter'], mgw)) for mgw in
-                 kwargs['mg_words']])
+        return (
+            kwargs['morpheme_break'] != '' and
+            kwargs['morpheme_gloss'] != '' and
+            len(kwargs['mb_words']) == len(kwargs['mg_words']) and
+            [len(_split(kwargs['morpheme_splitter'], mbw)) for mbw in
+             kwargs['mb_words']] ==
+            [len(_split(kwargs['morpheme_splitter'], mgw)) for mgw in
+             kwargs['mg_words']])
     except Exception as error:
         LOGGER.debug('error in morphemic_analysis_is_consistent')
         LOGGER.debug(error)
         LOGGER.debug("kwargs['morpheme_splitter'] %s",
                      kwargs['morpheme_splitter'])
         raise
-
 
 
 def get_category_from_partial_match(morpheme_matches, gloss_matches):

@@ -37,7 +37,9 @@ class TestPhonologybackupsView(TestView):
     def setUp(self):
         super().setUp()
         self.test_phonology_script = h.normalize(
-            codecs.open(self.test_phonology_script_path, 'r', 'utf8').read())
+            codecs.open(
+                self.test_phonology_script_path, 'r', 'utf8').read()).replace(
+                    '\r', '')
 
     def tearDown(self):
         super().tearDown(dirs_to_destroy=['phonology'])
