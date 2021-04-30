@@ -708,6 +708,17 @@ def includeme(config):
                     route_name='info',
                     request_method='GET',
                     renderer='json')
+    config.add_route(
+        'last_modified',
+        '{old_name}/sync/last_modified',
+        request_method='GET')
+    config.add_view(
+        'old.views.sync.Sync',
+        attr='last_modified',
+        route_name='last_modified',
+        request_method='GET',
+        renderer='json',
+        decorator=authenticate)
     # CORS preflight OPTIONS requests: don't interfere with them
     # TODO: test if this works.
     config.add_route('cors_proceed', '/{old_name}/*garbage', request_method='OPTIONS')
