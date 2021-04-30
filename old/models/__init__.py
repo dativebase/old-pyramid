@@ -6,14 +6,14 @@ from sqlalchemy.orm import configure_mappers, sessionmaker
 
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
-from .applicationsettings import ApplicationSettings
-from .collection import Collection
+from .applicationsettings import ApplicationSettings, ApplicationSettingsUser
+from .collection import Collection, CollectionFile, CollectionTag
 from .collectionbackup import CollectionBackup
-from .corpus import Corpus
+from .corpus import Corpus, CorpusForm, CorpusTag, CorpusFile
 from .corpusbackup import CorpusBackup
 from .elicitationmethod import ElicitationMethod
-from .file import File
-from .form import Form
+from .file import File, FileTag
+from .form import Form, FormFile, FormTag, CollectionForm
 from .formbackup import FormBackup
 from .formsearch import FormSearch
 from .keyboard import Keyboard
@@ -21,7 +21,7 @@ from .language import Language
 from .model import Model
 from .morphemelanguagemodel import MorphemeLanguageModel
 from .morphemelanguagemodelbackup import MorphemeLanguageModelBackup
-from .morphologicalparser import MorphologicalParser
+from .morphologicalparser import MorphologicalParser, Parse
 from .morphologicalparserbackup import MorphologicalParserBackup
 from .morphology import Morphology
 from .morphologybackup import MorphologyBackup
@@ -34,7 +34,7 @@ from .speaker import Speaker
 from .syntacticcategory import SyntacticCategory
 from .tag import Tag
 from .translation import Translation
-from .user import User
+from .user import User, UserForm
 
 # run configure_mappers after defining all of the models to ensure
 # all relationships can be setup
