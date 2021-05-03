@@ -256,6 +256,15 @@ linting tests::
     $ tox
 
 
+Open a Shell
+================================================================================
+
+To open a Python shell/REPL::
+
+    $ pshell config.ini
+
+
+
 .. _`OLD Web Site`: http://www.onlinelinguisticdatabase.org/
 .. _`Official OLD Documentation`: http://online-linguistic-database.readthedocs.org/en/latest/
 .. _`Dative`: http://www.dative.ca/
