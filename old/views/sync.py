@@ -16,8 +16,10 @@
 helping a follower OLD to synchronize with a leader.
 """
 
+import json
 import logging
 
+from sqlalchemy import text
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 import old.models as old_models
@@ -26,7 +28,7 @@ import old.models as old_models
 LOGGER = logging.getLogger(__name__)
 
 
-RESOURCES = (
+MODELS = (
     'ApplicationSettings',
     'ApplicationSettingsUser',
     'Collection',
@@ -70,26 +72,78 @@ RESOURCES = (
 )
 
 
+TABLES = tuple(getattr(old_models, mname).__table__.name for mname in MODELS)
+
+
 class Sync:
 
     def __init__(self, request):
         self.request = request
 
     def last_modified(self):
-        """Return a map whose keys are resource names and whose values are maps
-        from row IDs to row last_modified datet-time strings.
+        """Return a dict whose keys are table names and whose values are dicts
+        from row IDs to row last_modified date-time strings.
         """
         LOGGER.info('Returning last_modified information about this OLD.')
-        # Get OLD resources as a dict from resource names to lists of resource
-        # attributes.
-        resources = {}
-        for rname in RESOURCES:
-            resources[rname] = {}
-            model_cls = getattr(old_models, rname)
-            resources[rname] = dict(self.request.dbsession.query(
-                getattr(model_cls, 'id'),
-                getattr(model_cls, 'datetime_modified')).all())
+        tables = {}
+        for tname in TABLES:
+            tables[tname] = {
+                r['id']: r['datetime_modified'] for r in
+                self.request.dbsession.execute(
+                    text('select id, datetime_modified from {}'.format(tname)))}
         LOGGER.info('Returned last_modified information about this OLD.')
-        return resources
+        return tables
 
+    def tables(self):
+        """Return the raw tables of the OLD domain model as a single JSON
+        object. The JSON request body may optionally be an object with a
+        `tables` key whose value is an object whose keys are table names and
+        whose values are the integer IDs of the table rows that are needed by
+        the requester. The response body is isomorphic to the request: an
+        object with table name keys whose values are maps from row IDs to rows
+        as flat objects.
 
+        Example request:
+
+            {'tables': {'form': [1, 8], 'corpus': [3]}}
+
+        Example response::
+
+            {'form': {'1': {'id': 1}
+                      '8': {'id': 8}},
+             'corpus': {'3': {'id': 3}}}
+        """
+        LOGGER.info('Returning all tables in this OLD matching the supplied IDs.')
+        params = json.loads(self.request.body.decode(self.request.charset))
+        tables = params.get('tables')
+        if not tables:
+            msg = "No 'tables' key present in GET params"
+            LOGGER.error(msg)
+            self.request.response.status_int = 400
+            return {'error': msg}
+        ret = {}
+        if tables == '*':
+            LOGGER.warn('Returning all tables')
+            for tname in TABLES:
+                ret[tname] = {
+                    r['id']: dict(r)
+                    for r in self.request.dbsession.execute(
+                        text('select * from {}'.format(tname)))}
+        else:
+            LOGGER.info('Returning select tables')
+            for tname in TABLES:
+                ret[tname] = {}
+                ids = tables.get(tname)
+                if not ids:
+                    continue
+                if (not isinstance(ids, list) or
+                        set([isinstance(x, int) for x in ids]) != {True}):
+                    raise ValueError('Table name must resolve to a list of integers')
+                ret[tname] = {
+                    r['id']: dict(r)
+                    for r in self.request.dbsession.execute(
+                        text('select * from {} where id in ({})'.format(
+                            tname,
+                            ', '.join(str(i) for i in ids))))}
+        LOGGER.info('Returned all tables in this OLD matching the supplied request.')
+        return ret
