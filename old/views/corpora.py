@@ -215,6 +215,10 @@ class Corpora(Resources):
         """
         corpus, id_ = self._model_from_id()
         LOGGER.info('Attempting to write corpus %s to a file on disk', id_)
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to write a corpus to file in read-only mode')
+            self.request.response.status_int = 403
+            return oldc.READONLY_MODE_MSG
         if not corpus:
             self.request.response.status_int = 404
             msg = 'There is no corpus with id {}'.format(id_)

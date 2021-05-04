@@ -84,6 +84,10 @@ class Morphologicalparsers(Resources):
             :mod:`onlinelinguisticdatabase.lib.foma_worker`.
         """
         LOGGER.info('Attempting to generate and compile a morphological parser.')
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to generate and compile a parser in read-only mode')
+            self.request.response.status_int = 403
+            return oldc.READONLY_MODE_MSG
         return self._generate_and_compile_morphparser()
 
     def generate(self):
@@ -99,6 +103,10 @@ class Morphologicalparsers(Resources):
             generation task has terminated.
         """
         LOGGER.info('Attempting to generate a morphological parser.')
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to generate a parser in read-only mode')
+            self.request.response.status_int = 403
+            return oldc.READONLY_MODE_MSG
         return self._generate_and_compile_morphparser(compile_=False)
 
     def applydown(self):

@@ -22,6 +22,7 @@ import logging
 from sqlalchemy import text
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
+import old.lib.constants as oldc
 import old.models as old_models
 
 
@@ -75,6 +76,15 @@ MODELS = (
 TABLES = tuple(getattr(old_models, mname).__table__.name for mname in MODELS)
 
 
+def date_string(date_thing):
+    """Given a "date", return a string, where the date may already be a string
+    or it may be a `datetime.datetime` instance.
+    """
+    if isinstance(date_thing, str):
+        return date_thing.replace(' ', 'T')
+    return date_thing.strftime(oldc.ISO_STRFTIME)
+
+
 class Sync:
 
     def __init__(self, request):
@@ -88,8 +98,8 @@ class Sync:
         tables = {}
         for tname in TABLES:
             tables[tname] = {
-                r['id']: r['datetime_modified'] for r in
-                self.request.dbsession.execute(
+                r['id']: date_string(r['datetime_modified']) for
+                r in self.request.dbsession.execute(
                     text('select id, datetime_modified from {}'.format(tname)))}
         LOGGER.info('Returned last_modified information about this OLD.')
         return tables

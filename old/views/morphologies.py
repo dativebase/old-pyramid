@@ -71,6 +71,10 @@ class Morphologies(Resources):
             :mod:`old.lib.foma_worker`.
         """
         LOGGER.info('Attempting to generate and compile a morphology.')
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to generate and compile a morphology in read-only mode')
+            self.request.response.status_int = 403
+            return oldc.READONLY_MODE_MSG
         return self.generate_and_compile_morphology()
 
     def generate(self):
@@ -83,6 +87,10 @@ class Morphologies(Resources):
             determine when the generation task has terminated.
         """
         LOGGER.info('Attempting to generate a morphology.')
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to generate a morphology in read-only mode')
+            self.request.response.status_int = 403
+            return oldc.READONLY_MODE_MSG
         return self.generate_and_compile_morphology(compile_=False)
 
     def generate_and_compile_morphology(self, compile_=True):

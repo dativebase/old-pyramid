@@ -15,6 +15,7 @@ from old.lib.constants import (
     JSONDecodeErrorResponse,
     LANGUAGE_MODEL_TOOLKITS,
     MARKUP_LANGUAGES,
+    READONLY_MODE_MSG,
     SYNTACTIC_CATEGORY_TYPES,
     UNAUTHORIZED_MSG,
     USER_ROLES,
@@ -447,6 +448,10 @@ class Resources(abc.ABC, ReadonlyResources):
         """
         LOGGER.info('Attempting to create a new %s.', self.hmn_member_name)
         schema = self.schema_cls()
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to create a resource in read-only mode')
+            self.request.response.status_int = 403
+            return READONLY_MODE_MSG
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
@@ -498,6 +503,10 @@ class Resources(abc.ABC, ReadonlyResources):
         """
         resource_model, id_ = self._model_from_id(eager=True)
         LOGGER.info('Attempting to update %s %s.', self.hmn_member_name, id_)
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to update a resource in read-only mode')
+            self.request.response.status_int = 403
+            return READONLY_MODE_MSG
         if not resource_model:
             self.request.response.status_int = 404
             msg = self._rsrc_not_exist(id_)
@@ -579,6 +588,10 @@ class Resources(abc.ABC, ReadonlyResources):
         """
         resource_model, id_ = self._model_from_id(eager=True)
         LOGGER.info('Attempting to delete %s %s.', self.hmn_member_name, id_)
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to delete a resource in read-only mode')
+            self.request.response.status_int = 403
+            return READONLY_MODE_MSG
         if not resource_model:
             self.request.response.status_int = 404
             msg = self._rsrc_not_exist(id_)

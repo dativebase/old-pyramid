@@ -33,6 +33,7 @@ from old.lib.constants import (
     DEFAULT_DELIMITER,
     FORM_REFERENCE_PATTERN,
     JSONDecodeErrorResponse,
+    READONLY_MODE_MSG,
     UNAUTHORIZED_MSG,
     UNKNOWN_CATEGORY,
 )
@@ -315,6 +316,10 @@ class Forms(Resources):
         """
         LOGGER.info('Attempting to remember forms for a user.')
         schema = FormIdsSchema
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to remember forms in read-only mode')
+            self.request.response.status_int = 403
+            return READONLY_MODE_MSG
         try:
             values = json.loads(self.request.body.decode(self.request.charset))
         except ValueError:
@@ -383,6 +388,10 @@ class Forms(Resources):
         """
         LOGGER.info('Attempting to update the morphological analysis-related'
                     ' attributes of all forms.')
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to update the morpheme references of the forms in read-only mode')
+            self.request.response.status_int = 403
+            return READONLY_MODE_MSG
         forms = self.db.get_forms()
         return self.update_morpheme_references_of_forms(
             self.db.get_forms(),

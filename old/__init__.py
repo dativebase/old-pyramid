@@ -281,6 +281,7 @@ ENV_VAR_MAP = {
     'OLD_NAME_2_TESTS': 'old_name_2_tests',
     'OLD_TESTING': 'testing',
     # General OLD config
+    'OLD_READONLY': 'readonly',
     'OLD_CREATE_REDUCED_SIZE_FILE_COPIES': 'create_reduced_size_file_copies',
     'OLD_PREFERRED_LOSSY_AUDIO_FORMAT': 'preferred_lossy_audio_format',
     'OLD_PERMANENT_STORE': 'permanent_store',

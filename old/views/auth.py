@@ -6,7 +6,8 @@ from formencode.validators import Invalid
 from sqlalchemy.exc import SQLAlchemyError
 
 from old.lib.constants import (
-    JSONDecodeErrorResponse
+    JSONDecodeErrorResponse,
+    READONLY_MODE_MSG
 )
 from old.lib.schemata import (
     LoginSchema,
@@ -99,6 +100,10 @@ def email_reset_password(request):
     """
     LOGGER.info('Request for a password reset.')
     schema = PasswordResetSchema()
+    if self.request.registry.settings.get('readonly') == '1':
+        LOGGER.warning('Attempt to reset a password in read-only mode')
+        self.request.response.status_int = 403
+        return READONLY_MODE_MSG
     try:
         values = json.loads(request.body.decode(request.charset))
     except ValueError:

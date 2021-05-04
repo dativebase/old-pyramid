@@ -34,6 +34,18 @@ jobs:
             OLD_SESSION_TYPE: "file"
             SMTP_SERVER_ABSENT: "1"
           command: python -m pytest old\tests -v -x
+      - run:
+          name: "Run Read-only Mode Tests"
+          environment:
+            OLD_NAME_TESTS: "oldtests"
+            OLD_PERMANENT_STORE: "test-store"
+            OLD_TESTING: "1"
+            OLD_READONLY: "1"
+            OLD_DB_RDBMS: "sqlite"
+            OLD_SESSION_TYPE: "file"
+            SMTP_SERVER_ABSENT: "1"
+          command: python -m pytest old\tests\functional\test_readonly_mode.py::TestReadonlyMode::test_readonly_mode -v -x
+
   test:
     docker:
       - image: "jrwdunham/old-pyramid:dev_update-dependencies-re-dativetop"
@@ -68,14 +80,25 @@ jobs:
           name: "Setup custom environment variables"
           command: echo 'export SMTP_SERVER_ABSENT="1"' >> $BASH_ENV
       - run:
-          name: "Run the OLD tests"
+         name: "Run the OLD tests"
+         environment:
+           OLD_NAME_TESTS: "oldtests"
+           OLD_NAME_2_TESTS: "oldtests2"
+           OLD_PERMANENT_STORE: "/var/old/store"
+           OLD_TESTING: 1
+           SMTP_SERVER_ABSENT: "1"
+         command: "/venv/bin/pytest old/tests/ -v"
+      - run:
+          name: "Run Read-only Mode Tests"
           environment:
             OLD_NAME_TESTS: "oldtests"
-            OLD_NAME_2_TESTS: "oldtests2"
-            OLD_PERMANENT_STORE: "/var/old/store"
-            OLD_TESTING: 1
+            OLD_PERMANENT_STORE: "test-store"
+            OLD_TESTING: "1"
+            OLD_READONLY: "1"
+            OLD_DB_RDBMS: "sqlite"
+            OLD_SESSION_TYPE: "file"
             SMTP_SERVER_ABSENT: "1"
-          command: "/venv/bin/pytest /usr/src/old/old/tests/ -v"
+          command: "/venv/bin/pytest old/tests/functional/test_readonly_mode.py::TestReadonlyMode::test_readonly_mode -v"
 
 workflows:
   version: 2

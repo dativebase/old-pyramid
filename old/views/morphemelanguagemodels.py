@@ -39,6 +39,10 @@ class Morphemelanguagemodels(Resources):
         """
         langmod, id_ = self._model_from_id(eager=True)
         LOGGER.info('Attempting to generate morpheme language model %s.', id_)
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to generate a LM in read-only mode')
+            self.request.response.status_int = 403
+            return oldc.READONLY_MODE_MSG
         if not langmod:
             self.request.response.status_int = 404
             msg = 'There is no morpheme language model with id {}'.format(id_)
@@ -110,6 +114,10 @@ class Morphemelanguagemodels(Resources):
         langmod, id_ = self._model_from_id(eager=True)
         LOGGER.info('Attempting to compute the perplexity of morpheme language'
                     ' model %s.', id_)
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to compute the perplexity of a LM in read-only mode')
+            self.request.response.status_int = 403
+            return oldc.READONLY_MODE_MSG
         if not langmod:
             self.request.response.status_int = 404
             msg = 'There is no morpheme language model with id {}'.format(id_)

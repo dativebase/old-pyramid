@@ -49,6 +49,16 @@ test-sqlite-part:  ## Run a particular test in a SQLite testing environment.
 		SMTP_SERVER_ABSENT=1 \
 		pytest $(part) -v -s -x
 
+test-readonly:  ## Run tests for read-only mode
+	OLD_NAME_TESTS=oldtests \
+		OLD_PERMANENT_STORE=test-store \
+		OLD_TESTING=1 \
+		OLD_READONLY=1 \
+		OLD_DB_RDBMS=sqlite \
+		OLD_SESSION_TYPE=file \
+		SMTP_SERVER_ABSENT=1 \
+		pytest old/tests/functional/test_readonly_mode.py::TestReadonlyMode::test_readonly_mode -v -s -x
+
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
