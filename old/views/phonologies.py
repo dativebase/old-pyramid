@@ -32,6 +32,10 @@ class Phonologies(Resources):
         """
         phonology, id_ = self._model_from_id(eager=True)
         LOGGER.info('Attempting to compile phonology %d', id_)
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to compile a phonology in read-only mode')
+            self.request.response.status_int = 403
+            return oldc.READONLY_MODE_MSG
         if not phonology:
             self.request.response.status_int = 404
             msg = 'There is no phonology with id {}'.format(id_)

@@ -195,6 +195,9 @@ UNAUTHORIZED_MSG = {
     'error': 'You are not authorized to access this resource.'
 }
 
+READONLY_MODE_MSG = {
+    'error': 'This OLD is running in read-only mode. All attempts to mutate data will be rejected.'
+}
 
 UNAUTHENTICATED_MSG = {
     'error': 'Authentication is required to access this resource.'

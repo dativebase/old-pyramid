@@ -22,17 +22,64 @@ from uuid import uuid4
 
 from sqlalchemy.sql import desc
 
+import old.lib.constants as oldc
 from old.lib.dbutils import DBUtils
 from old.lib.SQLAQueryBuilder import SQLAQueryBuilder
 import old.models.modelbuilders as omb
 import old.models as old_models
-import old.views.sync as sut
 from old.tests import TestView
 
 LOGGER = logging.getLogger(__name__)
 
 
 forms_url = old_models.Form._url(old_name=TestView.old_name)
+
+
+# I don't know why I am failing to import this from old.views.sync in some
+# environments but not others. At any rate, I'm just copying it here as a
+# workaround.
+MODELS = (
+    'ApplicationSettings',
+    'ApplicationSettingsUser',
+    'Collection',
+    'CollectionBackup',
+    'CollectionFile',
+    'CollectionForm',
+    'CollectionTag',
+    'Corpus',
+    'CorpusBackup',
+    'CorpusFile',
+    'CorpusForm',
+    'CorpusTag',
+    'ElicitationMethod',
+    'File',
+    'FileTag',
+    'Form',
+    'FormBackup',
+    'FormFile',
+    'FormSearch',
+    'FormTag',
+    'Keyboard',
+    # 'Language': {}, # Language is special (immutable) ...
+    'MorphemeLanguageModel',
+    'MorphemeLanguageModelBackup',
+    'MorphologicalParser',
+    'MorphologicalParserBackup',
+    'Morphology',
+    'MorphologyBackup',
+    'Orthography',
+    'Page',
+    'Parse',
+    'Phonology',
+    'PhonologyBackup',
+    'Source',
+    'Speaker',
+    'SyntacticCategory',
+    'Tag',
+    'Translation',
+    'User',
+    'UserForm',
+)
 
 
 def debug_diff(prev, curr):
@@ -85,13 +132,13 @@ class TestSyncView(TestView):
         super().tearDown(dirs_to_clear=['reduced_files_path', 'files_path'])
 
     def get_table_expected(self, mdl):
-        return {str(r.id): r.datetime_modified.isoformat().replace('T', ' ') for
+        return {str(r.id): r.datetime_modified.strftime(oldc.ISO_STRFTIME) for
                 r in self.dbsession.query(mdl).all()}
 
     def get_expected(self):
         return {getattr(old_models, m).__table__.name:
                 self.get_table_expected(getattr(old_models, m))
-                for m in sut.MODELS}
+                for m in MODELS}
 
     def test_last_modified(self):
 

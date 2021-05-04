@@ -25,7 +25,8 @@ from formencode.validators import Invalid
 from sqlalchemy.orm import subqueryload
 
 from old.lib.constants import (
-    JSONDecodeErrorResponse
+    JSONDecodeErrorResponse,
+    READONLY_MODE_MSG
 )
 import old.lib.helpers as h
 from old.models import (
@@ -127,6 +128,10 @@ class Rememberedforms(Resources):
         id_ = self.request.matchdict['id']
         LOGGER.info('Attempting to update the forms remembered by user %d.',
                     id_)
+        if self.request.registry.settings.get('readonly') == '1':
+            LOGGER.warning('Attempt to update remembered forms in read-only mode')
+            self.request.response.status_int = 403
+            return READONLY_MODE_MSG
         user = self.request.dbsession.query(
             User).options(subqueryload(User.remembered_forms)).get(id_)
         schema = FormIdsSchemaNullable
