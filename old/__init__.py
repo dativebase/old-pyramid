@@ -352,5 +352,4 @@ def main(global_config, **settings):
     config = Configurator(settings=settings, request_factory=MyRequest)
     config.include('.routes')
     config.add_renderer('json', get_json_renderer())
-    config.scan()
     return OLDHeadersMiddleware(config.make_wsgi_app())
