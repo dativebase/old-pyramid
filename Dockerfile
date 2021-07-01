@@ -10,6 +10,7 @@ RUN set -ex \
         apt-transport-https \
         curl \
         git \
+        openssh-client \
         python-software-properties \
         software-properties-common \
         libldap2-dev \
