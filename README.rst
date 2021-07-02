@@ -112,6 +112,17 @@ Confirm that Python 3.6, Ffmpeg, foma, TGrep2, and MITLM are installed::
     # estimate-ngram -h
     MIT Language Modeling Toolkit 0.4.2
 
+After building the image as per above, you may wish to push it to Docker Hub::
+
+    $ docker tag dativebase/old jrwdunham/old-pyramid:2021-07-01
+    $ docker push jrwdunham/old-pyramid:2021-07-01
+
+The above may require logging out and then back in again::
+
+    $ docker logout
+    $ docker login
+
+
 
 Installation
 ===============================================================================

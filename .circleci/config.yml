@@ -48,7 +48,7 @@ jobs:
 
   test:
     docker:
-      - image: "jrwdunham/old-pyramid:dev_update-dependencies-re-dativetop"
+      - image: "jrwdunham/old-pyramid:2021-07-01"
         environment:
           OLD_DB_RDBMS: "mysql"
           OLD_DB_USER: "old"
