@@ -359,12 +359,6 @@ class TestApplicationsettingsView(TestView):
             'There is no application settings with id %s' % id
         assert response.content_type == 'application/json'
 
-        # Delete without an id
-        response = self.app.delete(url('delete', id=''), status=404,
-                                    extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
-
         # Unauthorized delete attempt as contributor
         response = self.app.post(url('create'), params,
                                     self.json_headers, self.extra_environ_admin)
@@ -393,12 +387,6 @@ class TestApplicationsettingsView(TestView):
                             extra_environ=self.extra_environ_admin, status=404)
         assert response.json_body['error'] == 'There is no application settings with id %s' % id
         assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('show', id=''), status=404,
-                                extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
 
         # Add the default application settings.
         application_settings = add_default_application_settings(self.dbsession)
@@ -442,12 +430,6 @@ class TestApplicationsettingsView(TestView):
         assert response.json_body['error'] == \
             'There is no application settings with id %s' % id
         assert response.content_type == 'application/json'
-
-        # No id: expect 404 Not Found
-        response = self.app.get(url('edit', id=''),
-            status=404, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
 
         # Add the default application settings.
         application_settings = add_default_application_settings(self.dbsession)

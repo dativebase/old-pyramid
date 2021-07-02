@@ -1582,12 +1582,6 @@ class TestFilesView(TestView):
         assert 'There is no file with id %s' % id_ in response.json_body['error']
         assert response.content_type == 'application/json'
 
-        # Delete without an id
-        response = self.app.delete(url('delete', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
-
         # Create and delete a file with unicode characters in the file name
         extra_environ = {'test.authentication.id': my_contributor_id}
         params = self.file_create_params_base64.copy()
@@ -1737,12 +1731,6 @@ class TestFilesView(TestView):
         assert 'There is no file with id %s' % id in response.json_body['error']
         assert response.content_type == 'application/json'
 
-        # No id
-        response = self.app.get(url('show', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
-
         # Now test that the restricted tag is working correctly.
         # First get the default contributor's id.
         users = db.get_users()
@@ -1883,12 +1871,6 @@ class TestFilesView(TestView):
             status=404)
         assert 'There is no file with id %s' % id_ in response.json_body['error']
         assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('edit', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
 
         # Valid id
         response = self.app.get(url('edit', id=restricted_file_id),

@@ -867,12 +867,6 @@ class TestMorphologiesView(TestView):
         assert 'There is no morphology with id %s' % id in response.json_body['error']
         assert response.content_type == 'application/json'
 
-        # No id
-        response = self.app.get(url('show', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
         # Valid id
         response = self.app.get(
             url('show', id=morphologies[0].id), headers=self.json_headers,
@@ -909,12 +903,6 @@ class TestMorphologiesView(TestView):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert 'There is no morphology with id %s' % id in response.json_body['error']
-        assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('edit', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
         # Valid id

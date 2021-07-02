@@ -302,15 +302,6 @@ class TestTagsView(TestView):
                 resp['error'])
         assert response.content_type == 'application/json'
 
-        # Delete without an id
-        tag_id = ''
-        response = self.app.delete(
-            url('delete', id=tag_id), status=404, headers=self.json_headers,
-            extra_environ=self.extra_environ_admin)
-        resp = response.json_body
-        assert resp['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
         # TODO: uncomment this once forms view implemented.
         """
         # Create a form, tag it, delete the tag and show that the form no
@@ -356,14 +347,6 @@ class TestTagsView(TestView):
         assert 'There is no tag with id %s' % id_ in resp['error']
         assert response.content_type == 'application/json'
 
-        # No id
-        response = self.app.get(
-            url('show', id=''), status=404, headers=self.json_headers,
-            extra_environ=self.extra_environ_admin)
-        resp = response.json_body
-        assert resp['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
         # Valid id
         response = self.app.get(
             url('show', id=tag_id), headers=self.json_headers,
@@ -407,14 +390,6 @@ class TestTagsView(TestView):
             extra_environ=self.extra_environ_admin, status=404)
         resp = response.json_body
         assert 'There is no tag with id %s' % id_ in resp['error']
-        assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(
-            url('edit_tag', id=''), status=404, headers=self.json_headers,
-            extra_environ=self.extra_environ_admin)
-        resp = response.json_body
-        assert resp['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
         # Valid id
