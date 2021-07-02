@@ -107,10 +107,6 @@ class TestLogin(TestView):
             print(msg)
             assert True
             return
-        assert False
-
-        LOGGER.info('MUSTANG')
-        print('MUSTANG')
 
         # Create an application settings so that there is an object
         # language id

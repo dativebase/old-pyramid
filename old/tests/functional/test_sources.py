@@ -886,12 +886,6 @@ class TestSourcesView(TestView):
         assert 'There is no source with id %s' % id in response.json_body['error']
         assert response.content_type == 'application/json'
 
-        # Delete without an id
-        response = self.app.delete(url('delete', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
     def test_show(self):
         """Tests that GET /source/id returns the source with id=id or an appropriate error."""
 
@@ -921,12 +915,6 @@ class TestSourcesView(TestView):
             status=404)
         resp = response.json_body
         assert 'There is no source with id %s' % id in response.json_body['error']
-        assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('show', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
         # Valid id
@@ -977,12 +965,6 @@ class TestSourcesView(TestView):
             status=404)
         assert 'There is no source with id %s' % id in response.json_body['error']
         assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('edit', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
 
         # Valid id
         response = self.app.get(url('edit', id=book_id),

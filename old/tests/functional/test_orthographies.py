@@ -370,12 +370,6 @@ class TestOrthographiesView(TestView):
         assert 'There is no orthography with id %s' % id in response.json_body['error']
         assert response.content_type == 'application/json'
 
-        # Delete without an id
-        response = self.app.delete(url('delete', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
         # Observe how deletions are restricted when an orthography is part of an
         # active application settings ...
 
@@ -443,12 +437,6 @@ class TestOrthographiesView(TestView):
         assert 'There is no orthography with id %s' % id in response.json_body['error']
         assert response.content_type == 'application/json'
 
-        # No id
-        response = self.app.get(url('show', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
         # Valid id
         response = self.app.get(url('show', id=orthography_id), headers=self.json_headers,
                                 extra_environ=self.extra_environ_admin)
@@ -493,11 +481,6 @@ class TestOrthographiesView(TestView):
             status=404)
         assert 'There is no orthography with id %s' % id in response.json_body['error']
         assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('edit', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
 
         # Valid id
         response = self.app.get(url('edit', id=orthography_id),

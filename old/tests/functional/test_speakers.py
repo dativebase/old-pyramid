@@ -276,12 +276,6 @@ class TestSpeakersView(TestView):
         assert 'There is no speaker with id %s' % id in response.json_body['error']
         assert response.content_type == 'application/json'
 
-        # Delete without an id
-        response = self.app.delete(url('delete', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
-        assert response.content_type == 'application/json'
-
     def test_show(self):
         """Tests that GET /speakers/id returns the speaker with id=id or an appropriate error."""
 
@@ -309,12 +303,6 @@ class TestSpeakersView(TestView):
             status=404)
         resp = response.json_body
         assert 'There is no speaker with id %s' % id in response.json_body['error']
-        assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('show', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
         # Valid id
@@ -362,12 +350,6 @@ class TestSpeakersView(TestView):
             headers=self.json_headers, extra_environ=self.extra_environ_admin,
             status=404)
         assert 'There is no speaker with id %s' % id in response.json_body['error']
-        assert response.content_type == 'application/json'
-
-        # No id
-        response = self.app.get(url('edit', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == 'The resource could not be found.'
         assert response.content_type == 'application/json'
 
         # Valid id

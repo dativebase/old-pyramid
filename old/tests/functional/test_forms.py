@@ -1613,13 +1613,6 @@ class TestFormsView(TestView):
         assert ('There is no form with id %s' % id_ in
                 response.json_body[ 'error'])
 
-        # Delete without an id
-        response = self.app.delete(
-            url('delete', id=''), status=404, headers=self.json_headers,
-            extra_environ=self.extra_environ_admin)
-        assert (response.json_body['error'] == 'The resource could not be'
-                ' found.')
-
     def test_delete_foreign_word(self):
         """Tests that DELETE /forms/id on a foreign word updates the global
         Inventory objects correctly.
@@ -1722,12 +1715,6 @@ class TestFormsView(TestView):
         assert response.content_type == 'application/json'
         assert 'There is no form with id %s' % id_ in response.json_body[
             'error']
-
-        # No id
-        response = self.app.get(url('show', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
 
         # Valid id
         response = self.app.get(url('show', id=form_id), headers=self.json_headers,
@@ -1870,13 +1857,6 @@ class TestFormsView(TestView):
             status=404)
         assert 'There is no form with id %s' % id_ in response.json_body[
             'error']
-
-        # No id
-        response = self.app.get(url('edit', id=''), status=404,
-            headers=self.json_headers, extra_environ=self.extra_environ_admin)
-        assert response.json_body['error'] == \
-            'The resource could not be found.'
-        assert response.content_type == 'application/json'
 
         # Valid id
         response = self.app.get(url('edit', id=restricted_form_id),
