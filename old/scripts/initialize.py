@@ -99,7 +99,8 @@ def main(argv=None):
                 args.old_name, os.path.join(
                     settings['permanent_store'],
                     settings['old_name']))
-    languages = omb.get_language_objects(settings['here'], truncated=False)
+    here = settings.get('here', os.path.dirname(settings['permanent_store']))
+    languages = omb.get_language_objects(here, truncated=False)
     administrator = omb.generate_default_administrator(settings=settings)
     contributor = omb.generate_default_contributor(settings=settings)
     viewer = omb.generate_default_viewer(settings=settings)
