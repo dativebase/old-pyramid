@@ -298,7 +298,9 @@ ENV_VAR_MAP = {
     'OLD_SESSION_DATA_DIR': 'session.data_dir',
     'OLD_SESSION_LOCK_DIR': 'session.lock_dir',
     'OLD_SESSION_KEY': 'session.key',
+    'OLD_SESSION_SAMESITE': 'session.samesite',
     'OLD_SESSION_SECRET': 'session.secret',
+    'OLD_SESSION_SECURE': 'session.secure',
     'OLD_SESSION_COOKIE_EXPIRES': 'session.cookie_expires'
 }
 
