@@ -247,7 +247,7 @@ class MyRequest(Request):
         if os.path.basename(self.registry.settings[
                 'session.lock_dir'].rstrip('/')) != self.old_name:
             self.registry.settings['session.lock_dir'] = os.path.join(
-                self.registry.settings['session.lock_dir'],
+                os.path.dirname(self.registry.settings['session.lock_dir']),
                 self.registry.settings['old_name'])
         if not self.registry.settings['session.key'].endswith(
                 '_{}'.format(self.old_name)):
