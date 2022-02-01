@@ -251,8 +251,7 @@ class MyRequest(Request):
                 self.registry.settings['old_name'])
         if not self.registry.settings['session.key'].endswith(
                 '_{}'.format(self.old_name)):
-            self.registry.settings['session.key'] = '{}_{}'.format(
-                self.registry.settings['session.key'],
+            self.registry.settings['session.key'] = 'old_{}'.format(
                 self.registry.settings['old_name'])
         self._beakersession = beaker_session_factory.get_session(
             self.registry.settings)(self)
