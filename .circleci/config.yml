@@ -100,11 +100,53 @@ jobs:
             SMTP_SERVER_ABSENT: "1"
           command: "/venv/bin/pytest old/tests/functional/test_readonly_mode.py::TestReadonlyMode::test_readonly_mode -v"
 
+  build:
+    docker:
+      - image: cimg/base:2022.01
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build and push Docker image
+          command: |
+            TAG="${CIRCLE_SHA1}"
+            docker build -t jrwdunham/old-pyramid:$TAG .
+            echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_LOGIN}" --password-stdin
+            docker push jrwdunham/old-pyramid:$TAG
+
+  deploy-prod:
+    docker:
+      - image: cimg/base:2022.01
+    steps:
+      - checkout
+      - run: ssh -oStrictHostKeyChecking=no -v $DROPLET_USER@$DROPLET_IP "/home/jrwdunham/deployold.sh ${CIRCLE_SHA1}"
+
 workflows:
   version: 2
   test_windows:
     jobs:
-      - test_windows
-  test:
+      - test_windows:
+          filters:
+            branches:
+              only: /^windows.*$/
+
+  test-build-and-deploy:
     jobs:
       - test
+      - build:
+          requires:
+            - test
+          context:
+            - General
+          filters:
+            branches:
+              only: master
+      - deploy-prod:
+          requires:
+            - build
+          context:
+            - General
+          filters:
+            branches:
+              only: master
