@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV PYTHONUNBUFFERED 1
@@ -11,7 +11,6 @@ RUN set -ex \
         curl \
         git \
         openssh-client \
-        python-software-properties \
         software-properties-common \
         libldap2-dev \
         libsasl2-dev \
@@ -19,10 +18,8 @@ RUN set -ex \
 
 # Install OS dependencies
 RUN set -ex \
-    && add-apt-repository "deb http://archive.ubuntu.com/ubuntu/ xenial multiverse" \
-    && add-apt-repository "deb http://archive.ubuntu.com/ubuntu/ xenial-security universe" \
-    && add-apt-repository "deb http://archive.ubuntu.com/ubuntu/ xenial-updates multiverse" \
-    && add-apt-repository "ppa:jonathonf/ffmpeg-4" \
+    && add-apt-repository multiverse \
+    && add-apt-repository universe \
     && add-apt-repository "ppa:deadsnakes/ppa" \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -34,7 +31,9 @@ RUN set -ex \
         python3.6-venv \
         python3-setuptools \
         ffmpeg \
-        libavcodec-ffmpeg56 \
+        libavcodec-extra58 \
+        libavformat58 \
+        libavutil56 \
         imagemagick \
         libevent-dev \
         libjansson4 \
@@ -47,21 +46,21 @@ RUN set -ex \
         flex \
         sqlite3 \
         uwsgi \
-        uwsgi-plugin-python \
+        uwsgi-plugin-python3 \
         libtiff5-dev \
         libjpeg8-dev \
         zlib1g-dev \
         libmysqlcppconn-dev \
         libfreetype6-dev \
         liblcms2-dev \
-        libreadline6 \
+        libreadline-dev \
         libreadline6-dev \
         libwebp-dev \
         tcl8.6-dev \
         tk8.6-dev \
         python-tk \
         libmysqlclient-dev \
-        mysql-client-5.7 \
+        mysql-client \
         libmagic-dev \
         tesseract-ocr \
         libssl-dev \
