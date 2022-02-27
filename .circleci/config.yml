@@ -32,6 +32,7 @@ jobs:
             OLD_TESTING: "1"
             OLD_DB_RDBMS: "sqlite"
             OLD_SESSION_TYPE: "file"
+            OLD_SESSION_SECURE: 0
             SMTP_SERVER_ABSENT: "1"
           command: python -m pytest old\tests -v -x
       - run:
@@ -43,6 +44,7 @@ jobs:
             OLD_READONLY: "1"
             OLD_DB_RDBMS: "sqlite"
             OLD_SESSION_TYPE: "file"
+            OLD_SESSION_SECURE: 0
             SMTP_SERVER_ABSENT: "1"
           command: python -m pytest old\tests\functional\test_readonly_mode.py::TestReadonlyMode::test_readonly_mode -v -x
 
@@ -86,6 +88,7 @@ jobs:
            OLD_NAME_2_TESTS: "oldtests2"
            OLD_PERMANENT_STORE: "/var/old/store"
            OLD_TESTING: 1
+           OLD_SESSION_SECURE: 0
            SMTP_SERVER_ABSENT: "1"
          command: "/venv/bin/pytest old/tests/ -v"
       - run:
@@ -97,6 +100,7 @@ jobs:
             OLD_READONLY: "1"
             OLD_DB_RDBMS: "sqlite"
             OLD_SESSION_TYPE: "file"
+            OLD_SESSION_SECURE: 0
             SMTP_SERVER_ABSENT: "1"
           command: "/venv/bin/pytest old/tests/functional/test_readonly_mode.py::TestReadonlyMode::test_readonly_mode -v"
 
